@@ -1,0 +1,36 @@
+name: Sync subtrees
+
+on:
+  repository_dispatch:
+    types: [backend-updated, frontend-updated]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo contenedor
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CONTAINER_REPO_TOKEN }}
+
+      - name: Config git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull backend subtree
+        if: github.event.action == 'backend-updated' || github.event_name == 'workflow_dispatch'
+        run: |
+          git subtree pull --prefix=backend \
+            https://github.com/jdario9912/tpif-backend.git main --squash -m "Sync backend"
+
+      - name: Pull frontend subtree
+        if: github.event.action == 'frontend-updated' || github.event_name == 'workflow_dispatch'
+        run: |
+          git subtree pull --prefix=frontend \
+            https://github.com/jdario9912/tpif-frontend.git main --squash -m "Sync frontend"
+
+      - name: Push cambios
+        run: git push origin main
