@@ -1,0 +1,815 @@
+# Diagramas Mermaid — App de Entrenadores y Atletas
+
+Pegar en https://mermaid.live, en GitHub/GitLab (bloque ```mermaid) o en Notion/Obsidian.
+
+---
+
+## 1. Diagrama de clases — Dominio
+
+```mermaid
+classDiagram
+    direction TB
+
+    class Usuario {
+        <<abstract>>
+        -UUID id
+        -String nombre
+        -String apellido
+        -String email
+        -String passwordHash
+        -String telefono
+        -Rol rol
+        -boolean activo
+        -LocalDateTime fechaRegistro
+        -LocalDateTime ultimoAcceso
+        +nombreCompleto() String
+        +registrarAcceso() void
+        +desactivar() void
+        +iniciarSesion(email, pass) boolean
+        +cerrarSesion() void
+        +recuperarAcceso(email) void
+    }
+
+    class Entrenador {
+        -String especialidad
+        -String matricula
+        -String biografia
+        +registrarAtleta() Atleta
+        +crearRutina() Rutina
+        +asignarRutina(atleta, rutina) void
+        +revisarSesion(sesion) void
+        +crearNota(atleta, nota) void
+        +cantidadAtletasActivos() int
+        +esDuenioDe(atleta) boolean
+    }
+
+    class Atleta {
+        -LocalDate fechaNacimiento
+        -Sexo sexo
+        -Double altura
+        -Double pesoInicial
+        -String objetivo
+        -NivelExperiencia nivel
+        -String lesiones
+        -String limitaciones
+        -int diasDisponibles
+        -LocalDate fechaInicio
+        -EstadoAtleta estado
+        +edad() int
+        +pesoActual() Double
+        +variacionPeso() Double
+        +imc() Double
+        +rutinaActiva() Rutina
+        +ultimaSesion() SesionEntrenamiento
+        +diasSinEntrenar() long
+        +cumplimientoSemanal() double
+        +cambiarEstado(estado) void
+    }
+
+    class Rutina {
+        -UUID id
+        -String nombre
+        -String descripcion
+        -String objetivo
+        -int diasPorSemana
+        -Integer duracionSemanas
+        -boolean esPlantilla
+        -LocalDateTime fechaCreacion
+        +agregarDia(dia) void
+        +quitarDia(dia) void
+        +dia(numeroDia) DiaRutina
+        +totalEjercicios() int
+        +volumenSemanalPlanificado() double
+        +clonarComoPlantilla() Rutina
+    }
+
+    class DiaRutina {
+        -UUID id
+        -int numeroDia
+        -String nombre
+        -String grupoMuscular
+        -String notas
+        +agregarEjercicio(ejercicio) void
+        +quitarEjercicio(ejercicio) void
+        +reordenar(ejercicioId, nuevoOrden) void
+        +cantidadEjercicios() int
+        +duracionEstimadaMin() int
+    }
+
+    class EjercicioRutina {
+        -UUID id
+        -String nombre
+        -int orden
+        -int series
+        -String repeticiones
+        -Double pesoRecomendado
+        -int descansoSegundos
+        -String rirRpe
+        -String tempo
+        -String notaTecnica
+        -String urlVideo
+        +repeticionesMinimas() int
+        +repeticionesMaximas() int
+        +volumenPlanificado() double
+        +tieneVideo() boolean
+    }
+
+    class AsignacionRutina {
+        -UUID id
+        -LocalDate fechaAsignacion
+        -LocalDate fechaInicio
+        -LocalDate fechaFin
+        -boolean activa
+        -String observaciones
+        +vigente() boolean
+        +finalizar(fecha) void
+        +semanaActual() int
+    }
+
+    class SesionEntrenamiento {
+        -UUID id
+        -LocalDate fecha
+        -LocalDateTime horaInicio
+        -LocalDateTime horaFin
+        -EstadoSesion estado
+        -Integer duracionMinutos
+        -String comentarioAtleta
+        -Integer sensacionGeneral
+        -String observacionEntrenador
+        -boolean revisado
+        +iniciar() void
+        +registrarSerie(serie) void
+        +finalizar(comentario) void
+        +marcarRevisada(observacion) void
+        +volumenTotal() double
+        +seriesCompletadas() int
+        +seriesOmitidas() int
+        +porcentajeCumplimiento() double
+    }
+
+    class SerieRealizada {
+        -UUID id
+        -int numeroSerie
+        -Double pesoUtilizado
+        -Integer repeticiones
+        -String rpe
+        -boolean completada
+        -boolean omitida
+        -String motivoOmision
+        -String comentario
+        +volumen() double
+        +diferenciaPesoVsPlan() Double
+        +cumplioObjetivo() boolean
+    }
+
+    class Comida {
+        -UUID id
+        -LocalDate fecha
+        -TipoComida tipoComida
+        -LocalTime hora
+        -String descripcion
+        -String cantidadAproximada
+        -Double calorias
+        -Double proteinas
+        -Double carbohidratos
+        -Double grasas
+        -String urlFoto
+        -String comentarioAtleta
+        -String observacionEntrenador
+        -boolean revisado
+        +tieneMacros() boolean
+        +tieneFoto() boolean
+        +marcarRevisada(observacion) void
+    }
+
+    class RegistroPeso {
+        -UUID id
+        -LocalDate fecha
+        -Double peso
+        -String comentario
+        +diferenciaCon(otro) double
+    }
+
+    class MedidaCorporal {
+        -UUID id
+        -LocalDate fecha
+        -Double cintura
+        -Double pecho
+        -Double brazoDerecho
+        -Double brazoIzquierdo
+        -Double piernaDerecha
+        -Double piernaIzquierda
+        -Double cadera
+        -Double cuello
+        -Double porcentajeGrasa
+        -String comentario
+        +medidasRegistradas() Map
+        +comparar(previa) Map
+    }
+
+    class FotoProgreso {
+        -UUID id
+        -LocalDate fecha
+        -TipoFoto tipo
+        -String url
+        -String nombreArchivo
+        -String contentType
+        -Long tamanioBytes
+        -String comentario
+    }
+
+    class Nota {
+        -UUID id
+        -String titulo
+        -String contenido
+        -TipoNota tipo
+        -LocalDateTime fecha
+        -boolean leida
+        -LocalDateTime fechaLectura
+        +esVisiblePara(usuario) boolean
+        +marcarLeida() void
+    }
+
+    class Alerta {
+        -UUID id
+        -TipoAlerta tipo
+        -Severidad severidad
+        -String mensaje
+        -LocalDateTime fechaGeneracion
+        -boolean atendida
+        -LocalDateTime fechaAtencion
+        +atender() void
+    }
+
+    class Rol {
+        <<enumeration>>
+        ENTRENADOR
+        ATLETA
+    }
+    class Sexo {
+        <<enumeration>>
+        MASCULINO
+        FEMENINO
+        OTRO
+    }
+    class NivelExperiencia {
+        <<enumeration>>
+        PRINCIPIANTE
+        INTERMEDIO
+        AVANZADO
+    }
+    class EstadoAtleta {
+        <<enumeration>>
+        ACTIVO
+        NECESITA_REVISION
+        SIN_RUTINA
+        SIN_ACTIVIDAD
+        INACTIVO
+    }
+    class EstadoSesion {
+        <<enumeration>>
+        EN_PROGRESO
+        FINALIZADA
+        CANCELADA
+    }
+    class TipoComida {
+        <<enumeration>>
+        DESAYUNO
+        ALMUERZO
+        MERIENDA
+        CENA
+        COLACION
+        PRE_ENTRENO
+        POST_ENTRENO
+    }
+    class TipoFoto {
+        <<enumeration>>
+        FRONTAL
+        LATERAL
+        ESPALDA
+    }
+    class TipoNota {
+        <<enumeration>>
+        PRIVADA
+        VISIBLE_ATLETA
+    }
+    class TipoAlerta {
+        <<enumeration>>
+        INACTIVIDAD
+        SIN_RUTINA
+        BAJO_CUMPLIMIENTO
+        SIN_REGISTRO_PESO
+        SESION_SIN_REVISAR
+    }
+    class Severidad {
+        <<enumeration>>
+        INFO
+        ADVERTENCIA
+        CRITICA
+    }
+
+    Usuario <|-- Entrenador
+    Usuario <|-- Atleta
+
+    Entrenador "1" -- "0..*" Atleta : gestiona
+    Entrenador "1" -- "0..*" Rutina : crea
+    Entrenador "1" -- "0..*" Nota : escribe
+
+    Rutina "1" *-- "1..*" DiaRutina : contiene
+    DiaRutina "1" *-- "1..*" EjercicioRutina : contiene
+
+    Atleta "1" -- "0..*" AsignacionRutina : tiene
+    AsignacionRutina --> "1" Rutina : refiere
+
+    Atleta "1" -- "0..*" SesionEntrenamiento : registra
+    SesionEntrenamiento "1" *-- "1..*" SerieRealizada : contiene
+    SesionEntrenamiento --> "1" DiaRutina : basada en
+    SerieRealizada --> "1" EjercicioRutina : corresponde a
+
+    Atleta "1" -- "0..*" Comida : registra
+    Atleta "1" -- "0..*" RegistroPeso : registra
+    Atleta "1" -- "0..*" MedidaCorporal : registra
+    Atleta "1" -- "0..*" FotoProgreso : sube
+    Atleta "1" -- "0..*" Alerta : genera
+    Nota --> "1" Atleta : sobre
+
+    Usuario ..> Rol
+    Atleta ..> Sexo
+    Atleta ..> NivelExperiencia
+    Atleta ..> EstadoAtleta
+    SesionEntrenamiento ..> EstadoSesion
+    Comida ..> TipoComida
+    FotoProgreso ..> TipoFoto
+    Nota ..> TipoNota
+    Alerta ..> TipoAlerta
+    Alerta ..> Severidad
+```
+
+---
+
+## 2. Factory Method — creación de usuarios
+
+```mermaid
+classDiagram
+direction TB
+
+class UsuarioFactoryProvider {
+<<@Service>>
+-Map~Rol, UsuarioFactory~ factories
++UsuarioFactoryProvider(List~UsuarioFactory~ fs)
++para(rol) UsuarioFactory
++rolesSoportados() Set~Rol~
+    }
+
+class UsuarioFactory {
+<<abstract>>
+#crearInstancia() Usuario
++rolSoportado() Rol
+#completarDatosEspecificos(u, req) void
+#validar(req) void
++crear(req, encoder) Usuario
+}
+
+class EntrenadorFactory {
+<<@Component>>
+#crearInstancia() Entrenador
++rolSoportado() Rol
+#completarDatosEspecificos(u, req) void
+}
+
+class AtletaFactory {
+<<@Component>>
+#crearInstancia() Atleta
++rolSoportado() Rol
+#completarDatosEspecificos(u, req) void
+}
+
+class NutricionistaFactory {
+<<futuro>>
+#crearInstancia() Nutricionista
++rolSoportado() Rol
+}
+
+class Usuario {
+<<abstract>>
+}
+class Entrenador
+class Atleta
+class Nutricionista {
+<<futuro>>
+}
+
+UsuarioFactory <|-- EntrenadorFactory
+UsuarioFactory <|-- AtletaFactory
+UsuarioFactory <|-- NutricionistaFactory
+UsuarioFactoryProvider ..> UsuarioFactory : use
+
+Usuario <|-- Entrenador
+Usuario <|-- Atleta
+Usuario <|-- Nutricionista
+
+EntrenadorFactory ..> Entrenador : crea
+AtletaFactory ..> Atleta : crea
+NutricionistaFactory ..> Nutricionista : crea
+UsuarioFactory ..> Usuario : produce
+```
+
+---
+
+## 3. Arquitectura Spring Boot — capas y dependencias
+
+```mermaid
+classDiagram
+direction LR
+
+namespace security {
+class SecurityConfig {
+<<@Configuration>>
++securityFilterChain(http) SecurityFilterChain
++passwordEncoder() PasswordEncoder
++authenticationProvider() AuthenticationProvider
++authenticationManager(cfg) AuthenticationManager
++corsConfigurationSource() CorsConfigurationSource
+}
+class JwtAuthenticationFilter {
+<<@Component>>
+-JwtService jwtService
+-UserDetailsService userDetailsService
+#doFilterInternal(req, res, chain) void
+#shouldNotFilter(req) boolean
+}
+class JwtService {
+<<@Service>>
+-String secretKey
+-long expiracionMs
++generarToken(user) String
++generarRefreshToken(user) String
++extraerEmail(token) String
++extraerRol(token) Rol
++esValido(token, user) boolean
+        }
+class UsuarioDetailsService {
+<<@Service>>
+-UsuarioRepository usuarioRepository
++loadUserByUsername(email) UserDetails
+}
+    }
+
+namespace controller {
+class AuthController {
+<<@RestController>>
++login(LoginRequest) TokenResponse
++registrar(RegistroUsuarioRequest) UsuarioResponse
++refrescar(RefreshRequest) TokenResponse
++recuperar(EmailRequest) void
++perfil() UsuarioResponse
+}
+class AtletaController {
+<<@RestController>>
++listar(q, estado, pageable) Page~AtletaResumenResponse~
++crear(RegistroUsuarioRequest) AtletaResponse
++detalle(id) AtletaDetalleResponse
++actualizar(id, AtletaRequest) AtletaResponse
++desactivar(id) void
++dashboard() DashboardResponse
+}
+class RutinaController {
+<<@RestController>>
++crear(RutinaRequest) RutinaResponse
++detalle(id) RutinaDetalleResponse
++duplicar(id, NombreRequest) RutinaResponse
++asignar(id, AsignacionRequest) AsignacionResponse
++porAtleta(atletaId) List~RutinaResponse~
+}
+class SesionController {
+<<@RestController>>
++iniciar(IniciarSesionRequest) SesionResponse
++registrarSerie(id, SerieRequest) SerieResponse
++finalizar(id, CierreSesionRequest) SesionResponse
++revisar(id, ObservacionRequest) void
++pendientes() List~SesionResumenResponse~
+}
+class ProgresoController {
+<<@RestController>>
++registrarPeso(RegistroPesoRequest) RegistroPesoResponse
++registrarMedidas(MedidaRequest) MedidaResponse
++subirFoto(archivo, tipo) FotoResponse
++evolucionPeso(desde, hasta) List~PuntoGraficoResponse~
+        }
+class NutricionController {
+<<@RestController>>
++registrar(ComidaRequest) ComidaResponse
++delDia(fecha) List~ComidaResponse~
++resumen(fecha) ResumenNutricionalResponse
++revisar(comidaId, ObservacionRequest) void
+}
+class GlobalExceptionHandler {
+<<@RestControllerAdvice>>
++handleRecursoNoEncontrado(e) ErrorResponse
++handleValidacion(e) ValidationErrorResponse
++handleReglaNegocio(e) ErrorResponse
++handleAccesoDenegado(e) ErrorResponse
+}
+    }
+
+namespace service {
+class AuthService {
+<<interface>>
++login(req) TokenResponse
++registrar(req) UsuarioResponse
++usuarioAutenticado() Usuario
+}
+class AtletaService {
+<<interface>>
++crear(req, entrenadorId) Atleta
++listarPorEntrenador(id, pageable) Page~Atleta~
++recalcularEstado(id) EstadoAtleta
++cumplimientoSemanal(id) double
++verificarPertenencia(atletaId, entrenadorId) void
+}
+class RutinaService {
+<<interface>>
++crear(req, entrenadorId) Rutina
++duplicar(rutinaId, nombre) Rutina
++asignar(rutinaId, atletaId, req) AsignacionRutina
++rutinaActivaDe(atletaId) Rutina
+        }
+class SesionService {
+<<interface>>
++iniciar(atletaId, diaRutinaId) SesionEntrenamiento
++registrarSerie(sesionId, req) SerieRealizada
++finalizar(sesionId, req) SesionEntrenamiento
++revisar(sesionId, req) void
++progresionEjercicio(atletaId, nombre) List~PuntoProgresionResponse~
+}
+class ProgresoService {
+<<interface>>
++registrarPeso(atletaId, req) RegistroPeso
++registrarMedidas(atletaId, req) MedidaCorporal
++subirFoto(atletaId, file, tipo) FotoProgreso
++evolucionPeso(atletaId, desde, hasta) List~PuntoGraficoResponse~
+}
+class NutricionService {
+<<interface>>
++registrarComida(atletaId, req) Comida
++comidasDelDia(atletaId, fecha) List~Comida~
++resumenDiario(atletaId, fecha) ResumenNutricionalResponse
+}
+class NotaService {
+<<interface>>
++crear(entrenadorId, atletaId, req) Nota
++listarVisiblesParaAtleta(atletaId) List~Nota~
++marcarLeida(notaId) void
+}
+class AlertaService {
+<<interface>>
++evaluarTodas() void
++evaluarAtleta(atletaId) List~Alerta~
++pendientes(entrenadorId) List~Alerta~
++atender(alertaId) void
+}
+class AtletaServiceImpl {
+<<@Service @Transactional>>
+}
+class SesionServiceImpl {
+<<@Service @Transactional>>
+}
+    }
+
+namespace repository {
+class UsuarioRepository {
+<<interface>>
++findByEmail(email) Optional~Usuario~
++existsByEmail(email) boolean
+}
+class AtletaRepository {
+<<interface>>
++findByEntrenadorId(id, pageable) Page~Atleta~
++findByEntrenadorIdAndEstado(id, estado) List~Atleta~
++existsByIdAndEntrenadorId(id, entrenadorId) boolean
+}
+class RutinaRepository {
+<<interface>>
++findByEntrenadorId(id) List~Rutina~
++findDetalleById(id) Optional~Rutina~
+}
+class SesionRepository {
+<<interface>>
++findByAtletaIdAndFechaBetween(id, d1, d2) List~SesionEntrenamiento~
++findTopByAtletaIdOrderByFechaDesc(id) Optional~SesionEntrenamiento~
++findByAtletaEntrenadorIdAndRevisadoFalse(id) List~SesionEntrenamiento~
+}
+class ComidaRepository {
+<<interface>>
++findByAtletaIdAndFecha(id, fecha) List~Comida~
+}
+class AlertaRepository {
+<<interface>>
++findByAtletaEntrenadorIdAndAtendidaFalse(id) List~Alerta~
+}
+    }
+
+namespace model {
+class Usuario {
+<<@Entity @Inheritance JOINED>>
+}
+class Atleta {
+<<@Entity>>
+}
+class Rutina {
+<<@Entity>>
+}
+class SesionEntrenamiento {
+<<@Entity>>
+}
+    }
+
+namespace factory {
+class UsuarioFactoryProvider {
+<<@Service>>
++para(rol) UsuarioFactory
+}
+    }
+
+namespace mapper {
+class AtletaMapper {
+<<@Mapper spring>>
++toResumen(atleta) AtletaResumenResponse
++toDetalle(atleta) AtletaDetalleResponse
++actualizar(target, req) void
+}
+    }
+
+AuthService <|.. AtletaServiceImpl
+AtletaService <|.. AtletaServiceImpl
+SesionService <|.. SesionServiceImpl
+
+AuthController --> AuthService
+AtletaController --> AtletaService
+RutinaController --> RutinaService
+SesionController --> SesionService
+ProgresoController --> ProgresoService
+NutricionController --> NutricionService
+
+AtletaServiceImpl --> AtletaRepository
+AtletaServiceImpl --> UsuarioFactoryProvider
+AtletaServiceImpl --> AtletaMapper
+AtletaServiceImpl --> AlertaService
+SesionServiceImpl --> SesionRepository
+SesionServiceImpl --> RutinaRepository
+AlertaService --> AlertaRepository
+
+UsuarioRepository --> Usuario
+AtletaRepository --> Atleta
+RutinaRepository --> Rutina
+SesionRepository --> SesionEntrenamiento
+ComidaRepository --> Usuario
+
+SecurityConfig ..> JwtAuthenticationFilter
+JwtAuthenticationFilter --> JwtService
+JwtAuthenticationFilter --> UsuarioDetailsService
+UsuarioDetailsService --> UsuarioRepository
+```
+
+---
+
+## 4. Modelo entidad-relación (tablas)
+
+```mermaid
+erDiagram
+USUARIOS ||--o| ENTRENADORES : "JOINED"
+USUARIOS ||--o| ATLETAS : "JOINED"
+ENTRENADORES ||--o{ ATLETAS : "gestiona"
+ENTRENADORES ||--o{ RUTINAS : "crea"
+ENTRENADORES ||--o{ NOTAS : "escribe"
+RUTINAS ||--|{ DIAS_RUTINA : "contiene"
+DIAS_RUTINA ||--|{ EJERCICIOS_RUTINA : "contiene"
+ATLETAS ||--o{ ASIGNACIONES_RUTINA : "tiene"
+RUTINAS ||--o{ ASIGNACIONES_RUTINA : "asignada en"
+ATLETAS ||--o{ SESIONES : "registra"
+DIAS_RUTINA ||--o{ SESIONES : "plan de"
+SESIONES ||--|{ SERIES_REALIZADAS : "contiene"
+EJERCICIOS_RUTINA ||--o{ SERIES_REALIZADAS : "plan de"
+ATLETAS ||--o{ COMIDAS : "registra"
+ATLETAS ||--o{ REGISTROS_PESO : "registra"
+ATLETAS ||--o{ MEDIDAS_CORPORALES : "registra"
+ATLETAS ||--o{ FOTOS_PROGRESO : "sube"
+ATLETAS ||--o{ NOTAS : "sobre"
+ATLETAS ||--o{ ALERTAS : "genera"
+
+USUARIOS {
+uuid id PK
+varchar nombre
+varchar apellido
+varchar email UK
+varchar password_hash
+varchar rol
+boolean activo
+timestamp fecha_registro
+}
+ATLETAS {
+uuid id PK_FK
+uuid entrenador_id FK
+date fecha_nacimiento
+decimal altura
+decimal peso_inicial
+varchar objetivo
+varchar nivel
+text lesiones
+varchar estado
+}
+RUTINAS {
+uuid id PK
+uuid entrenador_id FK
+varchar nombre
+int dias_por_semana
+boolean es_plantilla
+}
+SESIONES {
+uuid id PK
+uuid atleta_id FK
+uuid dia_rutina_id FK
+date fecha
+varchar estado
+int duracion_minutos
+boolean revisado
+}
+SERIES_REALIZADAS {
+uuid id PK
+uuid sesion_id FK
+uuid ejercicio_rutina_id FK
+int numero_serie
+decimal peso_utilizado
+int repeticiones
+boolean completada
+}
+```
+
+---
+
+## 5. Secuencia — registrar una serie durante el entrenamiento
+
+```mermaid
+sequenceDiagram
+autonumber
+actor A as Atleta
+participant SC as SesionController
+participant JF as JwtAuthenticationFilter
+participant SS as SesionServiceImpl
+participant SR as SesionRepository
+participant DB as PostgreSQL
+
+A->>JF: POST /api/sesiones/{id}/series (Bearer token)
+JF->>JF: validar token, cargar UserDetails
+JF->>SC: request autenticado
+SC->>SC: @Valid SerieRequest
+SC->>SS: registrarSerie(sesionId, req)
+SS->>SR: findById(sesionId)
+SR->>DB: SELECT
+DB-->>SS: SesionEntrenamiento
+SS->>SS: verificar estado EN_PROGRESO y pertenencia
+alt sesión finalizada
+SS-->>SC: SesionNoEditableException
+SC-->>A: 409 ErrorResponse
+else sesión activa
+SS->>SS: sesion.registrarSerie(serie)
+SS->>SR: save(sesion) — cascade ALL
+SR->>DB: INSERT series_realizadas
+SS-->>SC: SerieRealizada
+SC-->>A: 201 SerieResponse
+end
+```
+
+---
+
+## 6. Estados del Atleta
+
+```mermaid
+stateDiagram-v2
+[*] --> SIN_RUTINA : alta por el entrenador
+SIN_RUTINA --> ACTIVO : se le asigna una rutina
+ACTIVO --> SIN_ACTIVIDAD : 7+ días sin sesiones
+ACTIVO --> NECESITA_REVISION : cumplimiento < umbral
+SIN_ACTIVIDAD --> ACTIVO : registra una sesión
+NECESITA_REVISION --> ACTIVO : el entrenador ajusta la rutina
+SIN_ACTIVIDAD --> INACTIVO : 30+ días sin sesiones
+NECESITA_REVISION --> INACTIVO : baja
+ACTIVO --> INACTIVO : baja lógica (activo = false)
+INACTIVO --> ACTIVO : reactivación
+INACTIVO --> [*]
+```
+
+---
+
+## 7. Estados de la Sesión de Entrenamiento
+
+```mermaid
+stateDiagram-v2
+[*] --> EN_PROGRESO : iniciar(diaRutina)
+EN_PROGRESO --> EN_PROGRESO : registrarSerie()
+EN_PROGRESO --> FINALIZADA : finalizar(comentario)
+EN_PROGRESO --> CANCELADA : cancelar()
+FINALIZADA --> FINALIZADA : marcarRevisada(observacion)
+CANCELADA --> [*]
+FINALIZADA --> [*]
+```
