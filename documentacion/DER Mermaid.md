@@ -62,48 +62,48 @@ erDiagram
     %% ==================== TABLAS ====================
     ROLES {
         smallint id PK
-        varchar codigo UK "ENTRENADOR | ATLETA"
+        varchar codigo
         varchar nombre
-        varchar descripcion "NULL"
+        varchar descripcion
     }
     USUARIOS {
         uuid id PK
         smallint rol_id FK
         varchar nombre
         varchar apellido
-        varchar email UK
-        char password_hash "BCrypt(60)"
-        varchar telefono "NULL"
+        varchar email
+        char password_hash
+        varchar telefono
         boolean activo
         timestamptz fecha_registro
         timestamptz fecha_actualizacion
-        timestamptz ultimo_acceso "NULL"
+        timestamptz ultimo_acceso
     }
     ENTRENADORES {
-        uuid usuario_id PK_FK "ON DELETE CASCADE"
-        varchar especialidad "NULL"
-        varchar matricula UK "NULL"
-        text biografia "NULL"
+        uuid usuario_id PK
+        varchar especialidad
+        varchar matricula
+        varchar biografia
     }
     ATLETAS {
-        uuid usuario_id PK_FK "ON DELETE CASCADE"
+        uuid usuario_id PK
         uuid entrenador_id FK
-        smallint sexo_id FK "NULL"
-        smallint nivel_id FK "NULL"
+        smallint sexo_id FK
+        smallint nivel_id FK
         smallint estado_id FK
-        date fecha_nacimiento "NULL"
-        numeric altura_cm "NULL"
-        numeric peso_inicial_kg "NULL"
-        varchar objetivo "NULL"
-        text lesiones "NULL"
-        text limitaciones "NULL"
-        smallint dias_disponibles "NULL"
+        date fecha_nacimiento
+        numeric altura_cm
+        numeric peso_inicial_kg
+        varchar objetivo
+        varchar lesiones
+        varchar limitaciones
+        smallint dias_disponibles
         date fecha_inicio
     }
     REFRESH_TOKENS {
         uuid id PK
         uuid usuario_id FK
-        char token_hash UK "SHA-256"
+        char token_hash
         timestamptz emitido_en
         timestamptz expira_en
         boolean revocado
@@ -111,73 +111,72 @@ erDiagram
     TOKENS_RECUPERACION {
         uuid id PK
         uuid usuario_id FK
-        char token_hash UK
+        char token_hash
         timestamptz expira_en
-        timestamptz usado_en "NULL"
+        timestamptz usado_en
     }
     SEXOS {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
     }
     NIVELES_EXPERIENCIA {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         smallint orden
     }
     ESTADOS_ATLETA {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         boolean requiere_atencion
     }
-
     RUTINAS {
         uuid id PK
         uuid entrenador_id FK
-        varchar nombre UK "UNIQUE(entrenador_id, nombre)"
-        text descripcion "NULL"
-        varchar objetivo "NULL"
+        varchar nombre
+        varchar descripcion
+        varchar objetivo
         smallint dias_por_semana
-        smallint duracion_semanas "NULL"
+        smallint duracion_semanas
         boolean es_plantilla
         timestamptz fecha_creacion
     }
     DIAS_RUTINA {
         uuid id PK
-        uuid rutina_id FK "ON DELETE CASCADE"
-        smallint numero_dia UK "UNIQUE(rutina_id, numero_dia)"
+        uuid rutina_id FK
+        smallint numero_dia
         varchar nombre
-        text notas "NULL"
+        varchar notas
     }
     EJERCICIOS_CATALOGO {
         uuid id PK
         smallint grupo_muscular_id FK
-        uuid creado_por FK "NULL = global"
-        varchar nombre UK
-        text descripcion "NULL"
-        varchar url_video "NULL"
+        uuid creado_por FK
+        varchar nombre
+        varchar descripcion
+        varchar url_video
     }
     GRUPOS_MUSCULARES {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         varchar region
     }
     EJERCICIOS_RUTINA {
         uuid id PK
-        uuid dia_rutina_id FK "ON DELETE CASCADE"
+        uuid dia_rutina_id FK
         uuid ejercicio_id FK
-        smallint orden UK "UNIQUE(dia_rutina_id, orden)"
+        smallint orden
         smallint series
-        smallint reps_min "1FN: rango descompuesto"
-        smallint reps_max "NULL"
-        numeric peso_recomendado_kg "NULL"
+        smallint reps_min
+        smallint reps_max
+        numeric peso_recomendado_kg
         smallint descanso_seg
-        varchar rir_rpe "NULL"
-        varchar tempo "NULL"
-        text nota_tecnica "NULL"
+        varchar rir_rpe
+        varchar tempo
+        varchar nota_tecnica
     }
     ASIGNACIONES_RUTINA {
         uuid id PK
@@ -186,102 +185,99 @@ erDiagram
         uuid asignada_por FK
         date fecha_asignacion
         date fecha_inicio
-        date fecha_fin "NULL"
-        boolean activa "indice unico parcial WHERE activa"
-        text observaciones "NULL"
+        date fecha_fin
+        boolean activa
+        varchar observaciones
     }
-
     SESIONES_ENTRENAMIENTO {
         uuid id PK
         uuid atleta_id FK
-        uuid dia_rutina_id FK "NULL"
-        uuid asignacion_id FK "NULL"
+        uuid dia_rutina_id FK
+        uuid asignacion_id FK
         smallint estado_id FK
-        uuid revisado_por FK "NULL"
+        uuid revisado_por FK
         date fecha
         timestamptz hora_inicio
-        timestamptz hora_fin "NULL"
-        text comentario_atleta "NULL"
-        smallint sensacion_general "NULL (1-5)"
-        text observacion_entrenador "NULL"
-        timestamptz fecha_revision "NULL"
+        timestamptz hora_fin
+        varchar comentario_atleta
+        smallint sensacion_general
+        varchar observacion_entrenador
+        timestamptz fecha_revision
     }
     ESTADOS_SESION {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         boolean es_final
     }
     SERIES_REALIZADAS {
         uuid id PK
-        uuid sesion_id FK "ON DELETE CASCADE"
+        uuid sesion_id FK
         uuid ejercicio_rutina_id FK
-        smallint numero_serie UK "UNIQUE(sesion_id, ejercicio_rutina_id, numero_serie)"
-        numeric peso_kg "NULL"
-        smallint repeticiones "NULL"
-        varchar rpe "NULL"
+        smallint numero_serie
+        numeric peso_kg
+        smallint repeticiones
+        varchar rpe
         boolean completada
-        varchar motivo_omision "NULL"
-        text comentario "NULL"
+        varchar motivo_omision
+        varchar comentario
     }
-
     COMIDAS {
         uuid id PK
         uuid atleta_id FK
         smallint tipo_comida_id FK
-        uuid revisado_por FK "NULL"
+        uuid revisado_por FK
         date fecha
-        time hora "NULL"
-        text descripcion
-        varchar url_foto "NULL"
-        text comentario_atleta "NULL"
-        text observacion_entrenador "NULL"
-        timestamptz fecha_revision "NULL"
+        time hora
+        varchar descripcion
+        varchar url_foto
+        varchar comentario_atleta
+        varchar observacion_entrenador
+        timestamptz fecha_revision
     }
     TIPOS_COMIDA {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         smallint orden_dia
     }
     COMIDA_DETALLE {
-        uuid comida_id PK_FK
-        uuid alimento_id PK_FK
-        numeric cantidad_g "2FN: depende de la clave completa"
+        uuid comida_id PK
+        uuid alimento_id PK
+        numeric cantidad_g
     }
     ALIMENTOS {
         uuid id PK
-        varchar nombre UK
+        varchar nombre
         numeric porcion_referencia_g
-        numeric calorias_kcal "NULL"
-        numeric proteinas_g "NULL"
-        numeric carbohidratos_g "NULL"
-        numeric grasas_g "NULL"
+        numeric calorias_kcal
+        numeric proteinas_g
+        numeric carbohidratos_g
+        numeric grasas_g
     }
-
     REGISTROS_PESO {
         uuid id PK
         uuid atleta_id FK
-        date fecha UK "UNIQUE(atleta_id, fecha)"
+        date fecha
         numeric peso_kg
-        text comentario "NULL"
+        varchar comentario
     }
     MEDIDAS_REGISTRO {
         uuid id PK
         uuid atleta_id FK
-        date fecha UK "UNIQUE(atleta_id, fecha)"
-        numeric porcentaje_grasa "NULL"
-        text comentario "NULL"
+        date fecha
+        numeric porcentaje_grasa
+        varchar comentario
     }
     MEDIDA_VALORES {
-        uuid medida_registro_id PK_FK
-        smallint tipo_medida_id PK_FK
-        char lado PK "I | D | U"
-        numeric valor_cm "1FN: reemplaza 8 columnas"
+        uuid medida_registro_id PK
+        smallint tipo_medida_id PK
+        char lado PK
+        numeric valor_cm
     }
     TIPOS_MEDIDA {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         varchar unidad
         boolean bilateral
@@ -290,55 +286,54 @@ erDiagram
         uuid id PK
         uuid atleta_id FK
         smallint tipo_foto_id FK
-        date fecha UK "UNIQUE(atleta_id, tipo_foto_id, fecha)"
+        date fecha
         varchar url
-        varchar nombre_archivo "NULL"
-        varchar content_type "NULL"
-        bigint tamanio_bytes "NULL"
-        text comentario "NULL"
+        varchar nombre_archivo
+        varchar content_type
+        bigint tamanio_bytes
+        varchar comentario
     }
     TIPOS_FOTO {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
     }
-
     NOTAS {
         uuid id PK
         uuid atleta_id FK
         uuid autor_id FK
         smallint tipo_nota_id FK
         varchar titulo
-        text contenido
+        varchar contenido
         timestamptz fecha
-        timestamptz fecha_lectura "NULL — 3FN: leida es derivado"
+        timestamptz fecha_lectura
     }
     TIPOS_NOTA {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
-        boolean visible_atleta "3FN: depende del tipo"
+        boolean visible_atleta
     }
     ALERTAS {
         uuid id PK
         uuid atleta_id FK
         smallint tipo_alerta_id FK
-        uuid atendida_por FK "NULL"
+        uuid atendida_por FK
         varchar mensaje
         timestamptz fecha_generacion
-        timestamptz fecha_atencion "NULL"
+        timestamptz fecha_atencion
     }
     TIPOS_ALERTA {
         smallint id PK
-        varchar codigo UK
-        smallint severidad_id FK "3FN: depende del tipo"
+        varchar codigo
+        smallint severidad_id FK
         varchar nombre
         varchar plantilla_mensaje
-        smallint umbral_dias "NULL"
+        smallint umbral_dias
     }
     SEVERIDADES {
         smallint id PK
-        varchar codigo UK
+        varchar codigo
         varchar nombre
         smallint orden
     }
