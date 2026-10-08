@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gestion-deportiva}
+    username: ${POSTGRES_USER:user}
+    password: ${POSTGRES_PASSWORD:password123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+management:
+  endpoint:
+    health:
+      # En dev conviene ver el detalle de cada chequeo (DB, disco, etc.)
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: DEBUG
