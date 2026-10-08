@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    # Sin valores por defecto: si falta alguna variable, la app falla al arrancar
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      # El esquema se maneja con migraciones, Hibernate solo valida
+      ddl-auto: validate
+    show-sql: false
+
+management:
+  endpoint:
+    health:
+      # No exponer detalles internos al exterior
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    # Cambiá este paquete por el de tu aplicación
+    com.gestion_deportiva.api: INFO
