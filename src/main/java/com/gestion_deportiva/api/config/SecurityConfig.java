@@ -17,6 +17,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Health check abierto para balanceadores y orquestadores
                         .requestMatchers("/actuator/health/**").permitAll()
+                        // Swagger UI / OpenAPI docs: deshabilitados a nivel de springdoc en prod,
+                        // por eso no hace falta restringir el acceso acá por perfil
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
 //                         Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
