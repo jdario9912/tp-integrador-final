@@ -16,6 +16,13 @@ management:
       # No exponer detalles internos al exterior
       show-details: never
 
+springdoc:
+  # No exponer la documentación de la API en producción
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 logging:
   level:
     root: WARN
