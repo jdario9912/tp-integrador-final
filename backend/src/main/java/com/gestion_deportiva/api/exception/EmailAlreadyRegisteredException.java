@@ -1,8 +1,6 @@
 package com.gestion_deportiva.api.exception;
 
-// Se intenta registrar un usuario con un email que ya existe.
-// El GlobalExceptionHandler (US-34) la traduce a 409 Conflict.
-public class EmailAlreadyRegisteredException extends RuntimeException {
+public class EmailAlreadyRegisteredException extends ConflictException {
 
     private final String email;
 
