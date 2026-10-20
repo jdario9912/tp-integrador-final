@@ -1,9 +1,9 @@
 package com.gestion_deportiva.api.support;
 
-import com.gestion_deportiva.api.model.Athlete;
-import com.gestion_deportiva.api.model.Coach;
-import com.gestion_deportiva.api.model.RefreshToken;
-import com.gestion_deportiva.api.model.User;
+import com.gestion_deportiva.api.athlete.model.Athlete;
+import com.gestion_deportiva.api.auth.model.RefreshToken;
+import com.gestion_deportiva.api.coach.model.Coach;
+import com.gestion_deportiva.api.user.model.User;
 
 import java.time.Duration;
 import java.time.Instant;

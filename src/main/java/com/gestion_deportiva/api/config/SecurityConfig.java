@@ -1,6 +1,6 @@
 package com.gestion_deportiva.api.config;
 
-import com.gestion_deportiva.api.exception.SecurityErrorHandler;
+import com.gestion_deportiva.api.common.exception.SecurityErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
