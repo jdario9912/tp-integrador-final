@@ -66,3 +66,28 @@ Borrar la base de datos y empezar de cero (elimina el volumen con los datos)
 ```shell
 docker compose down -v
 ```
+
+**Tests**
+
+Los tests de integración y e2e usan [Testcontainers](https://testcontainers.com/): levantan su propio PostgreSQL en un contenedor temporal, así que **Docker tiene que estar corriendo**. No hace falta levantar el `docker-compose.yml` ni tocan la base de desarrollo.
+
+Ejecutar todos los tests (unitarios, integración y e2e)
+
+```shell
+./gradlew test
+```
+
+Ejecutar solo los tests e2e (paquete `e2e`: levantan la API completa en un puerto aleatorio y la prueban por HTTP)
+
+```shell
+./gradlew test --tests 'com.gestion_deportiva.api.e2e.*'
+```
+
+Ejecutar una sola clase o un solo test
+
+```shell
+./gradlew test --tests 'com.gestion_deportiva.api.e2e.CoachE2ETest'
+./gradlew test --tests 'com.gestion_deportiva.api.e2e.CoachE2ETest.shouldReturn409WhenEmailAlreadyRegisteredIgnoringCase'
+```
+
+El reporte con el resultado de cada test queda en `build/reports/tests/test/index.html`.

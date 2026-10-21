@@ -2,6 +2,7 @@ package com.gestion_deportiva.api.support;
 
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.auth.model.RefreshToken;
+import com.gestion_deportiva.api.coach.dto.RegisterCoachRequest;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.user.model.User;
 
@@ -18,6 +19,14 @@ public final class IdentityFixtures {
 
     public static Coach coach(String email) {
         return new Coach("Ana", "Paz", email, PASSWORD_HASH);
+    }
+
+    public static final String RAW_PASSWORD = "password123";
+
+    // Request de registro válido con todos los campos completos
+    public static RegisterCoachRequest registerCoachRequest(String email) {
+        return new RegisterCoachRequest("Ana", "Paz", email, RAW_PASSWORD, "+54 11 5555-5555",
+                "Fuerza", "MAT-1234", "Entrenadora de fuerza con 10 años de experiencia");
     }
 
     public static Athlete athlete(String email, Coach coach) {

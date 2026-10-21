@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,6 +32,18 @@ public class Coach extends User {
 
     public Coach(String firstName, String lastName, String email, String passwordHash) {
         super(Role.COACH, firstName, lastName, email, passwordHash);
+    }
+
+    // Builder sobre el constructor (no @SuperBuilder): el rol no se expone y se mantienen
+    // las validaciones y la normalización del email de User
+    @Builder
+    private Coach(String firstName, String lastName, String email, String passwordHash,
+                  String phone, String specialty, String licenseNumber, String bio) {
+        this(firstName, lastName, email, passwordHash);
+        setPhone(phone);
+        this.specialty = specialty;
+        this.licenseNumber = licenseNumber;
+        this.bio = bio;
     }
 
     // Si el atleta pertenece a este entrenador (base de la verificación de pertenencia, US-04)
