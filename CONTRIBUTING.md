@@ -259,7 +259,8 @@ El `README.md` se actualiza en el mismo PR cuando el cambio afecta a cómo se us
 | Elemento                                                           | Idioma                       |
 |--------------------------------------------------------------------|------------------------------|
 | Variables, métodos, clases, paquetes, enums, constantes            | **Inglés**                   |
-| Excepciones y mensajes de error de la API                          | **Inglés**                   |
+| Clases de excepción                                                | **Inglés**                   |
+| Texto de los mensajes que recibe el cliente (errores, validaciones) | **Castellano**               |
 | Tablas, columnas y migraciones de base de datos                    | **Inglés**                   |
 | Endpoints y campos de JSON                                         | **Inglés**                   |
 | Nombres de tests                                                   | **Inglés**                   |
@@ -277,6 +278,21 @@ public class AthleteService {
 public class ServicioAtleta {
     public Atleta registrar(CrearAtletaRequest solicitud) { ... }
 }
+```
+
+Los nombres (clases, métodos, campos) van en inglés, pero el **texto** del mensaje que llega al cliente va en castellano para que el frontend pueda mostrarlo directamente:
+
+```java
+// Correcto: clase en inglés, mensaje en castellano
+public class EmailAlreadyRegisteredException extends ConflictException {
+    public EmailAlreadyRegisteredException(String email) {
+        super("Ya existe un usuario registrado con el email " + email);
+    }
+}
+
+// Lo mismo aplica a los mensajes de Bean Validation
+@NotBlank(message = "El email es obligatorio")
+String email;
 ```
 
 ---

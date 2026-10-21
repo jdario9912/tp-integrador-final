@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.common.exception;
 
 import com.gestion_deportiva.api.config.SecurityConfig;
+import com.gestion_deportiva.api.config.WebConfig;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,7 +39,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser
 class GlobalExceptionHandlerTest {
 
-    private static final String BASE = "/test/errors";
+    // El controller declara solo su recurso; WebConfig le agrega el prefijo /api
+    private static final String MAPPING = "/test/errors";
+    private static final String BASE = WebConfig.API_PREFIX + MAPPING;
 
     @Autowired
     private MockMvc mockMvc;
@@ -109,6 +113,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void dataIntegrityViolationReturns409WithoutDatabaseDetails() throws Exception {
+        mockMvc.perform(get(BASE + "/data-integrity"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.DATA_CONFLICT_MESSAGE))
+                .andExpect(jsonPath("$.path").value(BASE + "/data-integrity"))
+                .andExpect(content().string(not(containsString("ux_users_email"))));
+    }
+
+    @Test
     void businessRuleViolationReturns422() throws Exception {
         mockMvc.perform(get(BASE + "/business-rule"))
                 .andExpect(status().is(422))
@@ -139,7 +154,7 @@ class GlobalExceptionHandlerTest {
 
     // Anidado para que Spring no lo registre en otros tests; por eso se agrega con @Import.
     @RestController
-    @RequestMapping(BASE)
+    @RequestMapping(MAPPING)
     static class ErrorTestController {
 
         record SampleRequest(@NotBlank String name, @Email String email) {
@@ -170,6 +185,12 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/conflict")
         void conflict() {
             throw new EmailAlreadyRegisteredException("ana@test.com");
+        }
+
+        @GetMapping("/data-integrity")
+        void dataIntegrity() {
+            throw new DataIntegrityViolationException(
+                    "duplicate key value violates unique constraint \"ux_users_email\"");
         }
 
         @GetMapping("/business-rule")

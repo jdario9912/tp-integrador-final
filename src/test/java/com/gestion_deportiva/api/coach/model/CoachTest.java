@@ -125,6 +125,69 @@ class CoachTest {
         assertNotEquals(coach("x@test.com"), coach("x@test.com")); // sin id no son iguales
     }
 
+    @Test
+    void unsavedCoachIsEqualToItself() {
+        Coach coach = coach("a@test.com");
+
+        assertEquals(coach, coach);
+    }
+
+    // equals/hashCode se heredan de User: el hash no cambia al persistir, así no se "pierde" en un HashSet
+    @Test
+    void hashCodeIsStableWhenIdIsAssigned() {
+        Coach coach = coach("a@test.com");
+        int before = coach.hashCode();
+
+        withId(coach);
+
+        assertEquals(before, coach.hashCode());
+    }
+
+    @Test
+    void builderCreatesActiveCoachWithAllFields() {
+        Coach coach = Coach.builder()
+                .firstName("Ana")
+                .lastName("Paz")
+                .email("  Ana@Test.COM ")
+                .passwordHash(PASSWORD_HASH)
+                .phone("+54 11 5555-5555")
+                .specialty("Fuerza")
+                .licenseNumber("MP-123")
+                .bio("Entrenadora de powerlifting")
+                .build();
+
+        assertEquals(Role.COACH, coach.getRole());
+        assertTrue(coach.isActive());
+        assertEquals("Ana", coach.getFirstName());
+        assertEquals("Paz", coach.getLastName());
+        assertEquals("ana@test.com", coach.getEmail());
+        assertEquals(PASSWORD_HASH, coach.getPasswordHash());
+        assertEquals("+54 11 5555-5555", coach.getPhone());
+        assertEquals("Fuerza", coach.getSpecialty());
+        assertEquals("MP-123", coach.getLicenseNumber());
+        assertEquals("Entrenadora de powerlifting", coach.getBio());
+    }
+
+    @Test
+    void builderAllowsOptionalFieldsToBeMissing() {
+        Coach coach = Coach.builder()
+                .firstName("Ana").lastName("Paz").email("a@test.com").passwordHash(PASSWORD_HASH)
+                .build();
+
+        assertNull(coach.getPhone());
+        assertNull(coach.getSpecialty());
+        assertNull(coach.getLicenseNumber());
+        assertNull(coach.getBio());
+    }
+
+    @Test
+    void builderRejectsMissingRequiredFields() {
+        assertThrows(NullPointerException.class, () -> Coach.builder()
+                .firstName("Ana").lastName("Paz").email("a@test.com").build());
+        assertThrows(NullPointerException.class, () -> Coach.builder()
+                .firstName("Ana").lastName("Paz").passwordHash(PASSWORD_HASH).build());
+    }
+
     private static Coach withId(Coach coach) {
         ReflectionTestUtils.setField(coach, "id", UUID.randomUUID());
         return coach;

@@ -4,6 +4,7 @@ import com.gestion_deportiva.api.common.exception.ApiErrorResponse.FieldErrorDet
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -33,6 +34,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     static final String MALFORMED_BODY_MESSAGE = "El cuerpo de la solicitud no es un JSON válido";
     static final String UNEXPECTED_MESSAGE = "Ocurrió un error inesperado. Intente nuevamente más tarde";
     static final String DEFAULT_MESSAGE = "No se pudo procesar la solicitud";
+    static final String DATA_CONFLICT_MESSAGE = "La operación entra en conflicto con datos existentes";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException ex,
@@ -43,6 +45,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    // Red de seguridad para constraints de la base (ej. carrera contra un índice único).
+    // Mensaje genérico: el detalle SQL (tablas, índices, valores) no se expone al cliente
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+                                                                         HttpServletRequest request) {
+        log.warn("Violación de integridad de datos en {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, DATA_CONFLICT_MESSAGE, request);
     }
 
     @ExceptionHandler(BusinessRuleException.class)

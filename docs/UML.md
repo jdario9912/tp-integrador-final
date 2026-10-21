@@ -37,6 +37,7 @@ Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código imple
 | − specialty | String |
 | − licenseNumber | String |
 | − bio | String |
+| + builder() | CoachBuilder |
 | + isOwnerOf(athlete: Athlete) | boolean |
 
 ### Athlete *(extiende User)*
@@ -205,6 +206,7 @@ class Coach {
   - specialty: String
   - licenseNumber: String
   - bio: String
+  + {static} builder(): CoachBuilder
   + isOwnerOf(athlete: Athlete): boolean
 }
 
