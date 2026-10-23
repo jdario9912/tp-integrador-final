@@ -56,6 +56,9 @@ public class SecurityConfig {
                         // por eso no hace falta restringir el acceso acá por perfil
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // hasRole("COACH") exige la authority ROLE_COACH (claim "role" del JWT, ver JwtConfig):
+                        // sin token responde 401 y un atleta autenticado recibe 403
+                        .requestMatchers(HttpMethod.POST, ATHLETES_PATH).hasRole("COACH")
                         // Todo lo demás requiere un access token válido
                         .anyRequest().authenticated()
                 )
