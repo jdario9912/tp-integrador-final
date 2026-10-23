@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -82,6 +83,27 @@ public class Athlete extends User {
     public Athlete(String firstName, String lastName, String email, String passwordHash, Coach coach) {
         super(Role.ATHLETE, firstName, lastName, email, passwordHash);
         this.coach = coach;
+    }
+
+    // Builder sobre el constructor (no @SuperBuilder): el rol y el estado no se exponen y se mantienen
+    // las validaciones de User y de los setters (ej. rango de availableDays)
+    @Builder
+    private Athlete(String firstName, String lastName, String email, String passwordHash, Coach coach,
+                    String phone, Sex sex, ExperienceLevel experienceLevel, LocalDate birthDate,
+                    BigDecimal heightCm, BigDecimal initialWeightKg, String goal, String injuries,
+                    String limitations, Short availableDays, LocalDate startDate) {
+        this(firstName, lastName, email, passwordHash, coach);
+        setPhone(phone);
+        this.sex = sex;
+        this.experienceLevel = experienceLevel;
+        this.birthDate = birthDate;
+        this.heightCm = heightCm;
+        this.initialWeightKg = initialWeightKg;
+        this.goal = goal;
+        this.injuries = injuries;
+        this.limitations = limitations;
+        setAvailableDays(availableDays);
+        this.startDate = startDate;
     }
 
     public void assignCoach(Coach newCoach) {

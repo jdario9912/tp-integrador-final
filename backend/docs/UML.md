@@ -55,11 +55,36 @@ Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código imple
 | − limitations | String |
 | − availableDays | Short |
 | − startDate | LocalDate |
+| + builder() | AthleteBuilder |
 | + assignCoach(newCoach: Coach) | void |
 | + unassignCoach() | void |
 | + changeStatus(newStatus: AthleteStatus) | void |
 | + setAvailableDays(days: Short) | void |
 | + age(today: LocalDate) | OptionalInt |
+
+### «abstract» UserFactory\<R, U extends User\> *(Factory Method)*
+Centraliza la creación de usuarios: hashea la contraseña y delega en cada subclase qué `User` concreto arma. Las subclases usan el `builder()` de la entidad.
+
+| Miembro | Tipo |
+|---|---|
+| − passwordEncoder | PasswordEncoder |
+| + create(request: R) *{final}* | U |
+| # rawPassword(request: R) *{abstract}* | String |
+| # instantiate(request: R, passwordHash: String) *{abstract}* | U |
+
+### CoachFactory *(extiende UserFactory\<RegisterCoachRequest, Coach\>)*
+| Miembro | Tipo |
+|---|---|
+| # rawPassword(request: RegisterCoachRequest) | String |
+| # instantiate(request: RegisterCoachRequest, passwordHash: String) | Coach |
+
+### AthleteFactory *(extiende UserFactory\<NewAthlete, Athlete\>)*
+`NewAthlete` agrupa el `CreateAthleteRequest` y el `Coach` autenticado.
+
+| Miembro | Tipo |
+|---|---|
+| # rawPassword(newAthlete: NewAthlete) | String |
+| # instantiate(newAthlete: NewAthlete, passwordHash: String) | Athlete |
 
 ### RefreshToken
 | Miembro | Tipo |
@@ -127,6 +152,9 @@ Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código imple
 |---|---|---|---|---|
 | User | generalización | Coach, Athlete | — | inheritance |
 | User | asociación | RefreshToken | 1 → 0..* | issues |
+| UserFactory | generalización | CoachFactory, AthleteFactory | — | inheritance |
+| CoachFactory | dependencia | Coach | — | creates |
+| AthleteFactory | dependencia | Athlete | — | creates |
 | Coach | agregación | Athlete | 0..1 → 0..* | manages |
 | Coach | asociación | Routine | 1 → 0..* | creates |
 | Coach | asociación | Note | 1 → 0..* | writes |
@@ -223,11 +251,29 @@ class Athlete {
   - limitations: String
   - availableDays: Short
   - startDate: LocalDate
+  + {static} builder(): AthleteBuilder
   + assignCoach(newCoach: Coach): void
   + unassignCoach(): void
   + changeStatus(newStatus: AthleteStatus): void
   + setAvailableDays(days: Short): void
   + age(today: LocalDate): OptionalInt
+}
+
+abstract class "UserFactory<R, U extends User>" as UserFactory {
+  - passwordEncoder: PasswordEncoder
+  + create(request: R): U {final}
+  # {abstract} rawPassword(request: R): String
+  # {abstract} instantiate(request: R, passwordHash: String): U
+}
+
+class CoachFactory {
+  # rawPassword(request: RegisterCoachRequest): String
+  # instantiate(request: RegisterCoachRequest, passwordHash: String): Coach
+}
+
+class AthleteFactory {
+  # rawPassword(newAthlete: NewAthlete): String
+  # instantiate(newAthlete: NewAthlete, passwordHash: String): Athlete
 }
 
 class RefreshToken {
@@ -357,6 +403,11 @@ class Alert {
 User <|-- Coach
 User <|-- Athlete
 User "1" -- "0..*" RefreshToken : issues >
+
+UserFactory <|-- CoachFactory
+UserFactory <|-- AthleteFactory
+CoachFactory ..> Coach : creates >
+AthleteFactory ..> Athlete : creates >
 
 Coach "0..1" o-- "0..*" Athlete : manages >
 Coach "1" -- "0..*" Routine : creates >

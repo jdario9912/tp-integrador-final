@@ -2,6 +2,7 @@ package com.gestion_deportiva.api.coach.service;
 
 import com.gestion_deportiva.api.coach.dto.CoachResponse;
 import com.gestion_deportiva.api.coach.dto.RegisterCoachRequest;
+import com.gestion_deportiva.api.coach.factory.CoachFactory;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
@@ -44,7 +45,7 @@ class CoachServiceTest {
 
     @BeforeEach
     void setUp() {
-        coachService = new CoachService(coachRepository, userRepository, passwordEncoder);
+        coachService = new CoachService(coachRepository, userRepository, new CoachFactory(passwordEncoder));
     }
 
     @Test

@@ -77,18 +77,24 @@ class RegisterCoachRequestTest {
         assertTrue(validator.validate(withOnlyRequired("ana@test.com", "p".repeat(length))).isEmpty());
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {7, 73})
-    void shouldRejectPasswordOutsideLengthLimits(int length) {
-        // Act
-        Set<ConstraintViolation<RegisterCoachRequest>> violations =
-                validator.validate(withOnlyRequired("ana@test.com", "p".repeat(length)));
+    @Test
+    void shouldAcceptMultibytePasswordAtByteLimit() {
+        // 36 caracteres, 72 bytes en UTF-8
+        assertTrue(validator.validate(withOnlyRequired("ana@test.com", "ñ".repeat(36))).isEmpty());
+    }
 
-        // Assert
-        assertEquals(1, violations.size());
-        ConstraintViolation<RegisterCoachRequest> violation = violations.iterator().next();
-        assertEquals("password", violation.getPropertyPath().toString());
-        assertEquals("La contraseña debe tener entre 8 y 72 caracteres", violation.getMessage());
+    @Test
+    void shouldRejectPasswordShorterThan8() {
+        assertPasswordViolation("p".repeat(7), "La contraseña debe tener al menos 8 caracteres");
+    }
+
+    @ParameterizedTest
+    // 73 bytes: 73 caracteres ASCII, o 72 caracteres con una ñ (BCrypt lanzaría IllegalArgumentException)
+    @ValueSource(strings = {"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+            "pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppñ"})
+    void shouldRejectPasswordOverBcryptByteLimit(String password) {
+        assertPasswordViolation(password,
+                "La contraseña no puede superar los 72 bytes (la ñ y las letras con acento cuentan doble)");
     }
 
     @Test
@@ -114,6 +120,17 @@ class RegisterCoachRequestTest {
 
     private static RegisterCoachRequest withOnlyRequired(String email, String password) {
         return new RegisterCoachRequest("Ana", "Paz", email, password, null, null, null, null);
+    }
+
+    private static void assertPasswordViolation(String password, String expectedMessage) {
+        // Act
+        Set<ConstraintViolation<RegisterCoachRequest>> violations = validator.validate(withOnlyRequired("ana@test.com", password));
+
+        // Assert
+        assertEquals(1, violations.size());
+        ConstraintViolation<RegisterCoachRequest> violation = violations.iterator().next();
+        assertEquals("password", violation.getPropertyPath().toString());
+        assertEquals(expectedMessage, violation.getMessage());
     }
 
     private static Set<String> invalidFields(RegisterCoachRequest request) {
