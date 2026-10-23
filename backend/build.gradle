@@ -53,4 +53,10 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// ./gradlew test -PexcludeE2e corre todo menos los tests e2e
+	if (project.hasProperty('excludeE2e')) {
+		filter {
+			excludeTestsMatching 'com.gestion_deportiva.api.e2e.*'
+		}
+	}
 }
