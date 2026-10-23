@@ -28,7 +28,7 @@ curl http://localhost:8080/actuator/health
 ```
 **Autenticación**
 
-Por ahora los endpoints protegidos usan HTTP Basic con el email y la contraseña de un usuario registrado (por ejemplo, un entrenador creado con `POST /api/coaches`). En Swagger UI se cargan desde el botón **Authorize** (`basicAuth`). Es provisorio hasta el login con JWT: el detalle y la guía de migración están en [docs/AUTH.md](docs/AUTH.md).
+Los endpoints protegidos requieren `Authorization: Bearer <accessToken>`. El token se obtiene con `POST /api/auth/login` usando el email y la contraseña de un usuario registrado (por ejemplo, un entrenador creado con `POST /api/coaches`). En Swagger UI se carga desde el botón **Authorize** (`bearerAuth`).
 
 **Desarrollo local (solo la base de datos en Docker)**
 

@@ -314,7 +314,7 @@ class AthleteE2ETest {
     private ResponseEntity<String> post(Object body, String email, String password) {
         return client.post()
                 .uri(PATH)
-                .headers(headers -> AuthHeaders.authenticate(headers, email, password))
+                .headers(headers -> AuthHeaders.authenticate(headers, client, email, password))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body instanceof String raw ? raw : jsonMapper.writeValueAsString(body))
                 .retrieve()
