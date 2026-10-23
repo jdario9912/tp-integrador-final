@@ -1,5 +1,7 @@
 package com.gestion_deportiva.api.common.exception;
 
+import com.gestion_deportiva.api.config.ClockConfig;
+import com.gestion_deportiva.api.config.JwtConfig;
 import com.gestion_deportiva.api.config.SecurityConfig;
 import com.gestion_deportiva.api.config.WebConfig;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
@@ -35,7 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(GlobalExceptionHandlerTest.ErrorTestController.class)
-@Import({GlobalExceptionHandlerTest.ErrorTestController.class, SecurityConfig.class, SecurityErrorHandler.class})
+// JwtConfig y ClockConfig: SecurityConfig valida los JWT con el JwtDecoder que definen
+@Import({GlobalExceptionHandlerTest.ErrorTestController.class, SecurityConfig.class, SecurityErrorHandler.class,
+        JwtConfig.class, ClockConfig.class})
 @WithMockUser
 class GlobalExceptionHandlerTest {
 
@@ -91,6 +95,25 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message").value(SecurityErrorHandler.FORBIDDEN_MESSAGE));
+    }
+
+    @Test
+    void unauthorizedExceptionReturns401WithItsOwnMessage() throws Exception {
+        mockMvc.perform(get(BASE + "/unauthorized"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Email o contraseña incorrectos"))
+                .andExpect(jsonPath("$.path").value(BASE + "/unauthorized"));
+    }
+
+    @Test
+    void forbiddenExceptionReturns403WithItsOwnMessage() throws Exception {
+        mockMvc.perform(get(BASE + "/forbidden"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("Tu cuenta está desactivada"));
     }
 
     @Test
@@ -173,6 +196,18 @@ class GlobalExceptionHandlerTest {
             }
         }
 
+        static class SampleUnauthorizedException extends UnauthorizedException {
+            SampleUnauthorizedException(String message) {
+                super(message);
+            }
+        }
+
+        static class SampleForbiddenException extends ForbiddenException {
+            SampleForbiddenException(String message) {
+                super(message);
+            }
+        }
+
         @PostMapping("/validation")
         void validation(@Valid @RequestBody SampleRequest request) {
         }
@@ -191,6 +226,16 @@ class GlobalExceptionHandlerTest {
         void dataIntegrity() {
             throw new DataIntegrityViolationException(
                     "duplicate key value violates unique constraint \"ux_users_email\"");
+        }
+
+        @GetMapping("/unauthorized")
+        void unauthorized() {
+            throw new SampleUnauthorizedException("Email o contraseña incorrectos");
+        }
+
+        @GetMapping("/forbidden")
+        void forbidden() {
+            throw new SampleForbiddenException("Tu cuenta está desactivada");
         }
 
         @GetMapping("/business-rule")

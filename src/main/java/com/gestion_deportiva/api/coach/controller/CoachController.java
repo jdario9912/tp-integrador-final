@@ -3,6 +3,7 @@ package com.gestion_deportiva.api.coach.controller;
 import com.gestion_deportiva.api.coach.dto.CoachResponse;
 import com.gestion_deportiva.api.coach.dto.RegisterCoachRequest;
 import com.gestion_deportiva.api.coach.service.CoachService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,8 +25,10 @@ public class CoachController {
     private final CoachService coachService;
 
     // El status real lo fija ResponseEntity.created; @ResponseStatus es para que Swagger documente el 201
+    // @SecurityRequirements vacío: en Swagger figura como endpoint público (sin candado)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirements
     public ResponseEntity<CoachResponse> register(@Valid @RequestBody RegisterCoachRequest request) {
         CoachResponse response = coachService.register(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
