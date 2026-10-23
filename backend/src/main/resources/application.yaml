@@ -4,6 +4,17 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+app:
+  security:
+    jwt:
+      # Sin valor por defecto: si falta JWT_SECRET la app no arranca (en dev lo define application-dev.yml).
+      # Mínimo 32 bytes; generarlo con: openssl rand -base64 32
+      secret: ${JWT_SECRET}
+      issuer: ${spring.application.name}
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+      # Se renueva en cada refresh: con 2 h sin usar la app hay que volver a iniciar sesión
+      refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:2h}
+
 server:
   port: ${SERVER_PORT:8080}
 

@@ -71,6 +71,29 @@ Borrar la base de datos y empezar de cero (elimina el volumen con los datos)
 docker compose down -v
 ```
 
+**Autenticación (JWT)**
+
+La API es stateless: cada request protegida lleva un access token JWT en el header `Authorization: Bearer <token>`. Hay una sola sesión activa por usuario: iniciar sesión en otro dispositivo cierra la anterior.
+
+| Endpoint | Acceso | Descripción |
+|---|---|---|
+| `POST /api/auth/login` | público | Recibe `email` y `password`. Devuelve `accessToken` (15 min), `refreshToken` (2 h), el rol y los datos del usuario |
+| `POST /api/auth/refresh` | público | Recibe `refreshToken`. Devuelve un par nuevo; el refresh token usado deja de servir |
+| `GET /api/auth/me` | con token | Datos del usuario autenticado |
+
+Variables de entorno:
+
+- `JWT_SECRET`: clave de firma, mínimo 32 bytes. **Obligatoria en prod** (sin ella la app no arranca). En dev hay un valor por defecto. Generarla con `openssl rand -base64 32`.
+- `JWT_ACCESS_TOKEN_TTL` (por defecto `15m`) y `JWT_REFRESH_TOKEN_TTL` (por defecto `2h`).
+
+Probar desde Swagger (http://localhost:8080/swagger-ui.html):
+
+1. Registrar un entrenador con `POST /api/coaches`.
+2. `POST /api/auth/login` con ese email y contraseña, y copiar el `accessToken`.
+3. Botón **Authorize**: pegar el `accessToken` (sin el prefijo `Bearer`).
+4. `GET /api/auth/me` devuelve los datos del usuario.
+5. `POST /api/auth/refresh` con el `refreshToken` devuelve un par nuevo; repetirlo con el refresh token viejo responde 401.
+
 **Tests**
 
 Los tests de integración y e2e usan [Testcontainers](https://testcontainers.com/): levantan su propio PostgreSQL en un contenedor temporal, así que **Docker tiene que estar corriendo**. No hace falta levantar el `docker-compose.yml` ni tocan la base de desarrollo.

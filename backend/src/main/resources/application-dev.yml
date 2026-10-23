@@ -8,6 +8,12 @@ spring:
       ddl-auto: validate
     show-sql: true
 
+app:
+  security:
+    jwt:
+      # Solo para desarrollo y tests. En prod JWT_SECRET es obligatorio
+      secret: ${JWT_SECRET:dev-only-secret-no-usar-en-produccion-0123456789}
+
 management:
   endpoint:
     health:

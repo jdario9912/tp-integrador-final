@@ -90,6 +90,43 @@ class RefreshTokenRepositoryTest extends AbstractIntegrationTest {
         assertEquals(0, remaining == null ? 0 : remaining.intValue());
     }
 
+    @Test
+    void deleteAllByUserIdDeletesOnlyThatUsersTokens() {
+        // Arrange
+        Coach ana = coachRepository.saveAndFlush(coach("ana@test.com"));
+        Coach bruno = coachRepository.saveAndFlush(coach("bruno@test.com"));
+        refreshTokenRepository.saveAndFlush(refreshToken(ana, 'a', NOW));
+        refreshTokenRepository.saveAndFlush(refreshToken(ana, 'b', NOW));
+        refreshTokenRepository.saveAndFlush(refreshToken(bruno, 'c', NOW));
+
+        // Act
+        int deleted = refreshTokenRepository.deleteAllByUserId(ana.getId());
+
+        // Assert
+        assertEquals(2, deleted);
+        assertEquals(0, countTokens(ana));
+        assertEquals(1, countTokens(bruno));
+    }
+
+    // Base del reclamo atómico del refresh: el segundo borrado del mismo token no afecta filas
+    @Test
+    void deleteOneReportsWhetherTheTokenStillExisted() {
+        // Arrange
+        Coach coach = coachRepository.saveAndFlush(coach("ana@test.com"));
+        RefreshToken token = refreshTokenRepository.saveAndFlush(refreshToken(coach, 'a', NOW));
+
+        // Act + Assert
+        assertEquals(1, refreshTokenRepository.deleteOne(token.getId()));
+        assertEquals(0, refreshTokenRepository.deleteOne(token.getId()));
+        assertEquals(0, countTokens(coach));
+    }
+
+    private int countTokens(Coach user) {
+        Integer value = jdbc.queryForObject(
+                "select count(*) from refresh_tokens where user_id = ?", Integer.class, user.getId());
+        return value == null ? 0 : value;
+    }
+
     private int countActive(Coach user) {
         Integer value = jdbc.queryForObject(
                 "select count(*) from refresh_tokens where user_id = ? and not revoked", Integer.class, user.getId());

@@ -33,6 +33,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-gestion-deportiva}
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      # ":-" usa el valor por defecto también si la variable está vacía en .env (una vacía rompería la app).
+      # La clave de desarrollo NO sirve para prod: ahí JWT_SECRET tiene que venir definida
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-no-usar-en-produccion-0123456789}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-15m}
+      JWT_REFRESH_TOKEN_TTL: ${JWT_REFRESH_TOKEN_TTL:-2h}
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
 
