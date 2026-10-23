@@ -1,8 +1,14 @@
+import { QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { queryClient } from './lib/query-client'
+import { AppRouter } from './router'
+
 function App() {
   return (
-    <h1 className="text-4xl font-semibold text-gray-900 dark:text-gray-100">
-      tpif-frontend
-    </h1>
+    <QueryClientProvider client={queryClient}>
+      <AppRouter />
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   )
 }
 

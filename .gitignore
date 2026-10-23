@@ -23,3 +23,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# notas locales
+task.md
+
+# playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# variables de entorno locales (plantilla en .env.example)
+.env
+
+# base de datos local de json-server
+mock/db.json
