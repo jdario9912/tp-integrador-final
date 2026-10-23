@@ -1,0 +1,86 @@
+name: Unit test, e2e test and build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-test:
+    name: Unit test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Dar permisos a gradlew
+        run: chmod +x gradlew
+
+      - name: Unit test
+        run: ./gradlew test -PexcludeE2e
+
+  e2e-test:
+    name: E2E test
+    needs: unit-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Dar permisos a gradlew
+        run: chmod +x gradlew
+
+      - name: E2E test
+        run: ./gradlew test --tests 'com.gestion_deportiva.api.e2e.*'
+
+  build:
+    name: Build
+    needs: e2e-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Dar permisos a gradlew
+        run: chmod +x gradlew
+
+      - name: Build
+        run: ./gradlew build -x test
+
+  docker-compose:
+    name: Docker compose up
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker compose up
+        run: docker compose up -d --build
