@@ -105,6 +105,50 @@ class AthleteTest {
     }
 
     @Test
+    void builderCreatesAthleteWithProfileActiveStatusAndNormalizedEmail() {
+        Coach coach = coach("coach@test.com");
+
+        Athlete athlete = Athlete.builder()
+                .firstName("Leo").lastName("Gil").email("  Leo@Test.com ").passwordHash("hash")
+                .coach(coach)
+                .phone("+54 11 4444-4444")
+                .sex(Sex.MALE)
+                .experienceLevel(ExperienceLevel.BEGINNER)
+                .birthDate(LocalDate.of(2000, 5, 20))
+                .heightCm(new BigDecimal("178.50"))
+                .initialWeightKg(new BigDecimal("80.25"))
+                .goal("Fuerza").injuries("Ninguna").limitations("Ninguna")
+                .availableDays((short) 3)
+                .startDate(LocalDate.of(2026, 11, 1))
+                .build();
+
+        assertEquals(Role.ATHLETE, athlete.getRole());
+        assertEquals(AthleteStatus.ACTIVE, athlete.getStatus());
+        assertSame(coach, athlete.getCoach());
+        assertEquals("leo@test.com", athlete.getEmail());
+        assertEquals("+54 11 4444-4444", athlete.getPhone());
+        assertEquals(Sex.MALE, athlete.getSex());
+        assertEquals(ExperienceLevel.BEGINNER, athlete.getExperienceLevel());
+        assertEquals(LocalDate.of(2000, 5, 20), athlete.getBirthDate());
+        assertEquals(new BigDecimal("178.50"), athlete.getHeightCm());
+        assertEquals(new BigDecimal("80.25"), athlete.getInitialWeightKg());
+        assertEquals("Fuerza", athlete.getGoal());
+        assertEquals((short) 3, athlete.getAvailableDays());
+        assertEquals(LocalDate.of(2026, 11, 1), athlete.getStartDate());
+    }
+
+    @Test
+    void builderRejectsAvailableDaysOutOfRangeAndMissingRequiredData() {
+        assertThrows(IllegalArgumentException.class, () -> Athlete.builder()
+                .firstName("Leo").lastName("Gil").email("a@test.com").passwordHash("hash")
+                .availableDays((short) 8)
+                .build());
+        assertThrows(NullPointerException.class, () -> Athlete.builder()
+                .firstName("Leo").lastName("Gil").passwordHash("hash")
+                .build());
+    }
+
+    @Test
     void ageIsEmptyWithoutBirthDate() {
         assertEquals(OptionalInt.empty(), athlete("a@test.com", null).age(LocalDate.of(2026, 10, 13)));
     }

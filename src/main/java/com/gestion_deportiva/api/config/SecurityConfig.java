@@ -24,6 +24,9 @@ public class SecurityConfig {
     // Spring Security filtra por la URL real, por eso incluye el prefijo de WebConfig
     static final String COACH_REGISTRATION_PATH = WebConfig.API_PREFIX + "/coaches";
 
+    // Alta de atletas: solo entrenadores autenticados
+    static final String ATHLETES_PATH = WebConfig.API_PREFIX + "/athletes";
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    SecurityErrorHandler securityErrorHandler) throws Exception {
@@ -37,15 +40,21 @@ public class SecurityConfig {
                         // por eso no hace falta restringir el acceso acá por perfil
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, COACH_REGISTRATION_PATH).permitAll()
+                        // hasRole("COACH") exige la authority "ROLE_COACH" de AuthenticatedUser:
+                        // sin credenciales responde 401 y un atleta autenticado recibe 403
+                        .requestMatchers(HttpMethod.POST, ATHLETES_PATH).hasRole("COACH")
 //                         Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
-                // El registro lo consume un cliente JSON sin sesión: no hay token CSRF que enviar
-                .csrf(csrf -> csrf.ignoringRequestMatchers(COACH_REGISTRATION_PATH))
+                // Clientes JSON que se autentican con el header Authorization (no con cookie de sesión):
+                // no hay token CSRF que enviar. Con JWT se deshabilita CSRF para toda la API (ver docs/AUTH.md)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(COACH_REGISTRATION_PATH, ATHLETES_PATH))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(securityErrorHandler)
                         .accessDeniedHandler(securityErrorHandler)
                 )
+                // Provisorio hasta el login JWT (ver docs/AUTH.md): httpBasic valida email y contraseña
+                // contra la tabla users mediante DatabaseUserDetailsService
                 .formLogin(Customizer.withDefaults())
                 .httpBasic(Customizer.withDefaults());
 

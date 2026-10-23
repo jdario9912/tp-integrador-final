@@ -172,6 +172,23 @@ class CoachE2ETest {
     }
 
     @Test
+    void shouldReturn400WhenPasswordExceeds72BytesBecauseOfMultibyteCharacters() {
+        // Arrange: 72 caracteres pero 73 bytes en UTF-8 por la ñ (BCrypt lanzaría IllegalArgumentException)
+        String password = "p".repeat(71) + "ñ";
+
+        // Act
+        ResponseEntity<String> response = post(Map.of("firstName", "Ana", "lastName", "Paz",
+                "email", "ana@test.com", "password", password));
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Set<String> fields = new HashSet<>();
+        json(response).get("fieldErrors").forEach(error -> fields.add(error.get("field").asString()));
+        assertEquals(Set.of("password"), fields);
+        assertEquals(0, count("users"));
+    }
+
+    @Test
     void shouldReturn400WhenJsonIsMalformed() {
         // Act
         ResponseEntity<String> response = post("{\"firstName\": \"Ana\", ");
