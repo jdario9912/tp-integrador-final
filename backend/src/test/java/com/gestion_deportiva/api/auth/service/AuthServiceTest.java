@@ -33,6 +33,7 @@ import java.util.UUID;
 import static com.gestion_deportiva.api.support.IdentityFixtures.PASSWORD_HASH;
 import static com.gestion_deportiva.api.support.IdentityFixtures.RAW_PASSWORD;
 import static com.gestion_deportiva.api.support.IdentityFixtures.coach;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -307,6 +308,34 @@ class AuthServiceTest {
         verify(refreshTokenRepository).deleteAllByUserId(coach.getId());
         verify(refreshTokenRepository, never()).save(any());
         verifyNoInteractions(jwtService);
+    }
+
+    // ---------- logout ----------
+
+    @Test
+    void shouldRevokeTheUserSessionsOnLogout() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        when(refreshTokenRepository.revokeAllByUserId(userId)).thenReturn(2);
+
+        // Act
+        authService.logout(userId);
+
+        // Assert
+        verify(refreshTokenRepository).revokeAllByUserId(userId);
+        verify(refreshTokenRepository, never()).deleteAllByUserId(any());
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldLogoutWithoutErrorWhenThereIsNothingToRevoke() {
+        // Arrange: sesión ya cerrada, token vencido o usuario sin sesiones
+        UUID userId = UUID.randomUUID();
+        when(refreshTokenRepository.revokeAllByUserId(userId)).thenReturn(0);
+
+        // Act + Assert
+        assertDoesNotThrow(() -> authService.logout(userId));
+        verify(refreshTokenRepository).revokeAllByUserId(userId);
     }
 
     // ---------- usuario actual ----------

@@ -80,6 +80,7 @@ La API es stateless: cada request protegida lleva un access token JWT en el head
 | `POST /api/auth/login` | público | Recibe `email` y `password`. Devuelve `accessToken` (15 min), `refreshToken` (2 h), el rol y los datos del usuario |
 | `POST /api/auth/refresh` | público | Recibe `refreshToken`. Devuelve un par nuevo; el refresh token usado deja de servir |
 | `GET /api/auth/me` | con token | Datos del usuario autenticado |
+| `POST /api/auth/logout` | con token | Revoca el refresh token de la sesión; responde 204, también si ya estaba cerrada |
 
 Variables de entorno:
 
@@ -93,6 +94,7 @@ Probar desde Swagger (http://localhost:8080/swagger-ui.html):
 3. Botón **Authorize**: pegar el `accessToken` (sin el prefijo `Bearer`).
 4. `GET /api/auth/me` devuelve los datos del usuario.
 5. `POST /api/auth/refresh` con el `refreshToken` devuelve un par nuevo; repetirlo con el refresh token viejo responde 401.
+6. `POST /api/auth/logout` responde 204 y revoca el refresh token. Repetirlo también responde 204; el refresh posterior responde 401.
 
 **Tests**
 
