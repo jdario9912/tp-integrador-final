@@ -12,7 +12,11 @@ const router = createBrowserRouter([
   { path: paths.login, element: <LoginPage /> },
   {
     element: <RequireAuth />,
-    children: [{ path: paths.dashboard, element: <DashboardPage /> }],
+    children: [
+      { path: paths.dashboard, element: <DashboardPage /> },
+      // páginas de un solo rol (US-04): van dentro de RequireRole, por ejemplo
+      // { element: <RequireRole roles={['COACH']} />, children: [{ path: ..., element: ... }] }
+    ],
   },
 ])
 
