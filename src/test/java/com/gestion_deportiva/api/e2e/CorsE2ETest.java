@@ -13,11 +13,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-// El preflight CORS lo resuelve Spring Security antes de la autenticación, para cualquier origen
+// El preflight CORS lo resuelve Spring Security antes de la autenticación. Solo se aceptan los orígenes de
+// app.cors.allowed-origins (US-04); en los tests es el default de dev: http://localhost:5173
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
 class CorsE2ETest {
+
+    private static final String FRONT_ORIGIN = "http://localhost:5173";
 
     @LocalServerPort
     private int port;
@@ -30,19 +34,33 @@ class CorsE2ETest {
     }
 
     @Test
-    void shouldAcceptPreflightFromAnyOrigin() {
+    void shouldAcceptPreflightFromTheFrontOrigin() {
         // Act
-        ResponseEntity<Void> response = client.method(HttpMethod.OPTIONS)
+        ResponseEntity<Void> response = preflight(FRONT_ORIGIN);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(FRONT_ORIGIN, response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    void shouldRejectPreflightFromAnyOtherOrigin() {
+        // Act
+        ResponseEntity<Void> response = preflight("http://otro-origen.com");
+
+        // Assert: sin el header el navegador bloquea la respuesta
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNull(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    private ResponseEntity<Void> preflight(String origin) {
+        return client.method(HttpMethod.OPTIONS)
                 .uri("/api/coaches")
-                .header(HttpHeaders.ORIGIN, "http://cualquier-origen.com")
+                .header(HttpHeaders.ORIGIN, origin)
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
                 .retrieve()
                 .onStatus(status -> true, (req, res) -> {
                 })
                 .toBodilessEntity();
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("*", response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 }

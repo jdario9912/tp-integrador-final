@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.config;
 
 import com.gestion_deportiva.api.common.exception.SecurityErrorHandler;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,6 +27,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(CorsProperties.class)
 public class SecurityConfig {
 
     // Endpoints públicos: registro de entrenadores (US-01), login y refresh (US-02).
@@ -39,8 +41,11 @@ public class SecurityConfig {
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, LOGIN_PATH),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, REFRESH_PATH));
 
-    // Alta de atletas: solo entrenadores autenticados
+    // Endpoints con access token (US-04): cada uno declara acá qué rol lo puede usar
+    static final String ME_PATH = WebConfig.API_PREFIX + "/auth/me";
+    static final String LOGOUT_PATH = WebConfig.API_PREFIX + "/auth/logout";
     static final String ATHLETES_PATH = WebConfig.API_PREFIX + "/athletes";
+    static final String ATHLETE_PATH = ATHLETES_PATH + "/{id}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -56,10 +61,17 @@ public class SecurityConfig {
                         // por eso no hace falta restringir el acceso acá por perfil
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Matriz rol × endpoint (US-04). La regla de rol vive acá y no en @PreAuthorize porque
+                        // corre antes de leer el body: un rol equivocado recibe 403 aunque el body sea inválido.
                         // hasRole("COACH") exige la authority ROLE_COACH (claim "role" del JWT, ver JwtConfig):
-                        // sin token responde 401 y un atleta autenticado recibe 403
+                        // sin token responde 401 y con el rol equivocado 403.
+                        // Cada endpoint tiene además su fila en RoleEndpointMatrixE2ETest (el test falla si falta).
+                        .requestMatchers(HttpMethod.GET, ME_PATH).authenticated()
+                        .requestMatchers(HttpMethod.POST, LOGOUT_PATH).authenticated()
                         .requestMatchers(HttpMethod.POST, ATHLETES_PATH).hasRole("COACH")
-                        // Todo lo demás requiere un access token válido
+                        // Los dos roles; qué atleta puede ver cada uno lo decide AthleteAccessGuard (pertenencia)
+                        .requestMatchers(HttpMethod.GET, ATHLETE_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )
                 // API stateless: el access token viaja en el header Authorization, sin sesión ni cookies,
@@ -89,12 +101,12 @@ public class SecurityConfig {
         return request -> PUBLIC_ENDPOINTS.matches(request) ? null : delegate.resolve(request);
     }
 
-    // Por ahora se acepta cualquier origen; restringir a los dominios del front antes de prod.
-    // Sin allowCredentials: con "*" el navegador no envía cookies (un token en Authorization sí funciona)
+    // Solo los orígenes del front (CORS_ALLOWED_ORIGINS). Un preflight de otro origen recibe 403 y el
+    // navegador bloquea la respuesta. Sin allowCredentials: el token viaja en Authorization, no en cookies
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(CorsProperties corsProperties) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("*"));
+        config.setAllowedOrigins(corsProperties.allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);
