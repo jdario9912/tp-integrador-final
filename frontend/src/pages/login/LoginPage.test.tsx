@@ -7,10 +7,10 @@ import { paths } from '../../router/paths'
 import { session } from '../../test/auth-fixtures'
 import { LoginPage } from './LoginPage'
 
-const renderAtLogin = () =>
+const renderAtLogin = (state?: unknown) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={[paths.login]}>
+      <MemoryRouter initialEntries={[{ pathname: paths.login, state }]}>
         <Routes>
           <Route path={paths.login} element={<LoginPage />} />
           <Route path={paths.dashboard} element={<p>pantalla dashboard</p>} />
@@ -30,6 +30,8 @@ describe('LoginPage', () => {
       'href',
       paths.registerCoach,
     )
+    // sin un logout fallido no hay aviso
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('con sesión va directo al dashboard', () => {
@@ -38,5 +40,13 @@ describe('LoginPage', () => {
     renderAtLogin()
 
     expect(screen.getByText('pantalla dashboard')).toBeInTheDocument()
+  })
+
+  it('muestra el aviso solo si el logout no se pudo confirmar', () => {
+    renderAtLogin({ logoutFailed: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Cerraste sesión en este dispositivo, pero no pudimos confirmarlo con el servidor.',
+    )
   })
 })
