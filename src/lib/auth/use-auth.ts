@@ -9,7 +9,7 @@ import { toSession, type AuthResponse } from './types'
 
 const signIn = (response: AuthResponse) => saveSession(toSession(response))
 
-// solo local: el cierre de sesión contra el backend (revocar el refresh token) es la US-03
+// solo local: el logout contra el backend (revocar el refresh token) lo hace useLogout (US-03)
 const signOut = () => clearSession()
 
 export function useAuth() {

@@ -13,3 +13,5 @@ export {
 } from './types'
 export { useAuth } from './use-auth'
 export { useCurrentUser } from './use-current-user'
+export { logout } from './logout'
+export { useLogout } from './use-logout'

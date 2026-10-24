@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { saveSession } from '../../lib/auth'
 import { getCurrentUser } from '../../lib/auth/get-current-user'
@@ -17,7 +18,9 @@ const renderPage = () =>
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <DashboardPage />
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <DashboardPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 

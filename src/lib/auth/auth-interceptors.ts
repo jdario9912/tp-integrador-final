@@ -10,7 +10,9 @@ export const REFRESH_URL = '/auth/refresh'
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
-// login y refresh no llevan access token y su 401 no dispara un refresh
+// login y refresh no llevan access token y su 401 no dispara un refresh.
+// /auth/logout queda fuera a propósito: necesita el access token y, si venció, el
+// interceptor tiene que refrescar y reintentar el logout con el token nuevo.
 const isAuthRequest = (config: InternalAxiosRequestConfig) =>
   config.url === LOGIN_URL || config.url === REFRESH_URL
 
