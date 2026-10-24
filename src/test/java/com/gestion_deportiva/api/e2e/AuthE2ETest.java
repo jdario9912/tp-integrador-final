@@ -57,6 +57,7 @@ class AuthE2ETest {
     private static final String LOGIN = "/api/auth/login";
     private static final String REFRESH = "/api/auth/refresh";
     private static final String ME = "/api/auth/me";
+    private static final String LOGOUT = "/api/auth/logout";
 
     @LocalServerPort
     private int port;
@@ -347,6 +348,102 @@ class AuthE2ETest {
         assertEquals(HttpStatus.UNAUTHORIZED, me(accessToken).getStatusCode());
     }
 
+    // ---------- logout ----------
+
+    @Test
+    void shouldLogoutRevokingTheRefreshTokenOfTheSession() {
+        // Arrange
+        Coach ana = saveCoach("ana@test.com", true);
+        JsonNode session = json(login("ana@test.com", RAW_PASSWORD));
+        String accessToken = session.get("accessToken").asString();
+        String refreshToken = session.get("refreshToken").asString();
+
+        // Act
+        ResponseEntity<String> response = logout(accessToken);
+
+        // Assert: 204 sin contenido y el token queda revocado en la base
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertTrue(response.getBody() == null || response.getBody().isEmpty());
+        assertEquals(Boolean.TRUE, revokedFlag(ana));
+
+        // Assert: el refresh token revocado ya no sirve
+        ResponseEntity<String> refreshed = refresh(refreshToken);
+        assertEquals(HttpStatus.UNAUTHORIZED, refreshed.getStatusCode());
+        assertEquals(SessionExpiredException.MESSAGE, json(refreshed).get("message").asString());
+    }
+
+    @Test
+    void shouldReturn204WhenLoggingOutTwice() {
+        // Arrange
+        saveCoach("ana@test.com", true);
+        String accessToken = json(login("ana@test.com", RAW_PASSWORD)).get("accessToken").asString();
+
+        // Act + Assert: el access token sigue vigente y el logout es idempotente
+        assertEquals(HttpStatus.NO_CONTENT, logout(accessToken).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, logout(accessToken).getStatusCode());
+    }
+
+    @Test
+    void shouldReturn401WhenLoggingOutWithoutAValidAccessToken() {
+        // Arrange
+        Coach ana = saveCoach("ana@test.com", true);
+        String refreshToken = json(login("ana@test.com", RAW_PASSWORD)).get("refreshToken").asString();
+        String expiredAccessToken = issueAccessToken(ana, Instant.now().minus(Duration.ofHours(1)), jwtEncoder);
+
+        // Act
+        ResponseEntity<String> withoutToken = logout(null);
+        ResponseEntity<String> withExpiredToken = logout(expiredAccessToken);
+
+        // Assert: formato estándar de 401
+        for (ResponseEntity<String> response : List.of(withoutToken, withExpiredToken)) {
+            assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+            JsonNode body = json(response);
+            assertEquals(401, body.get("status").asInt());
+            assertEquals("Unauthorized", body.get("error").asString());
+            assertEquals("Debe iniciar sesión para acceder a este recurso", body.get("message").asString());
+            assertEquals(LOGOUT, body.get("path").asString());
+        }
+
+        // Assert: sin autenticación no se revocó nada
+        assertEquals(Boolean.FALSE, revokedFlag(ana));
+        assertEquals(HttpStatus.OK, refresh(refreshToken).getStatusCode());
+    }
+
+    @Test
+    void shouldOnlyRevokeTheSessionOfTheAuthenticatedUser() {
+        // Arrange: dos usuarios con una sesión activa cada uno
+        saveCoach("ana@test.com", true);
+        saveCoach("bruno@test.com", true);
+        JsonNode anaSession = json(login("ana@test.com", RAW_PASSWORD));
+        String brunoRefreshToken = json(login("bruno@test.com", RAW_PASSWORD)).get("refreshToken").asString();
+
+        // Act
+        assertEquals(HttpStatus.NO_CONTENT,
+                logout(anaSession.get("accessToken").asString()).getStatusCode());
+
+        // Assert
+        assertEquals(HttpStatus.OK, refresh(brunoRefreshToken).getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED,
+                refresh(anaSession.get("refreshToken").asString()).getStatusCode());
+    }
+
+    @Test
+    void shouldLoginAgainAfterLogout() {
+        // Arrange
+        saveCoach("ana@test.com", true);
+        String accessToken = json(login("ana@test.com", RAW_PASSWORD)).get("accessToken").asString();
+        logout(accessToken);
+
+        // Act
+        ResponseEntity<String> response = login("ana@test.com", RAW_PASSWORD);
+
+        // Assert: nueva sesión válida y una sola fila (el login borra la revocada anterior)
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, countTokens());
+        assertEquals(HttpStatus.OK,
+                refresh(json(response).get("refreshToken").asString()).getStatusCode());
+    }
+
     // ---------- helpers ----------
 
     private Coach saveCoach(String email, boolean active) {
@@ -372,6 +469,17 @@ class AuthE2ETest {
     private ResponseEntity<String> me(String accessToken) {
         return client.get()
                 .uri(ME)
+                .headers(headers -> bearer(headers, accessToken))
+                .retrieve()
+                .onStatus(status -> true, (req, res) -> {
+                })
+                .toEntity(String.class);
+    }
+
+    // POST sin body: el logout se identifica solo con el access token
+    private ResponseEntity<String> logout(String accessToken) {
+        return client.post()
+                .uri(LOGOUT)
                 .headers(headers -> bearer(headers, accessToken))
                 .retrieve()
                 .onStatus(status -> true, (req, res) -> {
@@ -409,5 +517,10 @@ class AuthE2ETest {
     private int countTokens() {
         Integer count = jdbcTemplate.queryForObject("select count(*) from refresh_tokens", Integer.class);
         return count == null ? 0 : count;
+    }
+
+    private Boolean revokedFlag(Coach coach) {
+        return jdbcTemplate.queryForObject(
+                "select revoked from refresh_tokens where user_id = ?", Boolean.class, coach.getId());
     }
 }

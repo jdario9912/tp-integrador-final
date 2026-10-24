@@ -24,7 +24,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-// Login y refresh (US-02). Política: una sola sesión activa por usuario; cada login o refresh
+// Login, refresh y logout (US-02, US-03). Política: una sola sesión activa por usuario; cada login o refresh
 // borra los refresh tokens anteriores del usuario y emite uno nuevo.
 @Service
 public class AuthService {
@@ -121,6 +121,14 @@ public class AuthService {
         AuthResponse response = startSession(user, now);
         log.info("Refresh exitoso del usuario {}", user.getId());
         return response;
+    }
+
+    // Revoca en vez de borrar: la columna revoked queda como registro de la sesión cerrada.
+    // Es idempotente: si no hay tokens activos, revoca 0 filas y no falla.
+    @Transactional
+    public void logout(UUID userId) {
+        int revoked = refreshTokenRepository.revokeAllByUserId(userId);
+        log.info("Logout del usuario {}: {} sesiones revocadas", userId, revoked);
     }
 
     @Transactional(readOnly = true)

@@ -70,6 +70,18 @@ class RefreshTokenRepositoryTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void revokeAllByUserIdIsIdempotent() {
+        // Arrange: el logout se puede repetir sin efectos adicionales
+        Coach coach = coachRepository.saveAndFlush(coach("ana@test.com"));
+        refreshTokenRepository.saveAndFlush(refreshToken(coach, 'a', NOW));
+
+        // Act + Assert
+        assertEquals(1, refreshTokenRepository.revokeAllByUserId(coach.getId()));
+        assertEquals(0, refreshTokenRepository.revokeAllByUserId(coach.getId()));
+        assertEquals(0, countActive(coach));
+    }
+
+    @Test
     void expirationBeforeIssueIsRejectedByTheDatabase() {
         Coach coach = coachRepository.saveAndFlush(coach("ana@test.com"));
 
