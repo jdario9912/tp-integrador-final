@@ -1,10 +1,15 @@
 import axios, { type AxiosRequestConfig } from 'axios'
+// import directo (no desde lib/auth): el index de auth usa este cliente y se generaría un ciclo
+import { installAuthInterceptors } from '../auth/auth-interceptors'
 import { ApiError, type ApiErrorResponse } from './api-error'
 
 export const httpClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: { 'Content-Type': 'application/json' },
 })
+
+// antes que el interceptor de errores: el refresh necesita el error de axios original
+installAuthInterceptors(httpClient)
 
 // normaliza cualquier error de axios a ApiError para que hooks y formularios manejen un único tipo
 httpClient.interceptors.response.use(undefined, (error: unknown) => {

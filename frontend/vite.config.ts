@@ -11,8 +11,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     server: {
-      // el backend responde 401 al preflight OPTIONS sin cabeceras CORS;
-      // con el proxy el navegador ve un único origen y no hay preflight
+      // con el proxy el navegador ve un único origen: en desarrollo no hay preflight
+      // ni hace falta CORS (en producción VITE_API_URL apunta directo al backend)
       proxy: {
         '/api': {
           target: env.API_PROXY_TARGET || 'http://localhost:3001',

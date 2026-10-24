@@ -3,6 +3,8 @@ import { paths } from '../src/router/paths.ts'
 import { E2E_API_URL } from './config.ts'
 
 const COACHES_URL = `${E2E_API_URL}/coaches`
+const LOGIN_URL = `${E2E_API_URL}/auth/login`
+const ME_URL = `${E2E_API_URL}/auth/me`
 
 const createdCoach = {
   id: 'f14b8801-422f-4411-bdf4-e7a4f3ac3c4c',
@@ -26,7 +28,33 @@ const fillRequiredFields = async (page: Page) => {
 const submitButton = (page: Page) =>
   page.getByRole('button', { name: 'Registrarme' })
 
+// después de registrarse el front inicia sesión solo con las mismas credenciales
+const loggedCoach = {
+  id: createdCoach.id,
+  firstName: createdCoach.firstName,
+  lastName: createdCoach.lastName,
+  email: createdCoach.email,
+  role: 'COACH',
+}
+
 test.beforeEach(async ({ page }) => {
+  await page.route(LOGIN_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        accessToken: 'access-1',
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        refreshToken: 'refresh-1',
+        refreshExpiresIn: 7200,
+        role: 'COACH',
+        user: loggedCoach,
+      },
+    }),
+  )
+  await page.route(ME_URL, (route) =>
+    route.fulfill({ status: 200, json: loggedCoach }),
+  )
   await page.goto(paths.registerCoach)
 })
 
@@ -56,7 +84,7 @@ test('registra un entrenador con los datos ingresados', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
-test('redirige al dashboard después de registrar el entrenador', async ({
+test('después de registrarse inicia sesión y entra al dashboard', async ({
   page,
 }) => {
   await page.route(COACHES_URL, (route) =>
@@ -64,10 +92,17 @@ test('redirige al dashboard después de registrar el entrenador', async ({
   )
 
   await fillRequiredFields(page)
+  const loginPromise = page.waitForRequest(LOGIN_URL)
   await submitButton(page).click()
+  const login = await loginPromise
 
+  expect(login.postDataJSON()).toEqual({
+    email: 'ana@example.com',
+    password: '12345678',
+  })
   await expect(page).toHaveURL(paths.dashboard)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await expect(page.getByText('Panel del entrenador')).toBeVisible()
 })
 
 test('no envía el formulario si faltan campos obligatorios', async ({
