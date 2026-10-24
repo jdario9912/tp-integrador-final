@@ -27,7 +27,7 @@ echo '{ "coaches": [] }' > mock/db.json
 pnpm mock:api   # json-server en :3001, en otra terminal que pnpm dev
 ```
 
-json-server no valida datos ni devuelve los errores del backend (400, 409): sirve solo para desarrollo.
+json-server no valida datos ni devuelve los errores del backend (400, 409): sirve solo para desarrollo. Tampoco autentica: para probar el login hay que usar el backend real (`API_PROXY_TARGET=http://localhost:8080/api`).
 
 ### Tests E2E
 
@@ -42,7 +42,7 @@ Las variables de entorno van en `.env` (ignorado por git); `.env.example` es la 
   - json-server (por defecto): `http://localhost:3001`
   - backend real: URL del backend incluyendo el prefijo `/api`
 
-Se usa proxy porque el backend responde 401 al preflight `OPTIONS` sin cabeceras CORS; así el navegador ve un único origen. Vite lee estas variables solo al arrancar: reiniciá `pnpm dev` después de cambiarlas.
+Con el proxy el navegador ve un único origen y no hace falta CORS en desarrollo. En producción no hay proxy de Vite: `VITE_API_URL` tiene que ser la URL absoluta del backend (que responde con CORS). Vite lee estas variables solo al arrancar: reiniciá `pnpm dev` después de cambiarlas.
 
 ## Arquitectura
 
@@ -67,11 +67,19 @@ export const useCreateCoach = () => useMutation({ mutationFn: createCoach })
 
 Formularios: TanStack Form. Rutas: React Router, definidas en `src/router/AppRouter.tsx`. `src/App.tsx` solo compone los providers globales.
 
+### Autenticación
+
+- **Sesión** (`src/lib/auth`): el login (`POST /auth/login`) devuelve un access token (15 min) y un refresh token (2 h). Se guardan en `localStorage` (`tpif.session`) junto con el usuario y su rol. Los componentes la leen con `useAuth()`; no hace falta ningún Provider.
+- **Interceptores**: el cliente REST agrega `Authorization: Bearer <accessToken>` a cada request. Ante un 401 hace un único refresh (`POST /auth/refresh`, compartido entre requests simultáneos porque el backend rota el refresh token) y reintenta una vez. Si el refresh falla, borra la sesión y `RequireAuth` lleva al login.
+- **Rutas protegidas**: van dentro de `<RequireAuth />` en `AppRouter`. `/dashboard` es una sola ruta para los dos roles y muestra el panel según `user.role`.
+- **Datos del usuario**: `useCurrentUser()` (`GET /auth/me`) para mostrar datos frescos; `useAuth().user` tiene los de la sesión.
+- Después de registrarse, el front inicia sesión con las mismas credenciales y entra al dashboard.
+
 ### Estructura
 
 ```
 src/
-  lib/          utilidades transversales (cn, cliente REST, query client)
+  lib/          utilidades transversales (cn, cliente REST, query client, sesión, validaciones)
   ui/           componentes de UI comunes (botones, inputs, ...)
   router/       declaración de rutas (AppRouter)
   pages/

@@ -5,4 +5,6 @@ import { afterEach } from 'vitest'
 // sin globals de vitest, testing-library no limpia el DOM automáticamente
 afterEach(() => {
   cleanup()
+  // la sesión vive en localStorage: cada test arranca sin sesión
+  localStorage.clear()
 })

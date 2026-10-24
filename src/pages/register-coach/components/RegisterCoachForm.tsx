@@ -1,20 +1,18 @@
 import { useForm } from '@tanstack/react-form'
 import { useState, type SubmitEventHandler } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { isApiError } from '../../../lib/api'
+import { validateEmail, validateRequired } from '../../../lib/validation'
+import { paths } from '../../../router/paths'
 import { PrimaryButton } from '../../../ui/button'
 import { FormField, getFieldErrorId } from '../../../ui/form-field'
 import { TextInput } from '../../../ui/input'
 import { TextArea } from '../../../ui/textarea'
+import { useLogin } from '../../login/hooks/use-login'
 import { useCreateCoach } from '../hooks/use-create-coach'
 import { toCreateCoachInput } from '../to-create-coach-input'
 import type { RegisterCoachFormValues } from '../types'
-import {
-  validateEmail,
-  validatePassword,
-  validateRequired,
-} from '../validation'
-import { useNavigate } from 'react-router-dom'
-import { paths } from '../../../router/paths'
+import { validatePassword } from '../validation'
 
 type FieldName = keyof RegisterCoachFormValues
 
@@ -74,16 +72,28 @@ const textFields: {
 
 export function RegisterCoachForm() {
   const createCoach = useCreateCoach()
+  const login = useLogin()
   const [formError, setFormError] = useState<string>()
-  const navigator = useNavigate()
+  const navigate = useNavigate()
+
+  // después de registrarse inicia sesión con los mismos datos y entra al dashboard
+  const signInAfterRegister = async (email: string, password: string) => {
+    try {
+      await login.mutateAsync({ email, password })
+      navigate(paths.dashboard)
+    } catch {
+      // la cuenta ya existe: si el login automático falla, que ingrese a mano
+      navigate(paths.login)
+    }
+  }
 
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value, formApi }) => {
       setFormError(undefined)
+      const input = toCreateCoachInput(value)
       try {
-        await createCoach.mutateAsync(toCreateCoachInput(value))
-        navigator(paths.dashboard)
+        await createCoach.mutateAsync(input)
       } catch (error) {
         if (!isApiError(error)) {
           setFormError('Ocurrió un error inesperado. Intentá nuevamente.')
@@ -105,9 +115,15 @@ export function RegisterCoachForm() {
         if (error.fieldErrors.length === 0 || unmappedErrors.length > 0) {
           setFormError(error.message)
         }
+        return
       }
+
+      await signInAfterRegister(input.email, input.password)
     },
   })
+
+  // el botón sigue deshabilitado mientras corre el login automático
+  const isSubmitting = createCoach.isPending || login.isPending
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault()
@@ -181,8 +197,8 @@ export function RegisterCoachForm() {
         </p>
       )}
 
-      <PrimaryButton type="submit" disabled={createCoach.isPending}>
-        {createCoach.isPending ? 'Registrando...' : 'Registrarme'}
+      <PrimaryButton type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Registrando...' : 'Registrarme'}
       </PrimaryButton>
     </form>
   )
