@@ -2,6 +2,8 @@ package com.gestion_deportiva.api.e2e;
 
 import com.gestion_deportiva.api.TestcontainersConfiguration;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
+import com.gestion_deportiva.api.athlete.exception.AthleteAccessDeniedException;
+import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.athlete.model.enums.AthleteStatus;
 import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.model.Coach;
@@ -27,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.gestion_deportiva.api.support.IdentityFixtures.RAW_PASSWORD;
 import static com.gestion_deportiva.api.support.IdentityFixtures.createAthleteRequest;
@@ -307,6 +310,112 @@ class AthleteE2ETest {
         assertEquals(0, count("athletes"));
     }
 
+    // ---------- GET /api/athletes/{id} (US-04: pertenencia) ----------
+
+    @Test
+    void shouldReturnTheAthleteToItsCoach() {
+        // Arrange
+        Athlete leo = saveAthlete("leo@test.com", coach);
+
+        // Act
+        ResponseEntity<String> response = get(leo.getId().toString(), COACH_EMAIL);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        JsonNode body = json(response);
+        assertEquals(leo.getId().toString(), body.get("id").asString());
+        assertEquals(coach.getId().toString(), body.get("coachId").asString());
+        assertEquals("leo@test.com", body.get("email").asString());
+        assertFalse(body.has("passwordHash"));
+    }
+
+    @Test
+    void shouldReturnTheAthleteToHimself() {
+        // Arrange
+        Athlete leo = saveAthlete("leo@test.com", coach);
+
+        // Act
+        ResponseEntity<String> response = get(leo.getId().toString(), "leo@test.com");
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("leo@test.com", json(response).get("email").asString());
+    }
+
+    @Test
+    void shouldReturn403WhenTheAthleteBelongsToAnotherCoach() {
+        // Arrange: Bruno es otro entrenador
+        Athlete leo = saveAthlete("leo@test.com", coach);
+        saveCoach("bruno@test.com");
+
+        // Act
+        ResponseEntity<String> response = get(leo.getId().toString(), "bruno@test.com");
+
+        // Assert
+        assertForbidden(response, leo);
+    }
+
+    @Test
+    void shouldReturn403WhenAnAthleteAsksForAnotherAthlete() {
+        // Arrange: Mía es otra atleta del mismo entrenador
+        Athlete leo = saveAthlete("leo@test.com", coach);
+        saveAthlete("mia@test.com", coach);
+
+        // Act
+        ResponseEntity<String> response = get(leo.getId().toString(), "mia@test.com");
+
+        // Assert
+        assertForbidden(response, leo);
+    }
+
+    @Test
+    void shouldReturn403ToTheFormerCoachOfAnUnlinkedAthleteButNotToTheAthlete() {
+        // Arrange: atleta desvinculado (US-07), sin entrenador
+        Athlete leo = saveAthlete("leo@test.com", null);
+
+        // Act + Assert
+        assertForbidden(get(leo.getId().toString(), COACH_EMAIL), leo);
+        assertEquals(HttpStatus.OK, get(leo.getId().toString(), "leo@test.com").getStatusCode());
+    }
+
+    @Test
+    void shouldReturn404WhenTheAthleteDoesNotExist() {
+        // Arrange
+        UUID missing = UUID.randomUUID();
+
+        // Act
+        ResponseEntity<String> response = get(missing.toString(), COACH_EMAIL);
+
+        // Assert
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        JsonNode body = json(response);
+        assertEquals(404, body.get("status").asInt());
+        assertEquals("No existe el atleta con id " + missing, body.get("message").asString());
+    }
+
+    @Test
+    void shouldReturn400WhenTheIdIsNotAUuid() {
+        // Act
+        ResponseEntity<String> response = get("no-es-un-uuid", COACH_EMAIL);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(400, json(response).get("status").asInt());
+    }
+
+    @Test
+    void shouldReturn401WhenGettingAnAthleteWithoutCredentials() {
+        // Arrange
+        Athlete leo = saveAthlete("leo@test.com", coach);
+
+        // Act
+        ResponseEntity<String> response = get(leo.getId().toString(), null);
+
+        // Assert
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Debe iniciar sesión para acceder a este recurso", json(response).get("message").asString());
+    }
+
     private ResponseEntity<String> postAsCoach(Object body) {
         return post(body, COACH_EMAIL, RAW_PASSWORD);
     }
@@ -322,6 +431,41 @@ class AthleteE2ETest {
                 .onStatus(status -> true, (req, res) -> {
                 })
                 .toEntity(String.class);
+    }
+
+    // GET /api/athletes/{id} con la sesión de ese email (null = sin token)
+    private ResponseEntity<String> get(String id, String email) {
+        return client.get()
+                .uri(PATH + "/" + id)
+                .headers(headers -> {
+                    if (email != null) {
+                        AuthHeaders.authenticate(headers, client, email, RAW_PASSWORD);
+                    }
+                })
+                .retrieve()
+                .onStatus(status -> true, (req, res) -> {
+                })
+                .toEntity(String.class);
+    }
+
+    private Coach saveCoach(String email) {
+        return coachRepository.saveAndFlush(new Coach("Bruno", "Sosa", email, passwordEncoder.encode(RAW_PASSWORD)));
+    }
+
+    // owner null = atleta desvinculado
+    private Athlete saveAthlete(String email, Coach owner) {
+        return athleteRepository.saveAndFlush(
+                new Athlete("Leo", "Gil", email, passwordEncoder.encode(RAW_PASSWORD), owner));
+    }
+
+    // 403 con el formato estándar y sin datos del atleta pedido
+    private void assertForbidden(ResponseEntity<String> response, Athlete requested) {
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        JsonNode body = json(response);
+        assertEquals(403, body.get("status").asInt());
+        assertEquals(AthleteAccessDeniedException.MESSAGE, body.get("message").asString());
+        assertEquals(PATH + "/" + requested.getId(), body.get("path").asString());
+        assertFalse(response.getBody().contains(requested.getEmail()));
     }
 
     private void assertUnauthorized(ResponseEntity<String> response) {

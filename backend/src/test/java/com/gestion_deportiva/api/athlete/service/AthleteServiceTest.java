@@ -2,6 +2,7 @@ package com.gestion_deportiva.api.athlete.service;
 
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
+import com.gestion_deportiva.api.athlete.exception.AthleteAccessDeniedException;
 import com.gestion_deportiva.api.athlete.factory.AthleteFactory;
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.athlete.model.enums.AthleteStatus;
@@ -9,6 +10,7 @@ import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.exception.CoachNotFoundException;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
+import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
 import com.gestion_deportiva.api.user.model.enums.Role;
 import com.gestion_deportiva.api.user.repository.UserRepository;
@@ -26,6 +28,7 @@ import java.util.UUID;
 
 import static com.gestion_deportiva.api.support.IdentityFixtures.PASSWORD_HASH;
 import static com.gestion_deportiva.api.support.IdentityFixtures.RAW_PASSWORD;
+import static com.gestion_deportiva.api.support.IdentityFixtures.athlete;
 import static com.gestion_deportiva.api.support.IdentityFixtures.coach;
 import static com.gestion_deportiva.api.support.IdentityFixtures.createAthleteRequest;
 import static com.gestion_deportiva.api.support.IdentityFixtures.createAthleteRequestWithOnlyRequired;
@@ -34,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -56,6 +60,9 @@ class AthleteServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AthleteAccessGuard athleteAccessGuard;
+
     private AthleteService athleteService;
 
     private Coach coach;
@@ -63,7 +70,7 @@ class AthleteServiceTest {
     @BeforeEach
     void setUp() {
         athleteService = new AthleteService(athleteRepository, coachRepository, userRepository,
-                new AthleteFactory(passwordEncoder));
+                new AthleteFactory(passwordEncoder), athleteAccessGuard);
         coach = coach("ana@test.com");
     }
 
@@ -193,6 +200,36 @@ class AthleteServiceTest {
 
         // Assert
         assertSame(cause, ex);
+    }
+
+    // ---------- consulta por id (US-04) ----------
+
+    @Test
+    void shouldReturnTheAthleteWhenTheCallerCanAccessIt() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        AuthenticatedUser caller = new AuthenticatedUser(COACH_ID, Role.COACH);
+        when(athleteRepository.findById(athleteId)).thenReturn(Optional.of(athlete("leo@test.com", coach)));
+
+        // Act
+        AthleteResponse response = athleteService.findById(caller, athleteId);
+
+        // Assert
+        verify(athleteAccessGuard).verifyAccess(caller, athleteId);
+        assertEquals("leo@test.com", response.email());
+        assertEquals("Leo", response.firstName());
+    }
+
+    @Test
+    void shouldNotReadTheAthleteWhenTheGuardDeniesAccess() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        AuthenticatedUser caller = new AuthenticatedUser(UUID.randomUUID(), Role.COACH);
+        doThrow(new AthleteAccessDeniedException()).when(athleteAccessGuard).verifyAccess(caller, athleteId);
+
+        // Act + Assert
+        assertThrows(AthleteAccessDeniedException.class, () -> athleteService.findById(caller, athleteId));
+        verify(athleteRepository, never()).findById(any());
     }
 
     private void givenCoachExists() {

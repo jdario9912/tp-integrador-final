@@ -86,6 +86,7 @@ Variables de entorno:
 
 - `JWT_SECRET`: clave de firma, mínimo 32 bytes. **Obligatoria en prod** (sin ella la app no arranca). En dev hay un valor por defecto. Generarla con `openssl rand -base64 32`.
 - `JWT_ACCESS_TOKEN_TTL` (por defecto `15m`) y `JWT_REFRESH_TOKEN_TTL` (por defecto `2h`).
+- `CORS_ALLOWED_ORIGINS`: orígenes del front que pueden llamar a la API desde el navegador, separados por coma y sin barra final (ej. `https://app.ejemplo.com`). **Obligatoria en prod**; en dev, `http://localhost:5173`. Un origen que no está en la lista recibe 403.
 
 Probar desde Swagger (http://localhost:8080/swagger-ui.html):
 
@@ -95,6 +96,23 @@ Probar desde Swagger (http://localhost:8080/swagger-ui.html):
 4. `GET /api/auth/me` devuelve los datos del usuario.
 5. `POST /api/auth/refresh` con el `refreshToken` devuelve un par nuevo; repetirlo con el refresh token viejo responde 401.
 6. `POST /api/auth/logout` responde 204 y revoca el refresh token. Repetirlo también responde 204; el refresh posterior responde 401.
+
+**Roles y pertenencia**
+
+Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token responde 401 y con un rol que no corresponde, 403. Además, los datos de un atleta pasan por `AthleteAccessGuard`: un entrenador solo accede a sus atletas y un atleta solo a sus propios datos (si no, 403; si el atleta no existe, 404).
+
+| Endpoint | Sin token | COACH | ATHLETE |
+|---|---|---|---|
+| `POST /api/coaches` · `POST /api/auth/login` · `POST /api/auth/refresh` | público | público | público |
+| `GET /api/auth/me` · `POST /api/auth/logout` | 401 | ✓ | ✓ |
+| `POST /api/athletes` | 401 | ✓ | 403 |
+| `GET /api/athletes/{id}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
+
+Para agregar un endpoint:
+
+1. Si no es para los dos roles, su regla en `SecurityConfig` (`hasRole("COACH")` o `hasRole("ATHLETE")`). La regla corre antes de leer el body: un rol equivocado recibe 403 aunque el body sea inválido.
+2. Si toca datos de un atleta, `AthleteAccessGuard.verifyAccess(user, athleteId)` en el service (no solo en el controller). `AuthenticatedUser.from(jwt)` arma el usuario desde el token.
+3. Su fila en `RoleEndpointMatrixE2ETest`: el test falla si hay un endpoint sin fila.
 
 **Tests**
 

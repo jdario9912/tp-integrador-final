@@ -13,6 +13,9 @@ app:
     jwt:
       # Solo para desarrollo y tests. En prod JWT_SECRET es obligatorio
       secret: ${JWT_SECRET:dev-only-secret-no-usar-en-produccion-0123456789}
+  cors:
+    # El front de `pnpm dev`. Con el proxy de Vite no hace falta, pero sí si VITE_API_URL apunta directo a la API
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 management:
   endpoint:
