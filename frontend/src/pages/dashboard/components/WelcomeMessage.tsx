@@ -6,5 +6,5 @@ export function WelcomeMessage() {
   const { data: currentUser } = useCurrentUser()
   const firstName = currentUser?.firstName ?? user?.firstName
 
-  return <p className="text-lg">Hola, {firstName}</p>
+  return <p>Hola, {firstName}</p>
 }

@@ -5,6 +5,7 @@ import { isApiError } from '../../../lib/api'
 import { validateEmail, validateRequired } from '../../../lib/validation'
 import { paths } from '../../../router/paths'
 import { PrimaryButton } from '../../../ui/button'
+import { Callout } from '../../../ui/callout'
 import { FormField, getFieldErrorId } from '../../../ui/form-field'
 import { TextInput } from '../../../ui/input'
 import { TextArea } from '../../../ui/textarea'
@@ -37,6 +38,8 @@ const textFields: {
   label: string
   type?: string
   autoComplete?: string
+  // ocupa las dos columnas en pantallas anchas
+  wide?: boolean
   validate?: (field: { value: string }) => string | undefined
 }[] = [
   {
@@ -56,6 +59,7 @@ const textFields: {
     label: 'Email',
     type: 'email',
     autoComplete: 'email',
+    wide: true,
     validate: validateEmail,
   },
   {
@@ -63,11 +67,12 @@ const textFields: {
     label: 'Contraseña',
     type: 'password',
     autoComplete: 'new-password',
+    wide: true,
     validate: validatePassword,
   },
   { name: 'phone', label: 'Teléfono', type: 'tel', autoComplete: 'tel' },
   { name: 'specialty', label: 'Especialidad' },
-  { name: 'licenseNumber', label: 'Matrícula' },
+  { name: 'licenseNumber', label: 'Matrícula', wide: true },
 ]
 
 export function RegisterCoachForm() {
@@ -131,8 +136,12 @@ export function RegisterCoachForm() {
   }
 
   return (
-    <form noValidate className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      {textFields.map(({ name, label, type, autoComplete, validate }) => (
+    <form
+      noValidate
+      className="grid grid-cols-1 gap-5 sm:grid-cols-2"
+      onSubmit={handleSubmit}
+    >
+      {textFields.map(({ name, label, type, autoComplete, wide, validate }) => (
         <form.Field
           key={name}
           name={name}
@@ -146,12 +155,14 @@ export function RegisterCoachForm() {
                 htmlFor={fieldId(name)}
                 error={error}
                 required={Boolean(validate)}
+                className={wide ? 'sm:col-span-2' : undefined}
               >
                 <TextInput
                   id={fieldId(name)}
                   name={name}
                   type={type}
                   autoComplete={autoComplete}
+                  className="h-13 text-base"
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
@@ -170,11 +181,17 @@ export function RegisterCoachForm() {
         {(field) => {
           const error = field.state.meta.errors[0] as string | undefined
           return (
-            <FormField label="Biografía" htmlFor={fieldId('bio')} error={error}>
+            <FormField
+              label="Biografía"
+              htmlFor={fieldId('bio')}
+              error={error}
+              className="sm:col-span-2"
+            >
               <TextArea
                 id={fieldId('bio')}
                 name="bio"
                 rows={4}
+                className="text-base"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
                 onBlur={field.handleBlur}
@@ -189,15 +206,17 @@ export function RegisterCoachForm() {
       </form.Field>
 
       {formError && (
-        <p
-          role="alert"
-          className="bg-danger/10 text-danger rounded-md p-3 text-sm"
-        >
+        <Callout tone="danger" className="sm:col-span-2">
           {formError}
-        </p>
+        </Callout>
       )}
 
-      <PrimaryButton type="submit" disabled={isSubmitting}>
+      <PrimaryButton
+        type="submit"
+        size="lg"
+        disabled={isSubmitting}
+        className="sm:col-span-2"
+      >
         {isSubmitting ? 'Registrando...' : 'Registrarme'}
       </PrimaryButton>
     </form>
