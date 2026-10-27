@@ -1,32 +1,11 @@
-export type Sex = 'MALE' | 'FEMALE' | 'OTHER'
+import type { ExperienceLevel, Sex } from '../../lib/athletes'
 
-export type ExperienceLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
-
-export type AthleteStatus =
-  'ACTIVE' | 'NEEDS_REVIEW' | 'NO_ROUTINE' | 'NO_ACTIVITY' | 'INACTIVE'
-
-// respuesta de POST /athletes; el backend devuelve null en los opcionales que no se enviaron
-export type Athlete = {
-  id: string
-  coachId: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string | null
-  status: AthleteStatus
-  sex: Sex | null
-  experienceLevel: ExperienceLevel | null
-  // fechas en formato YYYY-MM-DD
-  birthDate: string | null
-  heightCm: number | null
-  initialWeightKg: number | null
-  goal: string | null
-  injuries: string | null
-  limitations: string | null
-  availableDays: number | null
-  startDate: string | null
-  createdAt: string
-}
+export type {
+  Athlete,
+  AthleteStatus,
+  ExperienceLevel,
+  Sex,
+} from '../../lib/athletes'
 
 // sin status ni coachId: arranca activo y queda asignado al entrenador autenticado
 export type CreateAthleteInput = {

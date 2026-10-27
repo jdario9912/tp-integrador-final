@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppShell } from '../layout'
+import { AthletesPage } from '../pages/athletes'
 import { DashboardPage } from '../pages/dashboard'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
@@ -29,6 +30,11 @@ const router = createBrowserRouter([
           {
             element: <RequireRole roles={['COACH']} />,
             children: [
+              {
+                path: paths.athletes,
+                element: <AthletesPage />,
+                handle: { title: 'Atletas' },
+              },
               {
                 path: paths.newAthlete,
                 element: <RegisterAthletePage />,
