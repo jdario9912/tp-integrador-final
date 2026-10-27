@@ -1,2 +1,5 @@
 export { BaseInput, type BaseInputProps } from './BaseInput'
-export { TextInput } from './TextInput'
+export { DateInput, type DateInputProps } from './DateInput'
+export { NumberInput, type NumberInputProps } from './NumberInput'
+export { SearchInput, type SearchInputProps } from './SearchInput'
+export { TextInput, type TextInputProps } from './TextInput'

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { FormField, getFieldErrorId } from '.'
+import { FormField, getFieldErrorId, getFieldHintId } from '.'
 import { TextInput } from '../input'
 
 describe('FormField', () => {
@@ -27,5 +27,27 @@ describe('FormField', () => {
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
       'Email inválido',
     )
+  })
+
+  it('muestra el hint asociado al control y lo oculta si hay error', () => {
+    const { rerender } = render(
+      <FormField label="Email" htmlFor="email" hint="Se usa para ingresar">
+        <TextInput id="email" aria-describedby={getFieldHintId('email')} />
+      </FormField>,
+    )
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Se usa para ingresar',
+    )
+    rerender(
+      <FormField
+        label="Email"
+        htmlFor="email"
+        hint="Se usa para ingresar"
+        error="Email inválido"
+      >
+        <TextInput id="email" />
+      </FormField>,
+    )
+    expect(screen.queryByText('Se usa para ingresar')).toBeNull()
   })
 })

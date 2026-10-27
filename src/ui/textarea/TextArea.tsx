@@ -5,7 +5,7 @@ export function TextArea({ className, ...rest }: BaseTextAreaProps) {
   return (
     <BaseTextArea
       className={cn(
-        'border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring aria-invalid:border-danger aria-invalid:focus-visible:ring-danger',
+        'border-border bg-surface text-foreground placeholder:text-subtle-foreground focus-visible:ring-ring aria-invalid:border-danger aria-invalid:focus-visible:ring-danger',
         className,
       )}
       {...rest}
