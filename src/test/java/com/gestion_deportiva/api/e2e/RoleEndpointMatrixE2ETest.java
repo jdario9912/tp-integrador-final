@@ -85,6 +85,7 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/auth/logout", UNAUTHORIZED, ALLOWED, ALLOWED),
             // atletas
             new Row(HttpMethod.POST, "/api/athletes", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/athletes", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/athletes/{id}", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";

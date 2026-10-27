@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.athlete.service;
 
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
+import com.gestion_deportiva.api.athlete.dto.AthleteSearchFilter;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
 import com.gestion_deportiva.api.athlete.exception.AthleteAccessDeniedException;
 import com.gestion_deportiva.api.athlete.factory.AthleteFactory;
@@ -10,6 +11,7 @@ import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.exception.CoachNotFoundException;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
+import com.gestion_deportiva.api.common.pagination.PageResponse;
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
 import com.gestion_deportiva.api.user.model.enums.Role;
@@ -21,8 +23,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -230,6 +238,34 @@ class AthleteServiceTest {
         // Act + Assert
         assertThrows(AthleteAccessDeniedException.class, () -> athleteService.findById(caller, athleteId));
         verify(athleteRepository, never()).findById(any());
+    }
+
+    // ---------- "Mis atletas" (US-08) ----------
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldListTheCoachsAthletesWithTheFixedSortAndRequestedPage() {
+        // Arrange: el cliente pide ordenar por passwordHash; se ignora
+        Pageable requested = PageRequest.of(1, 2, Sort.by("passwordHash"));
+        Athlete leo = athlete("leo@test.com", coach);
+        when(athleteRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(leo), inv.getArgument(1), 3));
+
+        // Act
+        PageResponse<AthleteResponse> response = athleteService.findMyAthletes(COACH_ID,
+                new AthleteSearchFilter("leo", null), requested);
+
+        // Assert
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(athleteRepository).findAll(any(Specification.class), pageable.capture());
+        assertEquals(1, pageable.getValue().getPageNumber());
+        assertEquals(2, pageable.getValue().getPageSize());
+        assertEquals(AthleteService.MY_ATHLETES_SORT, pageable.getValue().getSort());
+        assertEquals(1, response.page());
+        assertEquals(2, response.size());
+        assertEquals(3, response.totalElements());
+        assertEquals(2, response.totalPages());
+        assertEquals(List.of("leo@test.com"), response.content().stream().map(AthleteResponse::email).toList());
     }
 
     private void givenCoachExists() {

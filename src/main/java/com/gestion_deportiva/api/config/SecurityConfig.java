@@ -69,6 +69,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, ME_PATH).authenticated()
                         .requestMatchers(HttpMethod.POST, LOGOUT_PATH).authenticated()
                         .requestMatchers(HttpMethod.POST, ATHLETES_PATH).hasRole("COACH")
+                        // "Mis atletas": la consulta filtra por el entrenador del token (US-08)
+                        .requestMatchers(HttpMethod.GET, ATHLETES_PATH).hasRole("COACH")
                         // Los dos roles; qué atleta puede ver cada uno lo decide AthleteAccessGuard (pertenencia)
                         .requestMatchers(HttpMethod.GET, ATHLETE_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido

@@ -1,11 +1,16 @@
 package com.gestion_deportiva.api.athlete.controller;
 
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
+import com.gestion_deportiva.api.athlete.dto.AthleteSearchFilter;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
 import com.gestion_deportiva.api.athlete.service.AthleteService;
+import com.gestion_deportiva.api.common.pagination.PageResponse;
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,6 +47,16 @@ public class AthleteController {
                 .buildAndExpand(response.id())
                 .toUri();
         return ResponseEntity.created(location).body(response);
+    }
+
+    // Solo entrenadores (regla en SecurityConfig): lista los atletas vinculados al entrenador autenticado (US-08).
+    // ?page (desde 0) y ?size (máximo 100, ver application.yaml); ?name y ?goal son filtros opcionales.
+    // @ParameterObject: Swagger documenta cada query param por separado y no como un objeto
+    @GetMapping
+    public PageResponse<AthleteResponse> findMine(@AuthenticationPrincipal Jwt jwt,
+                                                  @ParameterObject @Valid AthleteSearchFilter filter,
+                                                  @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return athleteService.findMyAthletes(UUID.fromString(jwt.getSubject()), filter, pageable);
     }
 
     // Entrenador dueño o el propio atleta (US-04): el rol lo controla SecurityConfig y la pertenencia AthleteService
