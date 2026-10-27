@@ -101,8 +101,9 @@ test('después de registrarse inicia sesión y entra al dashboard', async ({
     password: '12345678',
   })
   await expect(page).toHaveURL(paths.dashboard)
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-  await expect(page.getByText('Panel del entrenador')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
 })
 
 test('no envía el formulario si faltan campos obligatorios', async ({

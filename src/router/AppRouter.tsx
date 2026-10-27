@@ -3,9 +3,11 @@ import { AppShell } from '../layout'
 import { DashboardPage } from '../pages/dashboard'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
+import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'
+import { RequireRole } from './RequireRole'
 
 const router = createBrowserRouter([
   { path: paths.home, element: <HomePage /> },
@@ -23,8 +25,17 @@ const router = createBrowserRouter([
             element: <DashboardPage />,
             handle: { title: 'Panel' },
           },
-          // páginas de un solo rol (US-04): van dentro de RequireRole, por ejemplo
-          // { element: <RequireRole roles={['COACH']} />, children: [{ path: ..., element: ... }] }
+          // páginas de un solo rol (US-04): van dentro de RequireRole
+          {
+            element: <RequireRole roles={['COACH']} />,
+            children: [
+              {
+                path: paths.newAthlete,
+                element: <RegisterAthletePage />,
+                handle: { title: 'Agregar atleta' },
+              },
+            ],
+          },
         ],
       },
     ],

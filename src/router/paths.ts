@@ -6,4 +6,5 @@ export const paths = {
   registerCoach: '/register-coach',
   login: '/login',
   dashboard: '/dashboard',
+  newAthlete: '/athletes/new',
 } as const

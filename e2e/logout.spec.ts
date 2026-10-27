@@ -21,7 +21,9 @@ test('el entrenador cierra sesión y vuelve al login', async ({ page }) => {
   await page.route(LOGOUT_URL, (route) => route.fulfill({ status: 204 }))
 
   await page.goto(paths.dashboard)
-  await expect(page.getByText('Panel del entrenador')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
 
   const requestPromise = page.waitForRequest(LOGOUT_URL)
   await page.getByRole('button', { name: 'Cerrar sesión' }).click()
@@ -96,7 +98,9 @@ test('con el access token vencido refresca, reintenta y no avisa', async ({
   })
 
   await page.goto(paths.dashboard)
-  await expect(page.getByText('Panel del entrenador')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
 
   const refreshPromise = page.waitForRequest(REFRESH_URL)
   await page.getByRole('button', { name: 'Cerrar sesión' }).click()

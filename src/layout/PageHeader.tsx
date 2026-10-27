@@ -21,7 +21,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'flex flex-wrap items-end justify-between gap-x-6 gap-y-4',
+        'flex flex-wrap items-start justify-between gap-x-6 gap-y-4',
         className,
       )}
     >

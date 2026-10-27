@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateEmail, validateRequired } from './validation'
+import { validateEmail, validatePassword, validateRequired } from './validation'
 
 describe('validateRequired', () => {
   const validate = validateRequired('El nombre es obligatorio')
@@ -27,5 +27,21 @@ describe('validateEmail', () => {
 
   it('acepta un email válido aunque tenga espacios alrededor', () => {
     expect(validateEmail({ value: ' ana@example.com ' })).toBeUndefined()
+  })
+})
+
+describe('validatePassword', () => {
+  it('pide la contraseña si está vacía', () => {
+    expect(validatePassword({ value: '' })).toBe('La contraseña es obligatoria')
+  })
+
+  it('exige al menos 8 caracteres', () => {
+    expect(validatePassword({ value: '1234567' })).toBe(
+      'La contraseña debe tener al menos 8 caracteres',
+    )
+  })
+
+  it('acepta 8 caracteres o más, incluidos espacios', () => {
+    expect(validatePassword({ value: ' clave 1 ' })).toBeUndefined()
   })
 })

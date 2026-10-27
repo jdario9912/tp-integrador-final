@@ -2,7 +2,11 @@ import { useForm } from '@tanstack/react-form'
 import { useState, type SubmitEventHandler } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isApiError } from '../../../lib/api'
-import { validateEmail, validateRequired } from '../../../lib/validation'
+import {
+  validateEmail,
+  validatePassword,
+  validateRequired,
+} from '../../../lib/validation'
 import { paths } from '../../../router/paths'
 import { PrimaryButton } from '../../../ui/button'
 import { Callout } from '../../../ui/callout'
@@ -13,7 +17,6 @@ import { useLogin } from '../../login/hooks/use-login'
 import { useCreateCoach } from '../hooks/use-create-coach'
 import { toCreateCoachInput } from '../to-create-coach-input'
 import type { RegisterCoachFormValues } from '../types'
-import { validatePassword } from '../validation'
 
 type FieldName = keyof RegisterCoachFormValues
 
