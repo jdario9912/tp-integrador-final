@@ -1,15 +1,21 @@
+import { AuthLayout } from '../../layout'
+import { paths } from '../../router/paths'
+import { TextLink } from '../../ui/text-link'
 import { RegisterCoachForm } from './components/RegisterCoachForm'
 
 export function RegisterCoachPage() {
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Registro de entrenador</h1>
-        <p className="text-muted-foreground text-sm">
-          Creá tu cuenta para gestionar a tus atletas.
-        </p>
-      </header>
+    <AuthLayout
+      title="Registro de entrenador"
+      description="Creá tu cuenta para gestionar a tus atletas."
+    >
       <RegisterCoachForm />
-    </main>
+      <p className="text-muted-foreground text-center text-[15px]">
+        ¿Ya tenés cuenta?{' '}
+        <TextLink to={paths.login} className="text-[15px]">
+          Iniciá sesión
+        </TextLink>
+      </p>
+    </AuthLayout>
   )
 }

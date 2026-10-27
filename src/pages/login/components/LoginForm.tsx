@@ -1,8 +1,10 @@
 import { useForm } from '@tanstack/react-form'
+import { Lock, Mail, type LucideIcon } from 'lucide-react'
 import { useState, type SubmitEventHandler } from 'react'
 import { isApiError } from '../../../lib/api'
 import { validateEmail, validateRequired } from '../../../lib/validation'
 import { PrimaryButton } from '../../../ui/button'
+import { Callout } from '../../../ui/callout'
 import { FormField, getFieldErrorId } from '../../../ui/form-field'
 import { TextInput } from '../../../ui/input'
 import { useLogin } from '../hooks/use-login'
@@ -22,6 +24,7 @@ const fields: {
   label: string
   type: string
   autoComplete: string
+  icon: LucideIcon
   validate: (field: { value: string }) => string | undefined
 }[] = [
   {
@@ -29,6 +32,7 @@ const fields: {
     label: 'Email',
     type: 'email',
     autoComplete: 'email',
+    icon: Mail,
     validate: validateEmail,
   },
   {
@@ -36,6 +40,7 @@ const fields: {
     label: 'Contraseña',
     type: 'password',
     autoComplete: 'current-password',
+    icon: Lock,
     // sin largo mínimo: eso se valida al registrarse, acá solo se compara
     validate: validateRequired('La contraseña es obligatoria'),
   },
@@ -87,47 +92,44 @@ export function LoginForm() {
   }
 
   return (
-    <form noValidate className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      {fields.map(({ name, label, type, autoComplete, validate }) => (
-        <form.Field key={name} name={name} validators={{ onBlur: validate }}>
-          {(field) => {
-            const error = field.state.meta.errors[0] as string | undefined
-            return (
-              <FormField
-                label={label}
-                htmlFor={fieldId(name)}
-                error={error}
-                required
-              >
-                <TextInput
-                  id={fieldId(name)}
-                  name={name}
-                  type={type}
-                  autoComplete={autoComplete}
-                  value={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                  aria-invalid={Boolean(error)}
-                  aria-describedby={
-                    error ? getFieldErrorId(fieldId(name)) : undefined
-                  }
-                />
-              </FormField>
-            )
-          }}
-        </form.Field>
-      ))}
-
-      {formError && (
-        <p
-          role="alert"
-          className="bg-danger/10 text-danger rounded-md p-3 text-sm"
-        >
-          {formError}
-        </p>
+    <form noValidate className="flex flex-col gap-5" onSubmit={handleSubmit}>
+      {fields.map(
+        ({ name, label, type, autoComplete, icon: Icon, validate }) => (
+          <form.Field key={name} name={name} validators={{ onBlur: validate }}>
+            {(field) => {
+              const error = field.state.meta.errors[0] as string | undefined
+              return (
+                <FormField
+                  label={label}
+                  htmlFor={fieldId(name)}
+                  error={error}
+                  required
+                >
+                  <TextInput
+                    id={fieldId(name)}
+                    name={name}
+                    type={type}
+                    autoComplete={autoComplete}
+                    leadingIcon={<Icon />}
+                    className="h-13 text-base"
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={
+                      error ? getFieldErrorId(fieldId(name)) : undefined
+                    }
+                  />
+                </FormField>
+              )
+            }}
+          </form.Field>
+        ),
       )}
 
-      <PrimaryButton type="submit" disabled={loginMutation.isPending}>
+      {formError && <Callout tone="danger">{formError}</Callout>}
+
+      <PrimaryButton type="submit" size="lg" disabled={loginMutation.isPending}>
         {loginMutation.isPending ? 'Ingresando...' : 'Ingresar'}
       </PrimaryButton>
     </form>
