@@ -1,2 +1,2 @@
 export { FormField, type FormFieldProps } from './FormField'
-export { getFieldErrorId } from './get-field-error-id'
+export { getFieldErrorId, getFieldHintId } from './get-field-error-id'

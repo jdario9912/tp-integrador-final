@@ -5,7 +5,7 @@ export function PrimaryButton({ className, ...rest }: BaseButtonProps) {
   return (
     <BaseButton
       className={cn(
-        'bg-primary text-primary-foreground hover:bg-primary-hover',
+        'bg-primary text-primary-foreground shadow-primary hover:bg-primary-hover',
         className,
       )}
       {...rest}

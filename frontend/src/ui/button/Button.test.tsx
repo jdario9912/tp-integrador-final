@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { BaseButton, PrimaryButton } from '.'
+import { BaseButton, DangerButton, OutlineButton, PrimaryButton } from '.'
 
 describe('BaseButton', () => {
   it('renderiza children y usa type="button" por defecto', () => {
@@ -25,6 +25,13 @@ describe('BaseButton', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it('usa el tamaño md por defecto y acepta otros tamaños', () => {
+    const { rerender } = render(<BaseButton>Ok</BaseButton>)
+    expect(screen.getByRole('button')).toHaveClass('h-11')
+    rerender(<BaseButton size="lg">Ok</BaseButton>)
+    expect(screen.getByRole('button')).toHaveClass('h-13', 'text-base')
+  })
+
   it('no dispara onClick si está deshabilitado', async () => {
     const onClick = vi.fn()
     render(
@@ -41,9 +48,27 @@ describe('PrimaryButton', () => {
   it('aplica los colores primarios sobre las clases base', () => {
     render(<PrimaryButton>Ok</PrimaryButton>)
     expect(screen.getByRole('button')).toHaveClass(
-      'rounded-md',
+      'rounded-control',
       'bg-primary',
       'text-primary-foreground',
+    )
+  })
+})
+
+describe('variantes', () => {
+  it('OutlineButton usa borde y texto primary', () => {
+    render(<OutlineButton>Asignar</OutlineButton>)
+    expect(screen.getByRole('button')).toHaveClass(
+      'border-primary',
+      'text-primary',
+    )
+  })
+
+  it('DangerButton usa los colores de peligro', () => {
+    render(<DangerButton>Eliminar</DangerButton>)
+    expect(screen.getByRole('button')).toHaveClass(
+      'bg-danger',
+      'text-danger-foreground',
     )
   })
 })
