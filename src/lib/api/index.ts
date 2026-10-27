@@ -5,3 +5,4 @@ export {
   type FieldError,
 } from './api-error'
 export { del, get, patch, post, put } from './client'
+export type { PageResponse } from './page-response'

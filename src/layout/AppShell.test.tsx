@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -48,6 +48,29 @@ describe('AppShell', () => {
       screen.getByRole('navigation', { name: 'Ubicación' }),
     ).toHaveTextContent('Panel')
     expect(screen.getByText('contenido')).toBeInTheDocument()
+  })
+
+  it('el entrenador ve el acceso a sus atletas', () => {
+    saveSession(session('COACH'))
+
+    renderShell()
+
+    const nav = screen.getByRole('navigation', { name: 'Principal' })
+    expect(within(nav).getByRole('link', { name: 'Atletas' })).toHaveAttribute(
+      'href',
+      paths.athletes,
+    )
+  })
+
+  it('el atleta no ve el acceso a atletas', () => {
+    saveSession(session('ATHLETE'))
+
+    renderShell()
+
+    const nav = screen.getByRole('navigation', { name: 'Principal' })
+    expect(
+      within(nav).queryByRole('link', { name: 'Atletas' }),
+    ).not.toBeInTheDocument()
   })
 
   it('abre el menú en móvil y lo cierra con Escape', async () => {
