@@ -13,3 +13,12 @@ export const validateEmail = ({ value }: FieldValue) => {
   if (!EMAIL_PATTERN.test(value.trim())) return 'El email no es válido'
   return undefined
 }
+
+const PASSWORD_MIN_LENGTH = 8
+
+export const validatePassword = ({ value }: FieldValue) => {
+  if (!value) return 'La contraseña es obligatoria'
+  if (value.length < PASSWORD_MIN_LENGTH)
+    return `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres`
+  return undefined
+}

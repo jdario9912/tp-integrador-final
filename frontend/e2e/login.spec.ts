@@ -34,8 +34,9 @@ test('el entrenador inicia sesión y ve su panel', async ({ page }) => {
     password: '12345678',
   })
   await expect(page).toHaveURL(paths.dashboard)
-  await expect(page.getByText('Panel del entrenador')).toBeVisible()
-  await expect(page.getByText('Hola, Ana')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
 })
 
 test('el atleta inicia sesión y ve su panel', async ({ page }) => {
@@ -48,7 +49,7 @@ test('el atleta inicia sesión y ve su panel', async ({ page }) => {
 
   await expect(page).toHaveURL(paths.dashboard)
   await expect(page.getByText('Panel del atleta')).toBeVisible()
-  await expect(page.getByText('Panel del entrenador')).toHaveCount(0)
+  await expect(page.getByText(/Bienvenido de nuevo/)).toHaveCount(0)
 })
 
 test('con credenciales inválidas muestra el error y no entra', async ({
@@ -90,7 +91,9 @@ test('la sesión se mantiene al recargar la página', async ({ page }) => {
   await page.reload()
 
   await expect(page).toHaveURL(paths.dashboard)
-  await expect(page.getByText('Panel del entrenador')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
 })
 
 test('sin sesión el dashboard redirige al login', async ({ page }) => {
@@ -118,7 +121,9 @@ test('con el access token vencido refresca la sesión y sigue', async ({
   expect(refresh.postDataJSON()).toEqual({
     refreshToken: 'refresh-de-access-vencido',
   })
-  await expect(page.getByText('Hola, Ana')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
+  ).toBeVisible()
   await expect(page).toHaveURL(paths.dashboard)
   const stored = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) ?? 'null'),
