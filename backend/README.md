@@ -106,7 +106,10 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `POST /api/coaches` · `POST /api/auth/login` · `POST /api/auth/refresh` | público | público | público |
 | `GET /api/auth/me` · `POST /api/auth/logout` | 401 | ✓ | ✓ |
 | `POST /api/athletes` | 401 | ✓ | 403 |
+| `GET /api/athletes` | 401 | ✓ solo sus atletas | 403 |
 | `GET /api/athletes/{id}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
+
+`GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
 
 Para agregar un endpoint:
 

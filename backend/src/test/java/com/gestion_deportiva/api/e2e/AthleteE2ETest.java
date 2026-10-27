@@ -26,7 +26,9 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -416,6 +418,107 @@ class AthleteE2ETest {
         assertEquals("Debe iniciar sesión para acceder a este recurso", json(response).get("message").asString());
     }
 
+    // ---------- GET /api/athletes ("Mis atletas", US-08) ----------
+
+    @Test
+    void shouldListOnlyTheAthletesLinkedToTheAuthenticatedCoach() {
+        // Arrange: Bruno es otro entrenador; Ema está desvinculada
+        Coach bruno = saveCoach("bruno@test.com");
+        saveAthlete("leo@test.com", coach, "Leo", "Gil", "Hipertrofia");
+        saveAthlete("mia@test.com", coach, "Mía", "Sosa", "Bajar de peso");
+        saveAthlete("teo@test.com", bruno, "Teo", "Ruiz", null);
+        saveAthlete("ema@test.com", null, "Ema", "Paz", null);
+
+        // Act
+        ResponseEntity<String> response = list("", COACH_EMAIL);
+
+        // Assert: ordenados por apellido y nombre, sin datos sensibles
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        JsonNode body = json(response);
+        assertEquals(List.of("leo@test.com", "mia@test.com"), emails(body));
+        assertEquals(coach.getId().toString(), body.get("content").get(0).get("coachId").asString());
+        assertEquals(0, body.get("page").asInt());
+        assertEquals(20, body.get("size").asInt());
+        assertEquals(2, body.get("totalElements").asLong());
+        assertEquals(1, body.get("totalPages").asInt());
+        assertFalse(response.getBody().contains("passwordHash"));
+    }
+
+    @Test
+    void shouldPaginateTheCoachsAthletes() {
+        // Arrange
+        saveAthlete("a@test.com", coach, "Ana", "Alvarez", null);
+        saveAthlete("b@test.com", coach, "Beto", "Bravo", null);
+        saveAthlete("c@test.com", coach, "Caro", "Castro", null);
+
+        // Act
+        JsonNode body = json(list("?page=1&size=2", COACH_EMAIL));
+
+        // Assert
+        assertEquals(List.of("c@test.com"), emails(body));
+        assertEquals(1, body.get("page").asInt());
+        assertEquals(2, body.get("size").asInt());
+        assertEquals(3, body.get("totalElements").asLong());
+        assertEquals(2, body.get("totalPages").asInt());
+    }
+
+    @Test
+    void shouldLimitThePageSizeTo100() {
+        // Act
+        JsonNode body = json(list("?size=500", COACH_EMAIL));
+
+        // Assert
+        assertEquals(100, body.get("size").asInt());
+    }
+
+    @Test
+    void shouldFilterByNameGoalOrBoth() {
+        // Arrange
+        saveAthlete("leo@test.com", coach, "Leo", "Gil", "Hipertrofia");
+        saveAthlete("lea@test.com", coach, "Lea", "Gómez", "Resistencia");
+        saveAthlete("mia@test.com", coach, "Mía", "Sosa", "Hipertrofia y fuerza");
+
+        // Act + Assert
+        assertEquals(List.of("leo@test.com", "lea@test.com"), emails(json(list("?name=LE", COACH_EMAIL))));
+        assertEquals(List.of("leo@test.com"), emails(json(list("?name=leo gil", COACH_EMAIL))));
+        assertEquals(List.of("leo@test.com", "mia@test.com"), emails(json(list("?goal=hipertrofia", COACH_EMAIL))));
+        assertEquals(List.of("leo@test.com"), emails(json(list("?name=le&goal=hiper", COACH_EMAIL))));
+        assertEquals(3, emails(json(list("?name=&goal=", COACH_EMAIL))).size());
+    }
+
+    @Test
+    void shouldReturn400WhenTheNameFilterIsTooLong() {
+        // Act
+        ResponseEntity<String> response = list("?name=" + "a".repeat(101), COACH_EMAIL);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("name", json(response).get("fieldErrors").get(0).get("field").asString());
+    }
+
+    @Test
+    void shouldReturn403WhenAnAthleteListsAthletes() {
+        // Arrange
+        saveAthlete("leo@test.com", coach);
+
+        // Act
+        ResponseEntity<String> response = list("", "leo@test.com");
+
+        // Assert
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals(403, json(response).get("status").asInt());
+    }
+
+    @Test
+    void shouldReturn401WhenListingAthletesWithoutCredentials() {
+        // Act
+        ResponseEntity<String> response = list("", null);
+
+        // Assert
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Debe iniciar sesión para acceder a este recurso", json(response).get("message").asString());
+    }
+
     private ResponseEntity<String> postAsCoach(Object body) {
         return post(body, COACH_EMAIL, RAW_PASSWORD);
     }
@@ -448,6 +551,27 @@ class AthleteE2ETest {
                 .toEntity(String.class);
     }
 
+    // GET /api/athletes + query string con la sesión de ese email (null = sin token)
+    private ResponseEntity<String> list(String query, String email) {
+        return client.get()
+                .uri(PATH + query)
+                .headers(headers -> {
+                    if (email != null) {
+                        AuthHeaders.authenticate(headers, client, email, RAW_PASSWORD);
+                    }
+                })
+                .retrieve()
+                .onStatus(status -> true, (req, res) -> {
+                })
+                .toEntity(String.class);
+    }
+
+    private List<String> emails(JsonNode page) {
+        List<String> emails = new ArrayList<>();
+        page.get("content").forEach(athlete -> emails.add(athlete.get("email").asString()));
+        return emails;
+    }
+
     private Coach saveCoach(String email) {
         return coachRepository.saveAndFlush(new Coach("Bruno", "Sosa", email, passwordEncoder.encode(RAW_PASSWORD)));
     }
@@ -456,6 +580,14 @@ class AthleteE2ETest {
     private Athlete saveAthlete(String email, Coach owner) {
         return athleteRepository.saveAndFlush(
                 new Athlete("Leo", "Gil", email, passwordEncoder.encode(RAW_PASSWORD), owner));
+    }
+
+    private Athlete saveAthlete(String email, Coach owner, String firstName, String lastName, String goal) {
+        return athleteRepository.saveAndFlush(Athlete.builder()
+                .firstName(firstName).lastName(lastName).email(email)
+                .passwordHash(passwordEncoder.encode(RAW_PASSWORD))
+                .coach(owner).goal(goal)
+                .build());
     }
 
     // 403 con el formato estándar y sin datos del atleta pedido

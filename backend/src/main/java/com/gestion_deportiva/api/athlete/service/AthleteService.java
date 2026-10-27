@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.athlete.service;
 
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
+import com.gestion_deportiva.api.athlete.dto.AthleteSearchFilter;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
 import com.gestion_deportiva.api.athlete.exception.AthleteNotFoundException;
 import com.gestion_deportiva.api.athlete.factory.AthleteFactory;
@@ -10,18 +11,32 @@ import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.exception.CoachNotFoundException;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
+import com.gestion_deportiva.api.common.pagination.PageResponse;
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
 import com.gestion_deportiva.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.gestion_deportiva.api.athlete.repository.AthleteSpecifications.belongsToCoach;
+import static com.gestion_deportiva.api.athlete.repository.AthleteSpecifications.goalContains;
+import static com.gestion_deportiva.api.athlete.repository.AthleteSpecifications.nameContains;
+
 @Service
 @RequiredArgsConstructor
 public class AthleteService {
+
+    // Orden fijo del listado: el "sort" del cliente se ignora para no ordenar por campos internos
+    // (ej. passwordHash) ni responder 500 por una propiedad inexistente. El id desempata para que la
+    // paginación sea estable
+    static final Sort MY_ATHLETES_SORT = Sort.by("lastName", "firstName", "id");
 
     private final AthleteRepository athleteRepository;
     private final CoachRepository coachRepository;
@@ -58,5 +73,18 @@ public class AthleteService {
         return athleteRepository.findById(athleteId)
                 .map(AthleteResponse::from)
                 .orElseThrow(() -> new AthleteNotFoundException(athleteId));
+    }
+
+    // "Mis atletas" (US-08): la consulta filtra siempre por el entrenador autenticado, así que no hace falta
+    // AthleteAccessGuard. Los atletas desvinculados no aparecen
+    @Transactional(readOnly = true)
+    public PageResponse<AthleteResponse> findMyAthletes(UUID coachId, AthleteSearchFilter filter, Pageable pageable) {
+        Specification<Athlete> spec = Specification.allOf(
+                belongsToCoach(coachId),
+                nameContains(filter.name()),
+                goalContains(filter.goal()));
+        Pageable page = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), MY_ATHLETES_SORT);
+        // AthleteResponse solo lee el id del coach (proxy LAZY): no dispara una consulta por atleta
+        return PageResponse.from(athleteRepository.findAll(spec, page).map(AthleteResponse::from));
     }
 }

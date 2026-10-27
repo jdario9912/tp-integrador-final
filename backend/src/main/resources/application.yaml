@@ -3,6 +3,11 @@ spring:
     name: ${APP_NAME:api-gestion-deportiva}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  data:
+    web:
+      pageable:
+        # Un ?size mayor se limita a este valor en lugar de traer todos los registros de una vez
+        max-page-size: 100
 
 app:
   security:
