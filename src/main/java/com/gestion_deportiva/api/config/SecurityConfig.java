@@ -46,6 +46,9 @@ public class SecurityConfig {
     static final String LOGOUT_PATH = WebConfig.API_PREFIX + "/auth/logout";
     static final String ATHLETES_PATH = WebConfig.API_PREFIX + "/athletes";
     static final String ATHLETE_PATH = ATHLETES_PATH + "/{id}";
+    static final String ATHLETE_DEACTIVATE_PATH = ATHLETE_PATH + "/deactivate";
+    static final String ATHLETE_REACTIVATE_PATH = ATHLETE_PATH + "/reactivate";
+    static final String ATHLETE_UNLINK_PATH = ATHLETE_PATH + "/unlink";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -73,6 +76,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, ATHLETES_PATH).hasRole("COACH")
                         // Los dos roles; qué atleta puede ver cada uno lo decide AthleteAccessGuard (pertenencia)
                         .requestMatchers(HttpMethod.GET, ATHLETE_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // Editar, desactivar/reactivar, desvincular y eliminar (US-07): solo el entrenador dueño
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.DELETE, ATHLETE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.POST, ATHLETE_DEACTIVATE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.POST, ATHLETE_REACTIVATE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.PATCH, ATHLETE_UNLINK_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

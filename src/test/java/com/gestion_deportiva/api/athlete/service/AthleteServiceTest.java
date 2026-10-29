@@ -3,11 +3,14 @@ package com.gestion_deportiva.api.athlete.service;
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
 import com.gestion_deportiva.api.athlete.dto.AthleteSearchFilter;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
+import com.gestion_deportiva.api.athlete.dto.UpdateAthleteRequest;
 import com.gestion_deportiva.api.athlete.exception.AthleteAccessDeniedException;
+import com.gestion_deportiva.api.athlete.exception.AthleteNotFoundException;
 import com.gestion_deportiva.api.athlete.factory.AthleteFactory;
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.athlete.model.enums.AthleteStatus;
 import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
+import com.gestion_deportiva.api.auth.repository.RefreshTokenRepository;
 import com.gestion_deportiva.api.coach.exception.CoachNotFoundException;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
@@ -19,6 +22,8 @@ import com.gestion_deportiva.api.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +35,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,13 +48,18 @@ import static com.gestion_deportiva.api.support.IdentityFixtures.athlete;
 import static com.gestion_deportiva.api.support.IdentityFixtures.coach;
 import static com.gestion_deportiva.api.support.IdentityFixtures.createAthleteRequest;
 import static com.gestion_deportiva.api.support.IdentityFixtures.createAthleteRequestWithOnlyRequired;
+import static com.gestion_deportiva.api.support.IdentityFixtures.updateAthleteRequest;
+import static com.gestion_deportiva.api.support.IdentityFixtures.updateAthleteRequestWithOnlyRequired;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -55,6 +68,7 @@ import static org.mockito.Mockito.when;
 class AthleteServiceTest {
 
     private static final UUID COACH_ID = UUID.randomUUID();
+    private static final Instant NOW = Instant.parse("2026-10-29T10:00:00Z");
 
     @Mock
     private AthleteRepository athleteRepository;
@@ -71,6 +85,9 @@ class AthleteServiceTest {
     @Mock
     private AthleteAccessGuard athleteAccessGuard;
 
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
     private AthleteService athleteService;
 
     private Coach coach;
@@ -78,7 +95,8 @@ class AthleteServiceTest {
     @BeforeEach
     void setUp() {
         athleteService = new AthleteService(athleteRepository, coachRepository, userRepository,
-                new AthleteFactory(passwordEncoder), athleteAccessGuard);
+                new AthleteFactory(passwordEncoder), athleteAccessGuard, refreshTokenRepository,
+                Clock.fixed(NOW, ZoneOffset.UTC));
         coach = coach("ana@test.com");
     }
 
@@ -266,6 +284,240 @@ class AthleteServiceTest {
         assertEquals(3, response.totalElements());
         assertEquals(2, response.totalPages());
         assertEquals(List.of("leo@test.com"), response.content().stream().map(AthleteResponse::email).toList());
+    }
+
+    // ---------- edición, activación y desvinculación (US-07) ----------
+
+    @Test
+    void shouldUpdateAllTheAthleteDataVerifyingOwnershipAsCoach() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        UpdateAthleteRequest request = updateAthleteRequest("leandro@test.com");
+        givenAthleteExists(athleteId, leo);
+        when(userRepository.existsByEmail("leandro@test.com")).thenReturn(false);
+        when(athleteRepository.saveAndFlush(leo)).thenReturn(leo);
+
+        // Act
+        AthleteResponse response = athleteService.update(COACH_ID, athleteId, request);
+
+        // Assert: la pertenencia se verifica siempre con rol COACH
+        verify(athleteAccessGuard).verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+        assertEquals("Leandro", leo.getFirstName());
+        assertEquals("Gimenez", leo.getLastName());
+        assertEquals("leandro@test.com", leo.getEmail());
+        assertEquals(request.phone(), leo.getPhone());
+        assertEquals(request.sex(), leo.getSex());
+        assertEquals(request.experienceLevel(), leo.getExperienceLevel());
+        assertEquals(request.birthDate(), leo.getBirthDate());
+        assertEquals(request.heightCm(), leo.getHeightCm());
+        assertEquals(request.initialWeightKg(), leo.getInitialWeightKg());
+        assertEquals(request.goal(), leo.getGoal());
+        assertEquals(request.injuries(), leo.getInjuries());
+        assertEquals(request.limitations(), leo.getLimitations());
+        assertEquals(request.availableDays(), leo.getAvailableDays());
+        assertEquals(request.startDate(), leo.getStartDate());
+        // No cambia lo que no es editable
+        assertSame(coach, leo.getCoach());
+        assertEquals(PASSWORD_HASH, leo.getPasswordHash());
+        assertEquals(AthleteStatus.ACTIVE, leo.getStatus());
+        assertEquals("leandro@test.com", response.email());
+        assertEquals("Leandro", response.firstName());
+    }
+
+    @Test
+    void shouldClearOptionalFieldsThatAreNotSent() {
+        // Arrange: un atleta con perfil completo
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = Athlete.builder().firstName("Leo").lastName("Gil").email("leo@test.com")
+                .passwordHash(PASSWORD_HASH).coach(coach).phone("123").goal("Hipertrofia")
+                .availableDays((short) 3).build();
+        givenAthleteExists(athleteId, leo);
+        when(athleteRepository.saveAndFlush(leo)).thenReturn(leo);
+
+        // Act
+        athleteService.update(COACH_ID, athleteId, updateAthleteRequestWithOnlyRequired("leo@test.com"));
+
+        // Assert
+        assertNull(leo.getPhone());
+        assertNull(leo.getGoal());
+        assertNull(leo.getAvailableDays());
+    }
+
+    @Test
+    void shouldNormalizeEmailTrimNamesAndNotCheckDuplicatesWhenTheEmailDoesNotChange() {
+        // Arrange: el mismo email en otras mayúsculas y con espacios
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        UpdateAthleteRequest request = new UpdateAthleteRequest("  Leo ", " Gil  ", "  LEO@Test.com ",
+                null, null, null, null, null, null, null, null, null, null, null);
+        givenAthleteExists(athleteId, leo);
+        when(athleteRepository.saveAndFlush(leo)).thenReturn(leo);
+
+        // Act
+        athleteService.update(COACH_ID, athleteId, request);
+
+        // Assert
+        verify(userRepository, never()).existsByEmail(any());
+        assertEquals("leo@test.com", leo.getEmail());
+        assertEquals("Leo", leo.getFirstName());
+        assertEquals("Gil", leo.getLastName());
+    }
+
+    @Test
+    void shouldThrowAndNotSaveWhenTheNewEmailIsAlreadyRegistered() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        givenAthleteExists(athleteId, leo);
+        when(userRepository.existsByEmail("mia@test.com")).thenReturn(true);
+
+        // Act
+        EmailAlreadyRegisteredException ex = assertThrows(EmailAlreadyRegisteredException.class,
+                () -> athleteService.update(COACH_ID, athleteId, updateAthleteRequest("MIA@test.com")));
+
+        // Assert
+        assertEquals("mia@test.com", ex.getEmail());
+        assertEquals("leo@test.com", leo.getEmail());
+        assertEquals("Leo", leo.getFirstName());
+        verify(athleteRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldPropagateDataIntegrityViolationWhenUpdating() {
+        // Arrange: otro usuario tomó el email entre el chequeo y el update
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        DataIntegrityViolationException cause = new DataIntegrityViolationException("ux_users_email");
+        givenAthleteExists(athleteId, leo);
+        when(userRepository.existsByEmail("mia@test.com")).thenReturn(false);
+        when(athleteRepository.saveAndFlush(leo)).thenThrow(cause);
+
+        // Act
+        DataIntegrityViolationException ex = assertThrows(DataIntegrityViolationException.class,
+                () -> athleteService.update(COACH_ID, athleteId, updateAthleteRequest("mia@test.com")));
+
+        // Assert
+        assertSame(cause, ex);
+    }
+
+    @Test
+    void shouldDeactivateAndReactivateTheAthleteIdempotently() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        givenAthleteExists(athleteId, leo);
+        when(athleteRepository.saveAndFlush(leo)).thenReturn(leo);
+
+        // Act + Assert
+        assertFalse(athleteService.deactivate(COACH_ID, athleteId).active());
+        assertFalse(athleteService.deactivate(COACH_ID, athleteId).active());
+        assertFalse(leo.isActive());
+        assertTrue(athleteService.reactivate(COACH_ID, athleteId).active());
+        assertTrue(athleteService.reactivate(COACH_ID, athleteId).active());
+        assertTrue(leo.isActive());
+        // Sigue vinculado
+        assertSame(coach, leo.getCoach());
+        verify(athleteAccessGuard, times(4)).verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+    }
+
+    @Test
+    void shouldUnlinkTheAthleteKeepingItsAccountAndData() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        givenAthleteExists(athleteId, leo);
+
+        // Act
+        athleteService.unlink(COACH_ID, athleteId);
+
+        // Assert
+        verify(athleteAccessGuard).verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+        verify(athleteRepository).saveAndFlush(leo);
+        verify(athleteRepository, never()).delete(any(Athlete.class));
+        assertNull(leo.getCoach());
+        assertTrue(leo.isActive());
+        assertEquals("leo@test.com", leo.getEmail());
+    }
+
+    @Test
+    void shouldSoftDeleteTheAthleteAndCloseItsSessions() {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        Athlete leo = athlete("leo@test.com", coach);
+        givenAthleteExists(athleteId, leo);
+
+        // Act
+        athleteService.delete(COACH_ID, athleteId);
+
+        // Assert: baja lógica, no un DELETE en la base
+        verify(athleteAccessGuard).verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+        verify(athleteRepository).saveAndFlush(leo);
+        verify(athleteRepository, never()).delete(any(Athlete.class));
+        verify(refreshTokenRepository).deleteAllByUserId(athleteId);
+        assertTrue(leo.isDeleted());
+        assertEquals(NOW, leo.getDeletedAt());
+        assertFalse(leo.isActive());
+        // Conserva sus datos y el vínculo (historial)
+        assertSame(coach, leo.getCoach());
+        assertEquals("leo@test.com", leo.getEmail());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "deactivate", "reactivate", "unlink", "delete"})
+    void shouldNotReadNorModifyTheAthleteWhenTheGuardDeniesAccess(String operation) {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        doThrow(new AthleteAccessDeniedException()).when(athleteAccessGuard)
+                .verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+
+        // Act + Assert
+        assertThrows(AthleteAccessDeniedException.class, () -> run(operation, athleteId));
+        verifyNoInteractions(athleteRepository, userRepository, refreshTokenRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "deactivate", "reactivate", "unlink", "delete"})
+    void shouldThrowNotFoundWhenTheGuardDoesNotFindTheAthlete(String operation) {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        doThrow(new AthleteNotFoundException(athleteId)).when(athleteAccessGuard)
+                .verifyAccess(new AuthenticatedUser(COACH_ID, Role.COACH), athleteId);
+
+        // Act
+        AthleteNotFoundException ex = assertThrows(AthleteNotFoundException.class, () -> run(operation, athleteId));
+
+        // Assert
+        assertEquals(athleteId, ex.getAthleteId());
+        verifyNoInteractions(athleteRepository, userRepository, refreshTokenRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "deactivate", "reactivate", "unlink", "delete"})
+    void shouldThrowNotFoundWhenTheAthleteIsDeletedAfterTheGuard(String operation) {
+        // Arrange
+        UUID athleteId = UUID.randomUUID();
+        when(athleteRepository.findById(athleteId)).thenReturn(Optional.empty());
+
+        // Act + Assert
+        assertThrows(AthleteNotFoundException.class, () -> run(operation, athleteId));
+        verify(athleteRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    private void run(String operation, UUID athleteId) {
+        switch (operation) {
+            case "update" -> athleteService.update(COACH_ID, athleteId, updateAthleteRequest("leo@test.com"));
+            case "deactivate" -> athleteService.deactivate(COACH_ID, athleteId);
+            case "reactivate" -> athleteService.reactivate(COACH_ID, athleteId);
+            case "unlink" -> athleteService.unlink(COACH_ID, athleteId);
+            case "delete" -> athleteService.delete(COACH_ID, athleteId);
+            default -> throw new IllegalArgumentException(operation);
+        }
+    }
+
+    private void givenAthleteExists(UUID athleteId, Athlete athlete) {
+        when(athleteRepository.findById(athleteId)).thenReturn(Optional.of(athlete));
     }
 
     private void givenCoachExists() {

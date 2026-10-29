@@ -3,6 +3,7 @@ package com.gestion_deportiva.api.athlete.controller;
 import com.gestion_deportiva.api.athlete.dto.AthleteResponse;
 import com.gestion_deportiva.api.athlete.dto.AthleteSearchFilter;
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
+import com.gestion_deportiva.api.athlete.dto.UpdateAthleteRequest;
 import com.gestion_deportiva.api.athlete.service.AthleteService;
 import com.gestion_deportiva.api.common.pagination.PageResponse;
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
@@ -15,9 +16,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -63,5 +67,38 @@ public class AthleteController {
     @GetMapping("/{id}")
     public AthleteResponse findById(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return athleteService.findById(AuthenticatedUser.from(jwt), id);
+    }
+
+    // Solo el entrenador dueño (US-07): el rol lo controla SecurityConfig y la pertenencia AthleteService.
+    // Edición completa: los opcionales que no vengan quedan en null; la contraseña no se edita acá
+    @PutMapping("/{id}")
+    public AthleteResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                  @Valid @RequestBody UpdateAthleteRequest request) {
+        return athleteService.update(UUID.fromString(jwt.getSubject()), id, request);
+    }
+
+    // Desactiva la cuenta: el atleta no puede iniciar sesión, pero sigue vinculado al entrenador
+    @PostMapping("/{id}/deactivate")
+    public AthleteResponse deactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return athleteService.deactivate(UUID.fromString(jwt.getSubject()), id);
+    }
+
+    @PostMapping("/{id}/reactivate")
+    public AthleteResponse reactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return athleteService.reactivate(UUID.fromString(jwt.getSubject()), id);
+    }
+
+    // Desvincula al atleta del entrenador: el atleta y su cuenta siguen, pero deja de pertenecerle
+    @PatchMapping("/{id}/unlink")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlink(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        athleteService.unlink(UUID.fromString(jwt.getSubject()), id);
+    }
+
+    // Elimina al atleta (baja lógica): la fila y su historial quedan en la base, pero la aplicación no lo ve más
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        athleteService.delete(UUID.fromString(jwt.getSubject()), id);
     }
 }

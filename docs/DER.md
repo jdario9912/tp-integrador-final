@@ -71,13 +71,14 @@ erDiagram
         smallint role_id FK
         varchar first_name
         varchar last_name
-        varchar email UK "unico sin distinguir mayusculas"
+        varchar email UK "unico sin distinguir mayusculas entre no eliminados"
         varchar password_hash
         varchar phone
         boolean active
         timestamptz created_at
         timestamptz updated_at
         timestamptz last_login_at
+        timestamptz deleted_at "baja logica"
     }
     COACHES {
         uuid user_id PK, FK

@@ -108,8 +108,16 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `POST /api/athletes` | 401 | ✓ | 403 |
 | `GET /api/athletes` | 401 | ✓ solo sus atletas | 403 |
 | `GET /api/athletes/{id}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
+| `PUT /api/athletes/{id}` · `DELETE /api/athletes/{id}` · `PATCH /api/athletes/{id}/unlink` | 401 | ✓ solo sus atletas | 403 |
+| `POST /api/athletes/{id}/deactivate` · `POST /api/athletes/{id}/reactivate` | 401 | ✓ solo sus atletas | 403 |
 
 `GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
+
+Gestión del atleta (US-07), solo para su entrenador:
+- `PUT /api/athletes/{id}` edita todos sus datos (mismos campos que el alta, sin `password`; los opcionales que no se envían quedan en null). Email de otro usuario → 409.
+- `POST /api/athletes/{id}/deactivate` y `/reactivate` cambian `active`: un atleta desactivado no puede iniciar sesión ni refrescar su sesión, pero sigue en "Mis atletas".
+- `PATCH /api/athletes/{id}/unlink` lo desvincula (204): el atleta y su historial quedan en la base con `coachId = null`, deja de aparecer en "Mis atletas" y el entrenador recibe 403 al consultarlo. Su cuenta no se modifica.
+- `DELETE /api/athletes/{id}` lo elimina (204) con baja lógica: la fila, sus datos y su historial quedan en la base (`users.deleted_at`), pero la aplicación no lo ve más (`@SQLRestriction` en `User`): sale de "Mis atletas", cualquier operación sobre él responde 404, no puede iniciar sesión (se borran sus refresh tokens) y su email queda libre para un alta nueva (índice único parcial de la V2).
 
 Para agregar un endpoint:
 

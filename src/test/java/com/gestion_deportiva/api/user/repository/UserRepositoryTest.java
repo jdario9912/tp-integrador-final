@@ -9,6 +9,7 @@ import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.coach.repository.CoachRepository;
 import com.gestion_deportiva.api.user.model.User;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -39,6 +40,9 @@ class UserRepositoryTest extends AbstractIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void findByEmailIgnoresCaseAndReturnsTheSubtype() {
@@ -73,6 +77,51 @@ class UserRepositoryTest extends AbstractIntegrationTest {
         // Insert directo con mayúsculas: lo frena el índice único lower(email), no Java
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
                 "insert into users (role_id, first_name, last_name, email, password_hash) values (1, 'X', 'Y', 'DUP@TEST.COM', 'h')"));
+    }
+
+    @Test
+    void deletedUsersAreHiddenFromEveryJpaQuery() {
+        Coach coach = coachRepository.saveAndFlush(coach("ana@test.com"));
+        Athlete athlete = athleteRepository.saveAndFlush(athlete("leo@test.com", coach));
+        athlete.markDeleted(Instant.parse("2026-10-29T10:00:00Z"));
+        athleteRepository.saveAndFlush(athlete);
+        // Sin esto, findById devolvería la entidad del contexto de persistencia sin pasar por la base
+        entityManager.clear();
+
+        assertTrue(athleteRepository.findById(athlete.getId()).isEmpty());
+        assertTrue(userRepository.findById(athlete.getId()).isEmpty());
+        assertFalse(athleteRepository.existsById(athlete.getId()));
+        assertFalse(athleteRepository.existsByIdAndCoachId(athlete.getId(), coach.getId()));
+        assertTrue(userRepository.findByEmail("leo@test.com").isEmpty());
+        assertFalse(userRepository.existsByEmail("leo@test.com"));
+        assertEquals(0, athleteRepository.count());
+        // La fila sigue en la base
+        assertEquals(1, count("select count(*) from users where id = ? and deleted_at is not null", athlete.getId()));
+    }
+
+    @Test
+    void theEmailOfADeletedUserCanBeReused() {
+        Athlete deleted = athleteRepository.saveAndFlush(athlete("leo@test.com", null));
+        deleted.markDeleted(Instant.parse("2026-10-29T10:00:00Z"));
+        athleteRepository.saveAndFlush(deleted);
+
+        Athlete reused = athleteRepository.saveAndFlush(athlete("LEO@test.com", null));
+
+        assertNotNull(reused.getId());
+        entityManager.clear();
+        assertEquals(reused.getId(), userRepository.findByEmail("leo@test.com").orElseThrow().getId());
+    }
+
+    @Test
+    void deletingTwoUsersWithTheSameEmailIsAllowed() {
+        // El índice parcial solo exige unicidad entre los no eliminados
+        for (int i = 0; i < 2; i++) {
+            Athlete athlete = athleteRepository.saveAndFlush(athlete("leo@test.com", null));
+            athlete.markDeleted(Instant.parse("2026-10-29T10:00:00Z"));
+            athleteRepository.saveAndFlush(athlete);
+        }
+
+        assertEquals(2, count("select count(*) from users where email = ?", "leo@test.com"));
     }
 
     @Test
@@ -135,8 +184,8 @@ class UserRepositoryTest extends AbstractIntegrationTest {
                 () -> jdbc.update("update users set role_id = 99 where id = ?", coach.getId()));
     }
 
-    private int count(String sql, Object id) {
-        Integer value = jdbc.queryForObject(sql, Integer.class, id);
+    private int count(String sql, Object param) {
+        Integer value = jdbc.queryForObject(sql, Integer.class, param);
         return value == null ? 0 : value;
     }
 }

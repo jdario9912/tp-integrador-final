@@ -19,6 +19,8 @@ public record AthleteResponse(
         String email,
         String phone,
         AthleteStatus status,
+        // false = cuenta desactivada: no puede iniciar sesión (US-07)
+        boolean active,
         Sex sex,
         ExperienceLevel experienceLevel,
         LocalDate birthDate,
@@ -41,6 +43,7 @@ public record AthleteResponse(
                 athlete.getEmail(),
                 athlete.getPhone(),
                 athlete.getStatus(),
+                athlete.isActive(),
                 athlete.getSex(),
                 athlete.getExperienceLevel(),
                 athlete.getBirthDate(),
