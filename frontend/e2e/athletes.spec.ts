@@ -34,6 +34,7 @@ const athleteJson = (
   email: `atleta${index}@example.com`,
   phone: null,
   status: 'ACTIVE',
+  active: true,
   sex: null,
   experienceLevel: null,
   birthDate: null,

@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   createMemoryRouter,
+  parsePath,
   RouterProvider,
   type RouterProviderProps,
 } from 'react-router-dom'
@@ -19,13 +20,13 @@ vi.mock('./actions/get-athletes', () => ({ getAthletes: vi.fn() }))
 
 let router: RouterProviderProps['router']
 
-const renderPage = (url: string = paths.athletes) => {
+const renderPage = (url: string = paths.athletes, state?: unknown) => {
   router = createMemoryRouter(
     [
       { path: paths.athletes, element: <AthletesPage /> },
       { path: paths.newAthlete, element: <p>alta de atleta</p> },
     ],
-    { initialEntries: [url] },
+    { initialEntries: [{ ...parsePath(url), state }] },
   )
   return render(
     <QueryClientProvider
@@ -271,5 +272,19 @@ describe('AthletesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Agregar atleta' }))
 
     expect(screen.getByText('alta de atleta')).toBeInTheDocument()
+  })
+
+  it('muestra el aviso de la edición y lo limpia sin perder los filtros', async () => {
+    vi.mocked(getAthletes).mockResolvedValue(athletesPage([juana]))
+
+    renderPage(`${paths.athletes}?name=jua`, {
+      notice: 'Desvinculaste a Lucas Gómez.',
+    })
+
+    expect(
+      await screen.findByText('Desvinculaste a Lucas Gómez.'),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(router.state.location.state).toBeNull())
+    expect(currentSearch()).toBe('name=jua')
   })
 })

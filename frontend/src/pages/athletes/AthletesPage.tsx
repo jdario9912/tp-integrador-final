@@ -1,10 +1,11 @@
 import { UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../layout'
 import { useDebouncedValue } from '../../lib/use-debounced-value'
 import { paths } from '../../router/paths'
 import { PrimaryButton } from '../../ui/button'
+import { Callout } from '../../ui/callout'
 import { Pagination } from '../../ui/pagination'
 import {
   parseAthleteFilters,
@@ -17,9 +18,27 @@ import { useAthletes } from './hooks/use-athletes'
 const athletesCount = (total: number) =>
   total === 1 ? '1 atleta' : `${total} atletas`
 
+// aviso de la edición de un atleta (guardado o desvinculado) al volver al listado
+type AthletesLocationState = { notice?: string }
+
 export function AthletesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // se lee una sola vez y se limpia el state, como en el dashboard: si no, vuelve a aparecer al recargar
+  const [notice] = useState(
+    () => (location.state as AthletesLocationState | null)?.notice,
+  )
+  useEffect(() => {
+    if (location.state) {
+      // con el search: limpiar el aviso no tiene que perder los filtros
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      })
+    }
+  }, [location.pathname, location.search, location.state, navigate])
   const filters = useMemo(
     () => parseAthleteFilters(searchParams),
     [searchParams],
@@ -81,6 +100,11 @@ export function AthletesPage() {
           </PrimaryButton>
         }
       />
+      {notice && (
+        <Callout tone="success" role="status">
+          {notice}
+        </Callout>
+      )}
       <AthleteFilters
         name={name}
         goal={goal}

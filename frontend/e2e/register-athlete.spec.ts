@@ -18,6 +18,7 @@ const createdAthlete = {
   email: 'juana@example.com',
   phone: null,
   status: 'ACTIVE',
+  active: true,
   sex: 'FEMALE',
   experienceLevel: 'BEGINNER',
   birthDate: null,

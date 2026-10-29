@@ -1,10 +1,12 @@
-import { Target, Weight } from 'lucide-react'
+import { Pencil, Target, Weight } from 'lucide-react'
 import { useId } from 'react'
 import type { Athlete } from '../../../lib/athletes'
+import { athleteEditPath } from '../../../router/paths'
 import { Avatar } from '../../../ui/avatar'
 import { Badge } from '../../../ui/badge'
 import { Card } from '../../../ui/card'
 import { InfoTile } from '../../../ui/info-tile'
+import { TextLink } from '../../../ui/text-link'
 import { athleteStatusView } from '../athlete-status'
 
 const weightFormat = new Intl.NumberFormat('es-AR', {
@@ -58,6 +60,15 @@ export function AthleteCard({ athlete }: AthleteCardProps) {
           }
         />
       </div>
+      {/* mt-auto: en una fila de cards de distinto alto el link queda alineado abajo */}
+      <TextLink
+        to={athleteEditPath(athlete.id)}
+        // el texto visible se repite en cada card: el nombre lo distingue para el lector
+        aria-label={`Editar a ${firstName} ${lastName}`}
+        className="mt-auto self-end"
+      >
+        <Pencil aria-hidden="true" /> Editar
+      </TextLink>
     </Card>
   )
 }

@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppShell } from '../layout'
 import { AthletesPage } from '../pages/athletes'
 import { DashboardPage } from '../pages/dashboard'
+import { EditAthletePage } from '../pages/edit-athlete'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
 import { RegisterAthletePage } from '../pages/register-athlete'
@@ -39,6 +40,11 @@ const router = createBrowserRouter([
                 path: paths.newAthlete,
                 element: <RegisterAthletePage />,
                 handle: { title: 'Agregar atleta' },
+              },
+              {
+                path: paths.editAthlete,
+                element: <EditAthletePage />,
+                handle: { title: 'Editar atleta' },
               },
             ],
           },

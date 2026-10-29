@@ -1,4 +1,4 @@
-// validadores propios del alta de atleta; los compartidos están en lib/validation.
+// validadores propios de los datos del atleta; los compartidos están en lib/validation.
 // Todos aceptan el campo vacío porque son datos opcionales
 type FieldValue = { value: string }
 

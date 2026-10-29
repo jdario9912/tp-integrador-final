@@ -14,6 +14,8 @@ export type Athlete = {
   email: string
   phone: string | null
   status: AthleteStatus
+  // false = cuenta desactivada: no puede iniciar sesión
+  active: boolean
   sex: Sex | null
   experienceLevel: ExperienceLevel | null
   // fechas en formato YYYY-MM-DD
