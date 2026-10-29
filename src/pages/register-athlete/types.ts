@@ -26,11 +26,5 @@ export type CreateAthleteInput = {
   startDate?: string
 }
 
-// en el formulario todos los campos son strings; los selects vacíos valen ''
-export type RegisterAthleteFormValues = {
-  [Key in keyof CreateAthleteInput]-?: Key extends 'sex'
-    ? Sex | ''
-    : Key extends 'experienceLevel'
-      ? ExperienceLevel | ''
-      : string
-}
+// los valores del formulario son los del formulario compartido de atleta
+export type { AthleteFormValues as RegisterAthleteFormValues } from '../../components/athlete-form'

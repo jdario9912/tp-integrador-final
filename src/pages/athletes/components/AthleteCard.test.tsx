@@ -1,7 +1,12 @@
-import { render, screen, within } from '@testing-library/react'
+import { render as baseRender, screen, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { createdAthlete } from '../../../test/athlete-fixtures'
 import { AthleteCard } from './AthleteCard'
+
+// la card tiene un link: necesita un router
+const render = (ui: ReactNode) => baseRender(<MemoryRouter>{ui}</MemoryRouter>)
 
 const card = () => screen.getByRole('region', { name: 'Juana Pérez' })
 
@@ -54,5 +59,13 @@ describe('AthleteCard', () => {
     expect(
       within(card()).getByRole('img', { name: 'Inactivo' }),
     ).toBeInTheDocument()
+  })
+
+  it('linkea a la edición del atleta', () => {
+    render(<AthleteCard athlete={createdAthlete({ id: 'abc' })} />)
+
+    expect(
+      within(card()).getByRole('link', { name: 'Editar a Juana Pérez' }),
+    ).toHaveAttribute('href', '/athletes/abc/edit')
   })
 })

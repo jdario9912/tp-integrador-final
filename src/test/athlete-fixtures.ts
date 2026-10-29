@@ -10,6 +10,7 @@ export const createdAthlete = (overrides: Partial<Athlete> = {}): Athlete => ({
   email: 'juana@example.com',
   phone: null,
   status: 'ACTIVE',
+  active: true,
   sex: null,
   experienceLevel: null,
   birthDate: null,
