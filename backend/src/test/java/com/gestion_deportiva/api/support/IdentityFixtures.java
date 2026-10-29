@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.support;
 
 import com.gestion_deportiva.api.athlete.dto.CreateAthleteRequest;
+import com.gestion_deportiva.api.athlete.dto.UpdateAthleteRequest;
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.athlete.model.enums.ExperienceLevel;
 import com.gestion_deportiva.api.athlete.model.enums.Sex;
@@ -50,6 +51,20 @@ public final class IdentityFixtures {
     public static CreateAthleteRequest createAthleteRequestWithOnlyRequired(String email, String password) {
         return new CreateAthleteRequest("Leo", "Gil", email, password, null, null, null, null, null, null,
                 null, null, null, null, null);
+    }
+
+    // Request de edición válido con todos los campos completos y distintos a los de createAthleteRequest
+    public static UpdateAthleteRequest updateAthleteRequest(String email) {
+        return new UpdateAthleteRequest("Leandro", "Gimenez", email, "+54 11 3333-3333",
+                Sex.OTHER, ExperienceLevel.ADVANCED, LocalDate.of(1998, 3, 10),
+                new BigDecimal("180.00"), new BigDecimal("75.50"), "Fuerza", "Hombro derecho",
+                "Sin overhead", (short) 5, LocalDate.of(2026, 12, 1));
+    }
+
+    // Solo los campos obligatorios: el resto del perfil queda en null
+    public static UpdateAthleteRequest updateAthleteRequestWithOnlyRequired(String email) {
+        return new UpdateAthleteRequest("Leo", "Gil", email, null, null, null, null, null, null, null, null,
+                null, null, null);
     }
 
     // Hash de 64 caracteres armado repitiendo un caracter (distinto char = distinto hash)

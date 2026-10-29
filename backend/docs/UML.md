@@ -23,6 +23,7 @@ Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código imple
 | − createdAt | Instant |
 | − updatedAt | Instant |
 | − lastLoginAt | Instant |
+| − deletedAt | Instant |
 | + normalizeEmail(email: String) *{static}* | String |
 | + fullName() | String |
 | + changeEmail(newEmail: String) | void |
@@ -30,6 +31,8 @@ Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código imple
 | + recordLogin(at: Instant) | void |
 | + deactivate() | void |
 | + reactivate() | void |
+| + markDeleted(at: Instant) | void |
+| + isDeleted() | boolean |
 
 ### Coach *(extiende User)*
 | Miembro | Tipo |
@@ -221,6 +224,7 @@ abstract class User {
   - createdAt: Instant
   - updatedAt: Instant
   - lastLoginAt: Instant
+  - deletedAt: Instant
   + {static} normalizeEmail(email: String): String
   + fullName(): String
   + changeEmail(newEmail: String): void
@@ -228,6 +232,8 @@ abstract class User {
   + recordLogin(at: Instant): void
   + deactivate(): void
   + reactivate(): void
+  + markDeleted(at: Instant): void
+  + isDeleted(): boolean
 }
 
 class Coach {

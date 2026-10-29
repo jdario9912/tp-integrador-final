@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
@@ -22,8 +23,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 // Superclase de todos los usuarios. Herencia JOINED: Coach y Athlete tienen su tabla con PK = FK a users.
+// @SQLRestriction: los usuarios eliminados (baja lógica) no aparecen en ninguna consulta de JPA, ni de User
+// ni de sus subtipos (findById, findByEmail, existsByEmail, listados...). Las consultas SQL nativas sí los ven
 @Entity
 @Table(name = "users")
+@SQLRestriction("deleted_at is null")
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // lo exige JPA
@@ -70,6 +74,10 @@ public abstract class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    // Baja lógica (US-07): con valor, el usuario está eliminado y su email queda libre (índice parcial de la V2)
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     protected User(Role role, String firstName, String lastName, String email, String passwordHash) {
         this.role = Objects.requireNonNull(role, "role");
         this.firstName = Objects.requireNonNull(firstName, "firstName");
@@ -105,6 +113,16 @@ public abstract class User {
 
     public void reactivate() {
         this.active = true;
+    }
+
+    // También lo desactiva: si algo llegara a leerlo igual, no puede iniciar sesión
+    public void markDeleted(Instant at) {
+        this.deletedAt = Objects.requireNonNull(at, "at");
+        this.active = false;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
     // equals/hashCode por id: patrón seguro para entidades JPA (no usar @Data)

@@ -8,15 +8,18 @@ import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.OptionalInt;
 
 import static com.gestion_deportiva.api.support.IdentityFixtures.athlete;
 import static com.gestion_deportiva.api.support.IdentityFixtures.coach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AthleteTest {
 
@@ -78,6 +81,20 @@ class AthleteTest {
         assertNull(athlete.getCoach());
 
         assertThrows(NullPointerException.class, () -> athlete.assignCoach(null));
+    }
+
+    @Test
+    void markDeletedSetsTheDateAndDeactivates() {
+        Athlete athlete = athlete("a@test.com", null);
+        Instant at = Instant.parse("2026-10-29T10:00:00Z");
+        assertFalse(athlete.isDeleted());
+
+        athlete.markDeleted(at);
+
+        assertTrue(athlete.isDeleted());
+        assertEquals(at, athlete.getDeletedAt());
+        assertFalse(athlete.isActive());
+        assertThrows(NullPointerException.class, () -> athlete.markDeleted(null));
     }
 
     @Test
