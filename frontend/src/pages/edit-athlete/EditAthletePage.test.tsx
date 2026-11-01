@@ -8,17 +8,17 @@ import {
 } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
+import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { athleteEditPath, paths } from '../../router/paths'
 import { createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'
-import { getAthlete } from './actions/get-athlete'
 import { setAthleteActive } from './actions/set-athlete-active'
 import { unlinkAthlete } from './actions/unlink-athlete'
 import { updateAthlete } from './actions/update-athlete'
 import { EditAthletePage } from './EditAthletePage'
 
-vi.mock('./actions/get-athlete', () => ({ getAthlete: vi.fn() }))
+vi.mock('../../lib/athletes/get-athlete', () => ({ getAthlete: vi.fn() }))
 vi.mock('./actions/update-athlete', () => ({ updateAthlete: vi.fn() }))
 vi.mock('./actions/set-athlete-active', () => ({ setAthleteActive: vi.fn() }))
 vi.mock('./actions/unlink-athlete', () => ({ unlinkAthlete: vi.fn() }))

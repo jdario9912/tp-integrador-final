@@ -55,6 +55,7 @@ componente React -> hook (TanStack Query) -> acción -> cliente REST (axios)
 - **Cliente REST** (`src/lib/api`): funciones tipadas `get`, `post`, `put`, `patch`, `del` que devuelven directamente el body. Todo error se normaliza a `ApiError` (`status`, `message`, `path`, `timestamp`); `status: 0` indica que no hubo respuesta del servidor.
 - **Acciones** (`src/pages/<modulo>/actions`): reciben los inputs de la operación y llaman al cliente REST.
 - **Hooks** (`src/pages/<modulo>/hooks`): envuelven las acciones con `useQuery` / `useMutation` y son lo único que consumen los componentes.
+- **Datos compartidos** (`src/lib/<dominio>`): la acción y el hook que usan varias páginas viven en `lib`, por ejemplo `useAthlete` (`GET /athletes/{id}`) en `src/lib/athletes`, que comparten la ficha y la edición del atleta con la misma clave de caché.
 
 ```ts
 // actions/create-coach.ts
@@ -76,6 +77,23 @@ Formularios: TanStack Form. Rutas: React Router, definidas en `src/router/AppRou
 - **Datos del usuario**: `useCurrentUser()` (`GET /auth/me`) para mostrar datos frescos; `useAuth().user` tiene los de la sesión.
 - **Cierre de sesión**: `useLogout()` llama a `POST /auth/logout` (revoca el refresh token) y, pase lo que pase, borra `tpif.session` y la caché de TanStack Query y vuelve al login. Si el servidor no confirmó el cierre (sin conexión o cualquier error que no sea 401), el login muestra un aviso una sola vez; un 401 se considera un cierre exitoso porque la sesión del servidor ya no existía.
 - Después de registrarse, el front inicia sesión con las mismas credenciales y entra al dashboard.
+
+### Rutas
+
+Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts` (las rutas con parámetros se arman con helpers como `athleteProfilePath(id)`). El `handle.title` de cada ruta es el texto de la barra de ubicación.
+
+| Ruta                 | Página                    | Acceso     |
+| -------------------- | ------------------------- | ---------- |
+| `/`                  | Inicio                    | público    |
+| `/register-coach`    | Registro de entrenador    | público    |
+| `/login`             | Inicio de sesión          | público    |
+| `/dashboard`         | Panel (según el rol)      | con sesión |
+| `/athletes`          | Mis atletas               | solo COACH |
+| `/athletes/new`      | Agregar atleta            | solo COACH |
+| `/athletes/:id`      | Perfil del atleta (ficha) | solo COACH |
+| `/athletes/:id/edit` | Editar atleta             | solo COACH |
+
+`/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso (el peso inicial hasta que existan los registros de peso), rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado.
 
 ### Estructura
 

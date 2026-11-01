@@ -10,9 +10,14 @@ export const paths = {
   dashboard: '/dashboard',
   athletes: '/athletes',
   newAthlete: '/athletes/new',
+  // convive con /athletes/new: React Router prioriza el segmento estático
+  athleteProfile: '/athletes/:id',
   editAthlete: '/athletes/:id/edit',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano
+export const athleteProfilePath = (id: string) =>
+  generatePath(paths.athleteProfile, { id })
+
 export const athleteEditPath = (id: string) =>
   generatePath(paths.editAthlete, { id })

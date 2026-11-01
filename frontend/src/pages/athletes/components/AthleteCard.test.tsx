@@ -68,4 +68,14 @@ describe('AthleteCard', () => {
       within(card()).getByRole('link', { name: 'Editar a Juana Pérez' }),
     ).toHaveAttribute('href', '/athletes/abc/edit')
   })
+
+  it('linkea a la ficha del atleta con su nombre en el link', () => {
+    render(<AthleteCard athlete={createdAthlete({ id: 'abc' })} />)
+
+    const link = within(card()).getByRole('link', {
+      name: 'Ver ficha de Juana Pérez',
+    })
+    expect(link).toHaveAttribute('href', '/athletes/abc')
+    expect(link).toHaveTextContent('Ver ficha')
+  })
 })
