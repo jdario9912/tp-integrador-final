@@ -23,6 +23,21 @@ describe('EmptyState', () => {
       screen.getByRole('button', { name: 'Agregar atleta' }),
     ).toBeInTheDocument()
   })
+
+  it('en tamaño sm achica el espaciado y el título para ir dentro de una card', () => {
+    render(
+      <EmptyState
+        size="sm"
+        icon={<UserX />}
+        title="Sin rutina asignada"
+        className="px-2"
+      />,
+    )
+    const title = screen.getByRole('heading', { name: 'Sin rutina asignada' })
+    expect(title).toHaveClass('text-base')
+    expect(title.parentElement).toHaveClass('py-6', 'px-2')
+    expect(title.parentElement).not.toHaveClass('py-16')
+  })
 })
 
 describe('Spinner y Skeleton', () => {

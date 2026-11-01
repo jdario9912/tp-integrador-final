@@ -1,7 +1,7 @@
-import { Pencil, Target, Weight } from 'lucide-react'
+import { IdCard, Pencil, Target, Weight } from 'lucide-react'
 import { useId } from 'react'
 import type { Athlete } from '../../../lib/athletes'
-import { athleteEditPath } from '../../../router/paths'
+import { athleteEditPath, athleteProfilePath } from '../../../router/paths'
 import { Avatar } from '../../../ui/avatar'
 import { Badge } from '../../../ui/badge'
 import { Card } from '../../../ui/card'
@@ -60,15 +60,26 @@ export function AthleteCard({ athlete }: AthleteCardProps) {
           }
         />
       </div>
-      {/* mt-auto: en una fila de cards de distinto alto el link queda alineado abajo */}
-      <TextLink
-        to={athleteEditPath(athlete.id)}
-        // el texto visible se repite en cada card: el nombre lo distingue para el lector
-        aria-label={`Editar a ${firstName} ${lastName}`}
-        className="mt-auto self-end"
-      >
-        <Pencil aria-hidden="true" /> Editar
-      </TextLink>
+      {/* mt-auto: en una fila de cards de distinto alto los links quedan alineados abajo */}
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {/* el texto visible se repite en cada card: el nombre lo distingue para el lector,
+            y el aria-label empieza con ese texto para que el control por voz lo encuentre */}
+        <TextLink
+          to={athleteProfilePath(athlete.id)}
+          aria-label={`Ver ficha de ${firstName} ${lastName}`}
+          className="min-h-6"
+        >
+          <IdCard aria-hidden="true" /> Ver ficha
+        </TextLink>
+        {/* acción secundaria: el detalle es lo principal de la card */}
+        <TextLink
+          to={athleteEditPath(athlete.id)}
+          aria-label={`Editar a ${firstName} ${lastName}`}
+          className="text-muted-foreground hover:text-primary min-h-6"
+        >
+          <Pencil aria-hidden="true" /> Editar
+        </TextLink>
+      </div>
     </Card>
   )
 }

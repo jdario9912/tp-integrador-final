@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { athleteDetailKey } from '../../../lib/athletes'
 import { useAuth } from '../../../lib/auth'
 import { setAthleteActive } from '../actions/set-athlete-active'
-import { athleteDetailKey } from './use-athlete'
 
 // la respuesta trae el atleta actualizado: se guarda directo en el detalle para que el
 // estado de la cuenta cambie sin esperar otro GET
