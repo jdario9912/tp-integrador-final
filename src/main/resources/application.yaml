@@ -1,6 +1,10 @@
 spring:
   application:
     name: ${APP_NAME:api-gestion-deportiva}
+  config:
+    # Spring no lee .env por sí solo; lo importamos para correr la app fuera de Docker Compose.
+    # "optional:" evita fallar si el archivo no existe (prod, CI, imagen Docker)
+    import: optional:file:.env[.properties]
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   data:
@@ -25,7 +29,7 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT}
 
 management:
   endpoints:
