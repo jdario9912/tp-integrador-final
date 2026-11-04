@@ -1,0 +1,51 @@
+name: CI/CD - Deploy por SSH
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:          # si el push SOLO toca estos archivos, no se despliega
+         - '**.md'
+         - 'docs/**'
+         - '.gitignore'
+  workflow_dispatch:   # permite lanzarlo a mano desde la pestaña Actions
+
+concurrency:
+  group: deploy-produccion
+  cancel-in-progress: false   # no corta un deploy en curso
+
+jobs:
+  deploy:
+    name: Deploy al servidor
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy vía SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 15m
+          script_stop: true                    # corta si algún comando falla
+          script: |
+            cd ${{ secrets.APP_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            umask 077
+            cat > .env <<'EOF'
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            SPRING_PROFILES_ACTIVE=${{ vars.SPRING_PROFILES_ACTIVE }}
+            SERVER_PORT=${{ vars.SERVER_PORT }}
+            POSTGRES_PORT=${{ vars.POSTGRES_PORT }}
+            JWT_ACCESS_TOKEN_TTL=${{ vars.JWT_ACCESS_TOKEN_TTL }}
+            JWT_REFRESH_TOKEN_TTL=${{ vars.JWT_REFRESH_TOKEN_TTL }}
+            CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}
+            EOF
+            sed -i 's/^[[:space:]]*//' .env
+
+            docker compose pull
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
