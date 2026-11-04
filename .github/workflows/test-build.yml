@@ -124,3 +124,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Deploy en Render
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          IMG="docker.io%2Fjdario9912%2Fgestion-deportiva%3Asha-${GITHUB_SHA::7}"
+          curl --fail -sS "${DEPLOY_HOOK}&imgURL=${IMG}"
