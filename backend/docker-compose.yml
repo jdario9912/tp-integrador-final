@@ -26,7 +26,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      SERVER_PORT: ${SERVER_PORT:-8080}
+      PORT: ${PORT:-8080}
       # Dentro de la red de Compose se accede a la DB por el nombre del servicio y el puerto interno
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -41,7 +41,7 @@ services:
       # Orígenes del front (separados por coma). En prod va el dominio real del front, no el de desarrollo
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
     ports:
-      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
+      - "${PORT:-8080}:${PORT:-8080}"
 
 volumes:
   postgres_data:

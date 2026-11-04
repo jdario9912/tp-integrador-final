@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gestion-deportiva}
     username: ${POSTGRES_USER:user}
-    password: ${POSTGRES_PASSWORD:password123}
+    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
