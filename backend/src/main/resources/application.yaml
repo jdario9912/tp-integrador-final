@@ -39,7 +39,7 @@ app:
       signed-url-ttl: ${STORAGE_SIGNED_URL_TTL:10m}
 
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
 
 management:
   endpoints:
