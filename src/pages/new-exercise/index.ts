@@ -1,0 +1,1 @@
+export { NewExercisePage } from './NewExercisePage'

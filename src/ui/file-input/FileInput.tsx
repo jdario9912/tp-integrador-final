@@ -1,6 +1,6 @@
-import { ImagePlus } from 'lucide-react'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
+import { ImagePlus } from '../icons'
 
 export type FileInputProps = Omit<ComponentPropsWithoutRef<'input'>, 'type'> & {
   // texto visible del área, también nombra al input

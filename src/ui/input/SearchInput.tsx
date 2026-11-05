@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Search } from '../icons'
 import { TextInput, type TextInputProps } from './TextInput'
 
 export type SearchInputProps = Omit<TextInputProps, 'type' | 'leadingIcon'>

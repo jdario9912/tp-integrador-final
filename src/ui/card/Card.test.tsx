@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { User } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
 import { Card, CardHeader, SectionCard } from '.'
+import { User } from '../icons'
 
 describe('Card', () => {
   it('aplica el tono y mergea className', () => {

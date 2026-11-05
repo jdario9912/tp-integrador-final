@@ -1,11 +1,14 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppShell } from '../layout'
+import { createBrowserRouter, RouterProvider } from '../lib/navigation'
 import { AthleteProfilePage } from '../pages/athlete-profile'
 import { AthletesPage } from '../pages/athletes'
 import { DashboardPage } from '../pages/dashboard'
 import { EditAthletePage } from '../pages/edit-athlete'
+import { EditExercisePage } from '../pages/edit-exercise'
+import { ExercisesPage } from '../pages/exercises'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
+import { NewExercisePage } from '../pages/new-exercise'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
 import { paths } from './paths'
@@ -51,6 +54,21 @@ const router = createBrowserRouter([
                 path: paths.editAthlete,
                 element: <EditAthletePage />,
                 handle: { title: 'Editar atleta' },
+              },
+              {
+                path: paths.exercises,
+                element: <ExercisesPage />,
+                handle: { title: 'Ejercicios' },
+              },
+              {
+                path: paths.newExercise,
+                element: <NewExercisePage />,
+                handle: { title: 'Nuevo ejercicio' },
+              },
+              {
+                path: paths.editExercise,
+                element: <EditExercisePage />,
+                handle: { title: 'Editar ejercicio' },
               },
             ],
           },

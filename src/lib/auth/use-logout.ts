@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import { isApiError } from '../api'
 import { paths } from '../../router/paths'
+import { useNavigate } from '../navigation'
 import { logout } from './logout'
 import { useAuth } from './use-auth'
 

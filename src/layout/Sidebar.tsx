@@ -1,6 +1,6 @@
-import { NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { cn } from '../lib/cn'
+import { NavLink } from '../lib/navigation'
 import { Brand } from './Brand'
 import { navItems } from './nav-items'
 import { SidebarUser } from './SidebarUser'

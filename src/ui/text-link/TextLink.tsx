@@ -1,5 +1,5 @@
-import { Link, type LinkProps } from 'react-router-dom'
 import { cn } from '../../lib/cn'
+import { Link, type LinkProps } from '../../lib/navigation'
 
 export type TextLinkProps = LinkProps
 

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { MemoryRouter } from '../../../lib/navigation'
 import { LatestWeightSection } from './LatestWeightSection'
 
 const section = () => screen.getByRole('region', { name: 'Último peso' })

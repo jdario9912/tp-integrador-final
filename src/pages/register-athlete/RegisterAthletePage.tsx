@@ -1,6 +1,6 @@
-import { ArrowLeft } from 'lucide-react'
 import { PageHeader } from '../../layout'
 import { paths } from '../../router/paths'
+import { ArrowLeft } from '../../ui/icons'
 import { TextLink } from '../../ui/text-link'
 import { RegisterAthleteForm } from './components/RegisterAthleteForm'
 

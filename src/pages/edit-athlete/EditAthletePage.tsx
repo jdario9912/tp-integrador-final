@@ -1,5 +1,3 @@
-import { ArrowLeft, RotateCw, UserX } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
 import {
   AthleteForm,
   coachEditFields,
@@ -9,10 +7,12 @@ import {
 import { PageHeader } from '../../layout'
 import { isApiError } from '../../lib/api'
 import { useAthlete } from '../../lib/athletes'
+import { useNavigate, useParams } from '../../lib/navigation'
 import { paths } from '../../router/paths'
 import { OutlineButton } from '../../ui/button'
 import { Callout } from '../../ui/callout'
 import { EmptyState } from '../../ui/empty-state'
+import { ArrowLeft, RotateCw, UserX } from '../../ui/icons'
 import { Skeleton } from '../../ui/skeleton'
 import { TextLink } from '../../ui/text-link'
 import { AthleteAccountCard } from './components/AthleteAccountCard'

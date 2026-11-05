@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { UserX } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
+import { UserX } from '../icons'
 import { Skeleton } from '../skeleton'
 import { Spinner } from '../spinner'
 import { EmptyState } from '.'

@@ -1,8 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { saveSession } from '../lib/auth'
+import { createMemoryRouter, RouterProvider } from '../lib/navigation'
 import { paths } from '../router/paths'
 import { session } from '../test/auth-fixtures'
 import { AppShell } from './AppShell'
@@ -50,7 +50,7 @@ describe('AppShell', () => {
     expect(screen.getByText('contenido')).toBeInTheDocument()
   })
 
-  it('el entrenador ve el acceso a sus atletas', () => {
+  it('el entrenador ve el acceso a sus atletas y al catálogo de ejercicios', () => {
     saveSession(session('COACH'))
 
     renderShell()
@@ -60,9 +60,12 @@ describe('AppShell', () => {
       'href',
       paths.athletes,
     )
+    expect(
+      within(nav).getByRole('link', { name: 'Ejercicios' }),
+    ).toHaveAttribute('href', paths.exercises)
   })
 
-  it('el atleta no ve el acceso a atletas', () => {
+  it('el atleta no ve el acceso a atletas ni a ejercicios', () => {
     saveSession(session('ATHLETE'))
 
     renderShell()
@@ -70,6 +73,9 @@ describe('AppShell', () => {
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(
       within(nav).queryByRole('link', { name: 'Atletas' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(nav).queryByRole('link', { name: 'Ejercicios' }),
     ).not.toBeInTheDocument()
   })
 

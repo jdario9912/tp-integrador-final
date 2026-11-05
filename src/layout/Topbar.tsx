@@ -1,6 +1,6 @@
-import { ChevronRight, Menu } from 'lucide-react'
-import { useMatches } from 'react-router-dom'
+import { useMatches } from '../lib/navigation'
 import { IconButton } from '../ui/icon-button'
+import { ChevronRight, Menu } from '../ui/icons'
 import { Brand } from './Brand'
 
 // cada ruta declara su título en `handle`: { handle: { title: 'Panel' } }

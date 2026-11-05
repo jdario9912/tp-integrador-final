@@ -1,7 +1,7 @@
 import { useForm } from '@tanstack/react-form'
 import { useState, type SubmitEventHandler } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { isApiError } from '../../../lib/api'
+import { useNavigate } from '../../../lib/navigation'
 import {
   validateEmail,
   validatePassword,

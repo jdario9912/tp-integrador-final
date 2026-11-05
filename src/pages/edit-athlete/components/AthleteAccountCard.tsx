@@ -1,9 +1,9 @@
-import { UserCog, UserMinus } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '../../../ui/badge'
 import { DangerButton, OutlineButton } from '../../../ui/button'
 import { SectionCard } from '../../../ui/card'
 import { ConfirmDialog } from '../../../ui/confirm-dialog'
+import { UserCog, UserMinus } from '../../../ui/icons'
 
 type AthleteAccountCardProps = {
   athleteName: string

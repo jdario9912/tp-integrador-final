@@ -1,8 +1,8 @@
-import { IdCard } from 'lucide-react'
 import type { Athlete } from '../../../lib/athletes'
 import { Badge } from '../../../ui/badge'
 import { SectionCard } from '../../../ui/card'
 import { DescriptionItem, DescriptionList } from '../../../ui/description-list'
+import { IdCard } from '../../../ui/icons'
 import { athleteStatusView } from '../../athletes/athlete-status'
 import {
   ageFromBirthDate,
