@@ -1,5 +1,5 @@
-import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth, type Role } from '../lib/auth'
+import { Navigate, Outlet } from '../lib/navigation'
 import { paths } from './paths'
 
 type RequireRoleProps = {

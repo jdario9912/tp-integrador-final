@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom'
 import { Brand } from '../../../layout'
 import { useAuth } from '../../../lib/auth'
+import { useNavigate } from '../../../lib/navigation'
 import { paths } from '../../../router/paths'
 import { PrimaryButton } from '../../../ui/button'
 

@@ -82,6 +82,22 @@ Se agrega validación del lado del cliente para el formulario de login.
 Closes mi-org/tpif-backend#45
 ```
 
+## Iconos y navegación
+
+Los iconos y la biblioteca de navegación se importan siempre desde un único módulo, nunca directo desde la biblioteca. Así, cambiar o sumar una biblioteca implica tocar un solo archivo:
+
+- **Iconos**: `src/ui/icons/index.ts` (hoy re-exporta `lucide-react`).
+- **Navegación**: `src/lib/navigation/index.ts` (hoy re-exporta `react-router-dom`): hooks (`useNavigate`, `useParams`, `useLocation`, `useSearchParams`, `useMatches`), componentes (`Link`, `NavLink`, `Navigate`, `Outlet`), utilidades (`generatePath`, `parsePath`), el setup del router (`createBrowserRouter`, `RouterProvider`) y los routers en memoria que usan los tests (`MemoryRouter`, `Routes`, `Route`, `createMemoryRouter`).
+
+```ts
+import { Dumbbell, type LucideIcon } from '../../ui/icons'
+import { useNavigate, useParams } from '../../lib/navigation'
+```
+
+Para usar un icono, hook o componente que todavía no está, agregalo a la lista del módulo correspondiente con **el mismo nombre que en la biblioteca** (exports explícitos, sin `export *`, para que se vea qué se usa y el tree-shaking siga funcionando). Los tests también importan desde estos módulos.
+
+La regla `no-restricted-imports` de oxlint (`.oxlintrc.json`) marca como error cualquier import de `lucide-react`, `react-router-dom` o `react-router` fuera de esos dos archivos.
+
 ## Testing
 
 - **Unit tests**: obligatorios para lógica de negocio, hooks, utilidades y componentes con comportamiento no trivial.

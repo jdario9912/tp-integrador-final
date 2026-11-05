@@ -1,10 +1,10 @@
-import { useNavigate } from 'react-router-dom'
 import {
   AthleteForm,
   coachCreateFields,
   emptyAthleteFormValues,
   type AthleteFormValues,
 } from '../../../components/athlete-form'
+import { useNavigate } from '../../../lib/navigation'
 import { paths } from '../../../router/paths'
 import { useCreateAthlete } from '../hooks/use-create-athlete'
 import { toCreateAthleteInput } from '../to-create-athlete-input'

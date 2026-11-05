@@ -1,11 +1,11 @@
-import { UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../layout'
+import { useLocation, useNavigate, useSearchParams } from '../../lib/navigation'
 import { useDebouncedValue } from '../../lib/use-debounced-value'
 import { paths } from '../../router/paths'
 import { PrimaryButton } from '../../ui/button'
 import { Callout } from '../../ui/callout'
+import { UserPlus } from '../../ui/icons'
 import { Pagination } from '../../ui/pagination'
 import {
   parseAthleteFilters,

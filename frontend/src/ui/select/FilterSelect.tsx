@@ -1,6 +1,6 @@
-import { ChevronDown } from 'lucide-react'
 import type { ComponentPropsWithoutRef } from 'react'
 import { cn } from '../../lib/cn'
+import { ChevronDown } from '../icons'
 
 export type FilterSelectProps = ComponentPropsWithoutRef<'select'> & {
   // nombre del filtro, se muestra antes del valor: "Estado: Todos"

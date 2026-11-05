@@ -1,6 +1,6 @@
-import { ArrowLeft, SearchX, UserX } from 'lucide-react'
 import { paths } from '../../../router/paths'
 import { EmptyState } from '../../../ui/empty-state'
+import { ArrowLeft, SearchX, UserX } from '../../../ui/icons'
 import { TextLink } from '../../../ui/text-link'
 
 export type UnavailableReason = 'not-found' | 'forbidden'

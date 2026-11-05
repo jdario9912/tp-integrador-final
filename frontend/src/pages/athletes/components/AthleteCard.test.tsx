@@ -1,7 +1,7 @@
 import { render as baseRender, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { MemoryRouter } from '../../../lib/navigation'
 import { createdAthlete } from '../../../test/athlete-fixtures'
 import { AthleteCard } from './AthleteCard'
 

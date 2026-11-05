@@ -1,5 +1,5 @@
-import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { Navigate, Outlet } from '../lib/navigation'
 import { paths } from './paths'
 
 // rutas que exigen sesión. Si la sesión expira (refresh vencido) también vuelve al login.

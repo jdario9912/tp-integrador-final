@@ -1,9 +1,9 @@
-import { HeartPulse, NotebookPen } from 'lucide-react'
 import type { Athlete } from '../../../lib/athletes'
 import { athleteEditPath } from '../../../router/paths'
 import { SectionCard } from '../../../ui/card'
 import { DescriptionItem, DescriptionList } from '../../../ui/description-list'
 import { EmptyState } from '../../../ui/empty-state'
+import { HeartPulse, NotebookPen } from '../../../ui/icons'
 import { TextLink } from '../../../ui/text-link'
 import {
   experienceLevelLabels,

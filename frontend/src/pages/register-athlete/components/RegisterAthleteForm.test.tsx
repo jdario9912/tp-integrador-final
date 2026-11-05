@@ -1,9 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/api'
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from '../../../lib/navigation'
 import { paths } from '../../../router/paths'
 import { createdAthlete } from '../../../test/athlete-fixtures'
 import { createAthlete } from '../actions/create-athlete'

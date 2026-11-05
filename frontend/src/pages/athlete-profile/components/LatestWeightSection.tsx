@@ -1,7 +1,7 @@
-import { Scale, Weight } from 'lucide-react'
 import { athleteEditPath } from '../../../router/paths'
 import { SectionCard } from '../../../ui/card'
 import { EmptyState } from '../../../ui/empty-state'
+import { Scale, Weight } from '../../../ui/icons'
 import { TextLink } from '../../../ui/text-link'
 import { formatWeightKg } from '../athlete-profile-format'
 

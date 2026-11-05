@@ -1,8 +1,8 @@
-import { LogOut } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { useLogout } from '../lib/auth/use-logout'
 import { Avatar } from '../ui/avatar'
 import { IconButton } from '../ui/icon-button'
+import { LogOut } from '../ui/icons'
 
 const ROLE_LABELS = {
   COACH: 'Entrenador',

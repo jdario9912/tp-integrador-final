@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Bell } from 'lucide-react'
 import { describe, expect, it, vi } from 'vitest'
 import { IconButton } from '.'
+import { Bell } from '../icons'
 
 describe('IconButton', () => {
   it('se anuncia por su aria-label y dispara onClick', async () => {

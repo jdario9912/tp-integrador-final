@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { saveSession, type Role } from '../lib/auth'
+import { MemoryRouter, Route, Routes } from '../lib/navigation'
 import { session } from '../test/auth-fixtures'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'

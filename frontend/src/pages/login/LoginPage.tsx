@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { AuthLayout } from '../../layout'
+import { Navigate, useLocation, useNavigate } from '../../lib/navigation'
 import { paths } from '../../router/paths'
 import { Callout } from '../../ui/callout'
 import { TextLink } from '../../ui/text-link'

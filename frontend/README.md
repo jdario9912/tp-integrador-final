@@ -55,7 +55,7 @@ componente React -> hook (TanStack Query) -> acción -> cliente REST (axios)
 - **Cliente REST** (`src/lib/api`): funciones tipadas `get`, `post`, `put`, `patch`, `del` que devuelven directamente el body. Todo error se normaliza a `ApiError` (`status`, `message`, `path`, `timestamp`); `status: 0` indica que no hubo respuesta del servidor.
 - **Acciones** (`src/pages/<modulo>/actions`): reciben los inputs de la operación y llaman al cliente REST.
 - **Hooks** (`src/pages/<modulo>/hooks`): envuelven las acciones con `useQuery` / `useMutation` y son lo único que consumen los componentes.
-- **Datos compartidos** (`src/lib/<dominio>`): la acción y el hook que usan varias páginas viven en `lib`, por ejemplo `useAthlete` (`GET /athletes/{id}`) en `src/lib/athletes`, que comparten la ficha y la edición del atleta con la misma clave de caché.
+- **Datos compartidos** (`src/lib/<dominio>`): la acción y el hook que usan varias páginas viven en `lib`, por ejemplo `useAthlete` (`GET /athletes/{id}`) en `src/lib/athletes`, que comparten la ficha y la edición del atleta con la misma clave de caché, o `useMuscleGroups` (`GET /muscle-groups`) en `src/lib/exercises`, que usan el catálogo y el formulario de ejercicios (se pide una sola vez por sesión: `staleTime: Infinity`).
 
 ```ts
 // actions/create-coach.ts
@@ -67,6 +67,8 @@ export const useCreateCoach = () => useMutation({ mutationFn: createCoach })
 ```
 
 Formularios: TanStack Form. Rutas: React Router, definidas en `src/router/AppRouter.tsx`. `src/App.tsx` solo compone los providers globales.
+
+Iconos y navegación se importan desde `src/ui/icons` y `src/lib/navigation`, nunca directo de `lucide-react` o `react-router-dom` (lo controla oxlint; ver [CONTRIBUTING](CONTRIBUTING.md#iconos-y-navegación)).
 
 ### Autenticación
 
@@ -82,25 +84,30 @@ Formularios: TanStack Form. Rutas: React Router, definidas en `src/router/AppRou
 
 Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts` (las rutas con parámetros se arman con helpers como `athleteProfilePath(id)`). El `handle.title` de cada ruta es el texto de la barra de ubicación.
 
-| Ruta                 | Página                    | Acceso     |
-| -------------------- | ------------------------- | ---------- |
-| `/`                  | Inicio                    | público    |
-| `/register-coach`    | Registro de entrenador    | público    |
-| `/login`             | Inicio de sesión          | público    |
-| `/dashboard`         | Panel (según el rol)      | con sesión |
-| `/athletes`          | Mis atletas               | solo COACH |
-| `/athletes/new`      | Agregar atleta            | solo COACH |
-| `/athletes/:id`      | Perfil del atleta (ficha) | solo COACH |
-| `/athletes/:id/edit` | Editar atleta             | solo COACH |
+| Ruta                  | Página                    | Acceso     |
+| --------------------- | ------------------------- | ---------- |
+| `/`                   | Inicio                    | público    |
+| `/register-coach`     | Registro de entrenador    | público    |
+| `/login`              | Inicio de sesión          | público    |
+| `/dashboard`          | Panel (según el rol)      | con sesión |
+| `/athletes`           | Mis atletas               | solo COACH |
+| `/athletes/new`       | Agregar atleta            | solo COACH |
+| `/athletes/:id`       | Perfil del atleta (ficha) | solo COACH |
+| `/athletes/:id/edit`  | Editar atleta             | solo COACH |
+| `/exercises`          | Catálogo de ejercicios    | solo COACH |
+| `/exercises/new`      | Nuevo ejercicio           | solo COACH |
+| `/exercises/:id/edit` | Editar ejercicio          | solo COACH |
 
 `/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso (el peso inicial hasta que existan los registros de peso), rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado.
+
+El catálogo de ejercicios (`/exercises`) lista los ejercicios globales del sistema y los propios del entrenador, con búsqueda por nombre y filtro por grupo muscular (agrupado por región) guardados en la URL. Los globales son de solo lectura: su `/exercises/:id/edit` muestra los datos sin formulario. Los propios se editan y se dan de baja (baja lógica: las rutinas que ya los usan no cambian). El formulario es compartido entre alta y edición (`src/components/exercise-form`).
 
 ### Estructura
 
 ```
 src/
-  lib/          utilidades transversales (cn, cliente REST, query client, sesión, validaciones)
-  ui/           componentes de UI comunes (botones, inputs, ...)
+  lib/          utilidades transversales (cn, cliente REST, query client, sesión, validaciones, navegación)
+  ui/           componentes de UI comunes (botones, inputs, ...) e iconos
   router/       declaración de rutas (AppRouter)
   pages/
     <modulo>/   index.ts, <Modulo>Page.tsx, types.ts, actions/, hooks/, components/

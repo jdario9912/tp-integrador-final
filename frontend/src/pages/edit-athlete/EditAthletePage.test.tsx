@@ -1,15 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import {
-  createMemoryRouter,
-  RouterProvider,
-  useLocation,
-} from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
 import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLocation,
+} from '../../lib/navigation'
 import { athleteEditPath, paths } from '../../router/paths'
 import { createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'

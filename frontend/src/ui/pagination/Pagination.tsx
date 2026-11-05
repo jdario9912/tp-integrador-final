@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import { SecondaryButton } from '../button'
+import { ChevronLeft, ChevronRight } from '../icons'
 
 export type PaginationProps = ComponentPropsWithoutRef<'nav'> & {
   // página actual, desde 1

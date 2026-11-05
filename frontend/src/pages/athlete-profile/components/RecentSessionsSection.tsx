@@ -1,6 +1,6 @@
-import { Activity, CalendarCheck } from 'lucide-react'
 import { SectionCard } from '../../../ui/card'
 import { EmptyState } from '../../../ui/empty-state'
+import { Activity, CalendarCheck } from '../../../ui/icons'
 
 const TITLE = 'Últimas sesiones'
 

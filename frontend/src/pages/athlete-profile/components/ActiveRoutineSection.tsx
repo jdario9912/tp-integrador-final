@@ -1,6 +1,6 @@
-import { ClipboardList, Dumbbell } from 'lucide-react'
 import { SectionCard } from '../../../ui/card'
 import { EmptyState } from '../../../ui/empty-state'
+import { ClipboardList, Dumbbell } from '../../../ui/icons'
 
 const TITLE = 'Rutina activa'
 
