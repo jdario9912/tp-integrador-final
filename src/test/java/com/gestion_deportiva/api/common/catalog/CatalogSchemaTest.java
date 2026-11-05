@@ -4,6 +4,7 @@ import com.gestion_deportiva.api.AbstractIntegrationTest;
 import com.gestion_deportiva.api.athlete.model.enums.AthleteStatus;
 import com.gestion_deportiva.api.athlete.model.enums.ExperienceLevel;
 import com.gestion_deportiva.api.athlete.model.enums.Sex;
+import com.gestion_deportiva.api.exercise.model.enums.MuscleGroup;
 import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,18 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
         assertCatalogInSync("sexes", Sex.values());
         assertCatalogInSync("experience_levels", ExperienceLevel.values());
         assertCatalogInSync("athlete_statuses", AthleteStatus.values());
+        assertCatalogInSync("muscle_groups", MuscleGroup.values());
+    }
+
+    @Test
+    void muscleGroupNamesAndRegionsMatchTheTable() {
+        Map<String, String> fromDb = jdbc.queryForList("select code, name, region from muscle_groups").stream()
+                .collect(Collectors.toMap(row -> (String) row.get("code"),
+                        row -> row.get("name") + "|" + row.get("region")));
+
+        for (MuscleGroup group : MuscleGroup.values()) {
+            assertEquals(group.getDisplayName() + "|" + group.getRegion().name(), fromDb.get(group.name()), group.name());
+        }
     }
 
     @Test
@@ -41,10 +54,11 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void flywayAppliedTheMigration() {
+    void flywayAppliedTheMigrations() {
         Integer applied = jdbc.queryForObject(
-                "select count(*) from flyway_schema_history where version = '1' and success", Integer.class);
-        assertTrue(applied != null && applied == 1);
+                "select count(*) from flyway_schema_history where version in ('1', '2', '3') and success",
+                Integer.class);
+        assertTrue(applied != null && applied == 3);
     }
 
     private void assertCatalogInSync(String table, CatalogEnum[] values) {

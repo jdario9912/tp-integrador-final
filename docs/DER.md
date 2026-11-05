@@ -154,14 +154,17 @@ erDiagram
     EXERCISES {
         uuid id PK
         smallint muscle_group_id FK
-        uuid created_by FK
-        varchar name
+        uuid created_by FK "NULL = global"
+        varchar name "unico por entrenador (y entre globales) sin distinguir mayusculas entre no eliminados"
         varchar description
         varchar video_url
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at "baja logica"
     }
     MUSCLE_GROUPS {
         smallint id PK
-        varchar code
+        varchar code UK
         varchar name
         varchar region
     }

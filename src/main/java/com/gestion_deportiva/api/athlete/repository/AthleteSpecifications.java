@@ -1,19 +1,18 @@
 package com.gestion_deportiva.api.athlete.repository;
 
 import com.gestion_deportiva.api.athlete.model.Athlete;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.Locale;
 import java.util.UUID;
+
+import static com.gestion_deportiva.api.common.specification.TextSearch.containsPattern;
+import static com.gestion_deportiva.api.common.specification.TextSearch.isBlank;
+import static com.gestion_deportiva.api.common.specification.TextSearch.like;
 
 // Filtros de la búsqueda de atletas (US-08). Specifications y no JPQL con ":name is null": Postgres no puede
 // inferir el tipo de un parámetro null y cada filtro opcional nuevo se suma sin reescribir la consulta
 public final class AthleteSpecifications {
-
-    private static final char LIKE_ESCAPE = '\\';
 
     private AthleteSpecifications() {
     }
@@ -41,22 +40,5 @@ public final class AthleteSpecifications {
         if (isBlank(goal)) return Specification.unrestricted();
         String pattern = containsPattern(goal);
         return (root, query, cb) -> like(cb, root.get("goal"), pattern);
-    }
-
-    private static Predicate like(CriteriaBuilder cb, Expression<String> field, String pattern) {
-        return cb.like(cb.lower(field), pattern, LIKE_ESCAPE);
-    }
-
-    // Contiene, sin distinguir mayúsculas. Se escapan % y _ para que el texto del usuario se busque literal
-    private static String containsPattern(String text) {
-        String escaped = text.trim().toLowerCase(Locale.ROOT)
-                .replace(String.valueOf(LIKE_ESCAPE), "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
-        return "%" + escaped + "%";
-    }
-
-    private static boolean isBlank(String text) {
-        return text == null || text.isBlank();
     }
 }
