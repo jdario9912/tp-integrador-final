@@ -125,6 +125,42 @@ Para agregar un endpoint:
 2. Si toca datos de un atleta, `AthleteAccessGuard.verifyAccess(user, athleteId)` en el service (no solo en el controller). `AuthenticatedUser.from(jwt)` arma el usuario desde el token.
 3. Su fila en `RoleEndpointMatrixE2ETest`: el test falla si hay un endpoint sin fila.
 
+**Almacenamiento de fotos (Supabase Storage)**
+
+Las fotos de progreso (US-28) se guardan en un bucket **privado** de Supabase Storage. La US-37 dejó lista la base: el puerto `ObjectStorage` (`upload`, `createSignedUrl`, `delete`) y su adaptador `SupabaseObjectStorage`, que usa la API REST de Storage con `RestClient` (sin dependencias nuevas). Todavía no hay endpoints: los agrega US-28.
+
+Flujo elegido para US-28:
+
+1. **Subida a través del backend**: el front manda la imagen en multipart a la API; el backend valida formato y tamaño y la sube a Supabase con la clave `service_role` (`POST /storage/v1/object/{bucket}/{ruta}`). El navegador nunca habla directo con Supabase ni conoce la clave.
+2. **En la base se guarda la ruta del objeto** (ej. `progress/<athleteId>/<uuid>.jpg`), nunca la URL firmada.
+3. **Lectura con URL firmada**: cada vez que se piden las fotos, el backend genera una URL nueva (`POST /storage/v1/object/sign/{bucket}/{ruta}` con `expiresIn`) y responde `url` + `expiresAt`. Sin firma, el objeto no es accesible (ni por la ruta pública ni por la autenticada sin token).
+4. **Renovación**: una URL vencida responde error (400 de Supabase). El front no la renueva por su cuenta: vuelve a pedir el recurso a la API (en TanStack Query, `staleTime` menor que el vencimiento y reintento desde el `onError` de la imagen).
+
+Errores: si Supabase no responde (timeout de conexión 5 s, de lectura 15 s), rechaza la conexión, responde 4xx/5xx o no está configurado, el adaptador lanza `StorageUnavailableException` y la API responde **503** con el formato `ApiErrorResponse` y un mensaje genérico ("El servicio de almacenamiento no está disponible..."). El detalle queda en el log, sin la clave.
+
+Variables de entorno (opcionales en dev: sin ellas la app arranca y el almacenamiento responde 503; **obligatorias en prod**):
+
+- `SUPABASE_URL`: URL del proyecto, sin path (`https://<proyecto>.supabase.co`).
+- `SUPABASE_SERVICE_ROLE_KEY`: clave `service_role` del proyecto. Es secreta: solo en `.env` o variables de entorno; nunca en el código, en logs ni en el front.
+- `SUPABASE_STORAGE_BUCKET`: nombre del bucket privado.
+- `STORAGE_SIGNED_URL_TTL`: vencimiento de las URLs firmadas (por defecto `10m`).
+
+Prueba contra el Supabase real (`SupabaseObjectStorageRealIT`): sube un PNG chico a `poc/<uuid>.png`, comprueba que la URL firmada responde 200 antes de vencer y error después, que sin firma no se accede, y borra el objeto. No usa Spring ni Docker y **se saltea si no está `SUPABASE_URL`**. Para correrla, definir las tres variables en la terminal (Gradle no lee `.env`):
+
+```shell
+# bash
+set -a && source .env && set +a
+./gradlew test --tests 'com.gestion_deportiva.api.storage.SupabaseObjectStorageRealIT'
+```
+
+```powershell
+# PowerShell
+$env:SUPABASE_URL='https://<proyecto>.supabase.co'; $env:SUPABASE_SERVICE_ROLE_KEY='<clave>'; $env:SUPABASE_STORAGE_BUCKET='<bucket>'
+.\gradlew.bat test --tests 'com.gestion_deportiva.api.storage.SupabaseObjectStorageRealIT'
+```
+
+Si el proyecto de Supabase está pausado por inactividad (plan gratuito), la prueba falla aunque el código esté bien: reactivarlo desde el panel.
+
 **Tests**
 
 Los tests de integración y e2e usan [Testcontainers](https://testcontainers.com/): levantan su propio PostgreSQL en un contenedor temporal, así que **Docker tiene que estar corriendo**. No hace falta levantar el `docker-compose.yml` ni tocan la base de desarrollo.

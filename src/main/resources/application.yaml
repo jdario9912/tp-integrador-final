@@ -27,6 +27,16 @@ app:
     # Orígenes del front que pueden llamar a la API desde el navegador, separados por coma (US-04).
     # Sin valor por defecto: si falta CORS_ALLOWED_ORIGINS la app no arranca (en dev lo define application-dev.yml)
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  storage:
+    supabase:
+      # Supabase Storage (US-37). Opcionales en dev: sin ellas la app arranca y el almacenamiento
+      # responde 503 "no disponible". En prod son obligatorias (application-prod.yml).
+      url: ${SUPABASE_URL:}
+      # Clave service_role: solo en .env o variables de entorno, nunca en el repo ni en el front
+      service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:}
+      # Vencimiento de las URLs firmadas de lectura
+      signed-url-ttl: ${STORAGE_SIGNED_URL_TTL:10m}
 
 server:
   port: ${PORT}

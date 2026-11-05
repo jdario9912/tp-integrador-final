@@ -40,6 +40,11 @@ services:
       JWT_REFRESH_TOKEN_TTL: ${JWT_REFRESH_TOKEN_TTL:-2h}
       # Orígenes del front (separados por coma). En prod va el dominio real del front, no el de desarrollo
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      # Supabase Storage (US-37): vacías en dev, el almacenamiento responde 503 "no disponible"
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-}
+      STORAGE_SIGNED_URL_TTL: ${STORAGE_SIGNED_URL_TTL:-10m}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
 

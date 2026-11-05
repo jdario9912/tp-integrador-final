@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.common.exception;
 
 import com.gestion_deportiva.api.common.exception.ApiErrorResponse.FieldErrorDetail;
+import com.gestion_deportiva.api.storage.StorageUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     static final String UNEXPECTED_MESSAGE = "Ocurrió un error inesperado. Intente nuevamente más tarde";
     static final String DEFAULT_MESSAGE = "No se pudo procesar la solicitud";
     static final String DATA_CONFLICT_MESSAGE = "La operación entra en conflicto con datos existentes";
+    static final String STORAGE_UNAVAILABLE_MESSAGE =
+            "El servicio de almacenamiento no está disponible. Intente nuevamente más tarde";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException ex,
@@ -84,6 +87,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException ex,
                                                                  HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, SecurityErrorHandler.UNAUTHORIZED_MESSAGE, request);
+    }
+
+    // Supabase caído, lento o sin configurar: la app sigue respondiendo y el cliente puede reintentar.
+    // El detalle (status de Supabase, ruta) queda en el log; nunca la clave ni la respuesta del proveedor
+    @ExceptionHandler(StorageUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleStorageUnavailable(StorageUnavailableException ex,
+                                                                     HttpServletRequest request) {
+        log.warn("Almacenamiento no disponible en {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMessage());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, STORAGE_UNAVAILABLE_MESSAGE, request);
     }
 
     @ExceptionHandler(Exception.class)
