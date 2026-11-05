@@ -10,6 +10,14 @@ spring:
       ddl-auto: validate
     show-sql: false
 
+app:
+  storage:
+    supabase:
+      # Sin valores por defecto: si falta alguna variable de Supabase, la app falla al arrancar
+      url: ${SUPABASE_URL}
+      service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
+      bucket: ${SUPABASE_STORAGE_BUCKET}
+
 management:
   endpoint:
     health:

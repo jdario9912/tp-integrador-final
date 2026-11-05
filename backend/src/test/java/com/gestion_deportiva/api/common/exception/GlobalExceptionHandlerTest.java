@@ -4,6 +4,7 @@ import com.gestion_deportiva.api.config.ClockConfig;
 import com.gestion_deportiva.api.config.JwtConfig;
 import com.gestion_deportiva.api.config.SecurityConfig;
 import com.gestion_deportiva.api.config.WebConfig;
+import com.gestion_deportiva.api.storage.StorageUnavailableException;
 import com.gestion_deportiva.api.user.exception.EmailAlreadyRegisteredException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -166,6 +167,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void storageUnavailableReturns503WithAGenericMessageAndNoProviderDetails() throws Exception {
+        mockMvc.perform(get(BASE + "/storage-unavailable"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.STORAGE_UNAVAILABLE_MESSAGE))
+                .andExpect(jsonPath("$.path").value(BASE + "/storage-unavailable"))
+                .andExpect(content().string(not(containsString("Supabase"))));
+    }
+
+    @Test
     void unsupportedHttpMethodKeeps405WithTheStandardFormat() throws Exception {
         mockMvc.perform(put(BASE + "/not-found").with(csrf()))
                 .andExpect(status().isMethodNotAllowed())
@@ -246,6 +258,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/access-denied")
         void accessDenied() {
             throw new AccessDeniedException("detalle interno de seguridad");
+        }
+
+        @GetMapping("/storage-unavailable")
+        void storageUnavailable() {
+            throw new StorageUnavailableException("Supabase respondió 500 al subir poc/foto.png");
         }
 
         @GetMapping("/unexpected")
