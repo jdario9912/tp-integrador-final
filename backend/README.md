@@ -110,6 +110,9 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `GET /api/athletes/{id}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `PUT /api/athletes/{id}` · `DELETE /api/athletes/{id}` · `PATCH /api/athletes/{id}/unlink` | 401 | ✓ solo sus atletas | 403 |
 | `POST /api/athletes/{id}/deactivate` · `POST /api/athletes/{id}/reactivate` | 401 | ✓ solo sus atletas | 403 |
+| `GET /api/muscle-groups` | 401 | ✓ | 403 |
+| `GET /api/exercises` · `POST /api/exercises` · `GET /api/exercises/{id}` | 401 | ✓ globales y propios | 403 |
+| `PUT /api/exercises/{id}` · `DELETE /api/exercises/{id}` | 401 | ✓ solo los propios | 403 |
 
 `GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
 
@@ -118,6 +121,13 @@ Gestión del atleta (US-07), solo para su entrenador:
 - `POST /api/athletes/{id}/deactivate` y `/reactivate` cambian `active`: un atleta desactivado no puede iniciar sesión ni refrescar su sesión, pero sigue en "Mis atletas".
 - `PATCH /api/athletes/{id}/unlink` lo desvincula (204): el atleta y su historial quedan en la base con `coachId = null`, deja de aparecer en "Mis atletas" y el entrenador recibe 403 al consultarlo. Su cuenta no se modifica.
 - `DELETE /api/athletes/{id}` lo elimina (204) con baja lógica: la fila, sus datos y su historial quedan en la base (`users.deleted_at`), pero la aplicación no lo ve más (`@SQLRestriction` en `User`): sale de "Mis atletas", cualquier operación sobre él responde 404, no puede iniciar sesión (se borran sus refresh tokens) y su email queda libre para un alta nueva (índice único parcial de la V2).
+
+Catálogo de ejercicios (US-38), solo para entrenadores:
+- `GET /api/muscle-groups` lista los 12 grupos musculares precargados: `{ code, name, region }` (`region`: `UPPER`, `CORE`, `LOWER` o `FULL`).
+- `GET /api/exercises` devuelve los ejercicios del sistema (precargados por la V3, `global: true`) y los del entrenador autenticado, ordenados por nombre y con el formato `PageResponse`. Query params opcionales: `page`, `size`, `name` (contiene, sin distinguir mayúsculas) y `muscleGroup` (código).
+- `POST /api/exercises` lo crea a nombre del entrenador (201): `name` y `muscleGroup` obligatorios, `description` y `videoUrl` (http/https) opcionales. Nombre repetido en su catálogo, sin distinguir mayúsculas → 409; puede repetir el nombre de un global o de otro entrenador.
+- `PUT /api/exercises/{id}` edita todos sus datos (los opcionales que no se envían quedan en null). Un global o uno de otro entrenador → 403.
+- `DELETE /api/exercises/{id}` lo elimina (204) con baja lógica (`exercises.deleted_at`): sale del catálogo y su nombre queda libre, pero las rutinas que lo usan lo siguen referenciando.
 
 Para agregar un endpoint:
 

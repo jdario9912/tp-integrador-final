@@ -49,6 +49,9 @@ public class SecurityConfig {
     static final String ATHLETE_DEACTIVATE_PATH = ATHLETE_PATH + "/deactivate";
     static final String ATHLETE_REACTIVATE_PATH = ATHLETE_PATH + "/reactivate";
     static final String ATHLETE_UNLINK_PATH = ATHLETE_PATH + "/unlink";
+    static final String EXERCISES_PATH = WebConfig.API_PREFIX + "/exercises";
+    static final String EXERCISE_PATH = EXERCISES_PATH + "/{id}";
+    static final String MUSCLE_GROUPS_PATH = WebConfig.API_PREFIX + "/muscle-groups";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -82,6 +85,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, ATHLETE_DEACTIVATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.POST, ATHLETE_REACTIVATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PATCH, ATHLETE_UNLINK_PATH).hasRole("COACH")
+                        // Catálogo de ejercicios (US-38): solo entrenadores; la autoría la controla ExerciseService
+                        .requestMatchers(HttpMethod.GET, MUSCLE_GROUPS_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.GET, EXERCISES_PATH, EXERCISE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.POST, EXERCISES_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.PUT, EXERCISE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.DELETE, EXERCISE_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

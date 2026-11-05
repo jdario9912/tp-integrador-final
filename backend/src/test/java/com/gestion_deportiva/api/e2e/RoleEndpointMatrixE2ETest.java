@@ -91,7 +91,15 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.DELETE, "/api/athletes/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.PATCH, "/api/athletes/{id}/unlink", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.POST, "/api/athletes/{id}/deactivate", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            new Row(HttpMethod.POST, "/api/athletes/{id}/reactivate", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.POST, "/api/athletes/{id}/reactivate", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // catálogo de ejercicios (US-38): {id} es el del atleta, así que el entrenador recibe 404 (pasa la
+            // autorización); la autoría se prueba en ExerciseE2ETest
+            new Row(HttpMethod.GET, "/api/muscle-groups", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.POST, "/api/exercises", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/exercises", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.PUT, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.DELETE, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";

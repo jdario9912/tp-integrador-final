@@ -3,7 +3,7 @@
 TP Final · versión 1.1
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete` y `RefreshToken` reflejan el código implementado en `com.gestion_deportiva.api.model`. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken` y `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`) reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -102,6 +102,27 @@ Centraliza la creación de usuarios: hashea la contraseña y delega en cada subc
 | + revoke() | void |
 | + isActive(now: Instant) | boolean |
 
+### Exercise
+Ejercicio del catálogo (US-38). Sin autor (`createdBy` null) es un ejercicio del sistema: lo ven todos los entrenadores y nadie lo edita. Baja lógica con `deletedAt`.
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − muscleGroup | MuscleGroup |
+| − createdBy | Coach [0..1] |
+| − name | String |
+| − description | String [0..1] |
+| − videoUrl | String [0..1] |
+| − createdAt | Instant |
+| − updatedAt | Instant |
+| − deletedAt | Instant |
+| + builder() | ExerciseBuilder |
+| + rename(newName: String) | void |
+| + isGlobal() | boolean |
+| + isOwnedBy(coachId: UUID) | boolean |
+| + markDeleted(at: Instant) | void |
+| + isDeleted() | boolean |
+
 ### Routine
 `− id: UUID`, `− name: String`, `− goal: String`, `− startDate: Date`, `− endDate: Date`, `− daysPerWeek: int`, `+ addDay(day): void`
 
@@ -109,7 +130,7 @@ Centraliza la creación de usuarios: hashea la contraseña y delega en cada subc
 `− id: UUID`, `− dayNumber: int`, `− name: String`, `+ addExercise(exercise): void`
 
 ### RoutineExercise
-`− id: UUID`, `− name: String`, `− sortOrder: int`, `− sets: int`, `− reps: int`, `− recommendedWeight: float`, `− rest: int`, `− rirRpe: String`, `− techniqueNote: String`
+`− id: UUID`, `− sortOrder: int`, `− sets: int`, `− reps: int`, `− recommendedWeight: float`, `− rest: int`, `− rirRpe: String`, `− techniqueNote: String`
 
 ### RoutineAssignment
 `− id: UUID`, `− assignmentDate: Date`, `− active: boolean`
@@ -143,6 +164,8 @@ Centraliza la creación de usuarios: hashea la contraseña y delega en cada subc
 - **Sex**: MALE, FEMALE, OTHER
 - **ExperienceLevel**: BEGINNER, INTERMEDIATE, ADVANCED
 - **AthleteStatus**: ACTIVE, NEEDS_REVIEW, NO_ROUTINE, NO_ACTIVITY, INACTIVE
+- **MuscleGroup** (`displayName`, `region`): CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, ABS, QUADRICEPS, HAMSTRINGS, GLUTES, CALVES, FULL_BODY
+- **MuscleRegion**: UPPER, CORE, LOWER, FULL
 - **SessionStatus**: IN_PROGRESS, FINISHED
 - **PhotoType**: FRONT, SIDE, BACK
 - **NoteType**: PRIVATE, VISIBLE_TO_ATHLETE
@@ -159,10 +182,13 @@ Centraliza la creación de usuarios: hashea la contraseña y delega en cada subc
 | CoachFactory | dependencia | Coach | — | creates |
 | AthleteFactory | dependencia | Athlete | — | creates |
 | Coach | agregación | Athlete | 0..1 → 0..* | manages |
+| Coach | asociación | Exercise | 0..1 → 0..* | contributes |
+| MuscleGroup | asociación | Exercise | 1 → 0..* | classifies |
 | Coach | asociación | Routine | 1 → 0..* | creates |
 | Coach | asociación | Note | 1 → 0..* | writes |
 | Routine | composición | RoutineDay | 1 → 1..* | contains |
 | RoutineDay | composición | RoutineExercise | 1 → 1..* | contains |
+| RoutineExercise | asociación dirigida | Exercise | → 1 | is planned from |
 | Athlete | asociación | RoutineAssignment | 1 → 0..* | has |
 | RoutineAssignment | asociación dirigida | Routine | → 1 | refers to |
 | Athlete | asociación | TrainingSession | 1 → 0..* | logs |
@@ -204,6 +230,22 @@ NEEDS_REVIEW
 NO_ROUTINE
 NO_ACTIVITY
 INACTIVE }
+enum MuscleGroup { CHEST
+BACK
+SHOULDERS
+BICEPS
+TRICEPS
+FOREARMS
+ABS
+QUADRICEPS
+HAMSTRINGS
+GLUTES
+CALVES
+FULL_BODY }
+enum MuscleRegion { UPPER
+CORE
+LOWER
+FULL }
 enum SessionStatus { IN_PROGRESS
 FINISHED }
 enum PhotoType { FRONT
@@ -294,6 +336,24 @@ class RefreshToken {
   + isActive(now: Instant): boolean
 }
 
+class Exercise {
+  - id: UUID
+  - muscleGroup: MuscleGroup
+  - createdBy: Coach [0..1]
+  - name: String
+  - description: String [0..1]
+  - videoUrl: String [0..1]
+  - createdAt: Instant
+  - updatedAt: Instant
+  - deletedAt: Instant
+  + {static} builder(): ExerciseBuilder
+  + rename(newName: String): void
+  + isGlobal(): boolean
+  + isOwnedBy(coachId: UUID): boolean
+  + markDeleted(at: Instant): void
+  + isDeleted(): boolean
+}
+
 class Routine {
   - id: UUID
   - name: String
@@ -313,7 +373,6 @@ class RoutineDay {
 
 class RoutineExercise {
   - id: UUID
-  - name: String
   - sortOrder: int
   - sets: int
   - reps: int
@@ -416,11 +475,14 @@ CoachFactory ..> Coach : creates >
 AthleteFactory ..> Athlete : creates >
 
 Coach "0..1" o-- "0..*" Athlete : manages >
+Coach "0..1" -- "0..*" Exercise : contributes >
+MuscleGroup "1" -- "0..*" Exercise : classifies >
 Coach "1" -- "0..*" Routine : creates >
 Coach "1" -- "0..*" Note : writes >
 
 Routine "1" *-- "1..*" RoutineDay : contains >
 RoutineDay "1" *-- "1..*" RoutineExercise : contains >
+RoutineExercise --> "1" Exercise : is planned from >
 
 Athlete "1" -- "0..*" RoutineAssignment : has >
 RoutineAssignment --> "1" Routine : refers to >
@@ -442,6 +504,7 @@ User ..> Role
 Athlete ..> Sex
 Athlete ..> ExperienceLevel
 Athlete ..> AthleteStatus
+MuscleGroup ..> MuscleRegion
 TrainingSession ..> SessionStatus
 ProgressPhoto ..> PhotoType
 Note ..> NoteType
