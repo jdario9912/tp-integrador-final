@@ -97,10 +97,15 @@ Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts
 | `/exercises`          | Catálogo de ejercicios    | solo COACH |
 | `/exercises/new`      | Nuevo ejercicio           | solo COACH |
 | `/exercises/:id/edit` | Editar ejercicio          | solo COACH |
+| `/routines`           | Mis rutinas               | solo COACH |
+| `/routines/new`       | Nueva rutina              | solo COACH |
+| `/routines/:id`       | Detalle de la rutina      | solo COACH |
 
 `/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso (el peso inicial hasta que existan los registros de peso), rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado.
 
 El catálogo de ejercicios (`/exercises`) lista los ejercicios globales del sistema y los propios del entrenador, con búsqueda por nombre y filtro por grupo muscular (agrupado por región) guardados en la URL. Los globales son de solo lectura: su `/exercises/:id/edit` muestra los datos sin formulario. Los propios se editan y se dan de baja (baja lógica: las rutinas que ya los usan no cambian). El formulario es compartido entre alta y edición (`src/components/exercise-form`).
+
+Las rutinas (`/routines`) muestran solo las del entrenador, ordenadas por nombre y paginadas (la página va en la URL). El alta (`/routines/new`, formulario en `src/components/routine-form`) carga los datos generales: nombre (obligatorio y único entre las rutinas propias, sin distinguir mayúsculas; el 409 se muestra en el campo), objetivo, días por semana (1 a 7), duración en semanas (1 a 52), descripción y si es plantilla. Después del alta se va al detalle (`/routines/:id`), de solo lectura; ante un 403 (rutina de otro entrenador) o un 404 muestra un aviso con la salida al listado. Los días y ejercicios de la rutina y la asignación a atletas llegan con US-14 a US-16.
 
 ### Estructura
 

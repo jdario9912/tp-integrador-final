@@ -50,7 +50,7 @@ describe('AppShell', () => {
     expect(screen.getByText('contenido')).toBeInTheDocument()
   })
 
-  it('el entrenador ve el acceso a sus atletas y al catálogo de ejercicios', () => {
+  it('el entrenador ve el acceso a sus atletas, sus rutinas y al catálogo de ejercicios', () => {
     saveSession(session('COACH'))
 
     renderShell()
@@ -60,12 +60,16 @@ describe('AppShell', () => {
       'href',
       paths.athletes,
     )
+    expect(within(nav).getByRole('link', { name: 'Rutinas' })).toHaveAttribute(
+      'href',
+      paths.routines,
+    )
     expect(
       within(nav).getByRole('link', { name: 'Ejercicios' }),
     ).toHaveAttribute('href', paths.exercises)
   })
 
-  it('el atleta no ve el acceso a atletas ni a ejercicios', () => {
+  it('el atleta no ve el acceso a atletas, rutinas ni ejercicios', () => {
     saveSession(session('ATHLETE'))
 
     renderShell()
@@ -73,6 +77,9 @@ describe('AppShell', () => {
     const nav = screen.getByRole('navigation', { name: 'Principal' })
     expect(
       within(nav).queryByRole('link', { name: 'Atletas' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(nav).queryByRole('link', { name: 'Rutinas' }),
     ).not.toBeInTheDocument()
     expect(
       within(nav).queryByRole('link', { name: 'Ejercicios' }),

@@ -13,6 +13,7 @@ export {
   ChevronRight,
   ClipboardList,
   Dumbbell,
+  Eye,
   HeartPulse,
   IdCard,
   ImagePlus,
