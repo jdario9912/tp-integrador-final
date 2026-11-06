@@ -17,6 +17,10 @@ export const paths = {
   exercises: '/exercises',
   newExercise: '/exercises/new',
   editExercise: '/exercises/:id/edit',
+  routines: '/routines',
+  newRoutine: '/routines/new',
+  // convive con /routines/new: React Router prioriza el segmento estático
+  routineDetail: '/routines/:id',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano
@@ -28,3 +32,6 @@ export const athleteEditPath = (id: string) =>
 
 export const exerciseEditPath = (id: string) =>
   generatePath(paths.editExercise, { id })
+
+export const routineDetailPath = (id: string) =>
+  generatePath(paths.routineDetail, { id })

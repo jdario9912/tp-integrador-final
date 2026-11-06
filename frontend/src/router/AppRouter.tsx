@@ -9,8 +9,11 @@ import { ExercisesPage } from '../pages/exercises'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
 import { NewExercisePage } from '../pages/new-exercise'
+import { NewRoutinePage } from '../pages/new-routine'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
+import { RoutineDetailPage } from '../pages/routine-detail'
+import { RoutinesPage } from '../pages/routines'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'
 import { RequireRole } from './RequireRole'
@@ -69,6 +72,21 @@ const router = createBrowserRouter([
                 path: paths.editExercise,
                 element: <EditExercisePage />,
                 handle: { title: 'Editar ejercicio' },
+              },
+              {
+                path: paths.routines,
+                element: <RoutinesPage />,
+                handle: { title: 'Rutinas' },
+              },
+              {
+                path: paths.newRoutine,
+                element: <NewRoutinePage />,
+                handle: { title: 'Nueva rutina' },
+              },
+              {
+                path: paths.routineDetail,
+                element: <RoutineDetailPage />,
+                handle: { title: 'Detalle de la rutina' },
               },
             ],
           },
