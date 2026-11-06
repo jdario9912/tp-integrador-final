@@ -99,7 +99,12 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.GET, "/api/exercises", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.PUT, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            new Row(HttpMethod.DELETE, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.DELETE, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // rutinas (US-13): {id} es el del atleta, así que el entrenador recibe 404 (pasa la autorización);
+            // la pertenencia se prueba en RoutineE2ETest
+            new Row(HttpMethod.POST, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/routines/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
