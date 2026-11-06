@@ -52,6 +52,8 @@ public class SecurityConfig {
     static final String EXERCISES_PATH = WebConfig.API_PREFIX + "/exercises";
     static final String EXERCISE_PATH = EXERCISES_PATH + "/{id}";
     static final String MUSCLE_GROUPS_PATH = WebConfig.API_PREFIX + "/muscle-groups";
+    static final String ROUTINES_PATH = WebConfig.API_PREFIX + "/routines";
+    static final String ROUTINE_PATH = ROUTINES_PATH + "/{id}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -91,6 +93,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, EXERCISES_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PUT, EXERCISE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.DELETE, EXERCISE_PATH).hasRole("COACH")
+                        // Rutinas (US-13): solo entrenadores; la pertenencia la controla RoutineService
+                        .requestMatchers(HttpMethod.POST, ROUTINES_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.GET, ROUTINES_PATH, ROUTINE_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

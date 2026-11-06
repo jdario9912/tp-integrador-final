@@ -136,13 +136,14 @@ erDiagram
     ROUTINES {
         uuid id PK
         uuid coach_id FK
-        varchar name
+        varchar name "unico por entrenador sin distinguir mayusculas"
         varchar description
         varchar goal
-        smallint days_per_week
-        smallint duration_weeks
-        boolean is_template
+        smallint days_per_week "1 a 7"
+        smallint duration_weeks "1 a 52"
+        boolean is_template "default false"
         timestamptz created_at
+        timestamptz updated_at
     }
     ROUTINE_DAYS {
         uuid id PK

@@ -113,6 +113,7 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `GET /api/muscle-groups` | 401 | ✓ | 403 |
 | `GET /api/exercises` · `POST /api/exercises` · `GET /api/exercises/{id}` | 401 | ✓ globales y propios | 403 |
 | `PUT /api/exercises/{id}` · `DELETE /api/exercises/{id}` | 401 | ✓ solo los propios | 403 |
+| `POST /api/routines` · `GET /api/routines` · `GET /api/routines/{id}` | 401 | ✓ solo las propias | 403 |
 
 `GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
 
@@ -128,6 +129,11 @@ Catálogo de ejercicios (US-38), solo para entrenadores:
 - `POST /api/exercises` lo crea a nombre del entrenador (201): `name` y `muscleGroup` obligatorios, `description` y `videoUrl` (http/https) opcionales. Nombre repetido en su catálogo, sin distinguir mayúsculas → 409; puede repetir el nombre de un global o de otro entrenador.
 - `PUT /api/exercises/{id}` edita todos sus datos (los opcionales que no se envían quedan en null). Un global o uno de otro entrenador → 403.
 - `DELETE /api/exercises/{id}` lo elimina (204) con baja lógica (`exercises.deleted_at`): sale del catálogo y su nombre queda libre, pero las rutinas que lo usan lo siguen referenciando.
+
+Rutinas (US-13), solo para entrenadores:
+- `POST /api/routines` la crea a nombre del entrenador (201): `name` obligatorio; `description`, `goal`, `daysPerWeek` (1 a 7), `durationWeeks` (1 a 52) e `isTemplate` (plantilla reutilizable, `false` por defecto) opcionales. Nombre repetido entre sus rutinas, sin distinguir mayúsculas → 409; puede repetir el nombre de una rutina de otro entrenador.
+- `GET /api/routines` ("Mis rutinas") devuelve solo las del entrenador autenticado, ordenadas por nombre y con el formato `PageResponse`. Query params opcionales: `page` y `size`.
+- `GET /api/routines/{id}` devuelve una rutina propia. La de otro entrenador → 403.
 
 Para agregar un endpoint:
 

@@ -3,7 +3,7 @@
 TP Final · versión 1.1
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete`, `RefreshToken` y `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`) reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`) y `Routine` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -124,7 +124,23 @@ Ejercicio del catálogo (US-38). Sin autor (`createdBy` null) es un ejercicio de
 | + isDeleted() | boolean |
 
 ### Routine
-`− id: UUID`, `− name: String`, `− goal: String`, `− startDate: Date`, `− endDate: Date`, `− daysPerWeek: int`, `+ addDay(day): void`
+Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantilla reutilizable para distintos atletas. Los días (`RoutineDay`) se agregan en US-14.
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − coach | Coach |
+| − name | String |
+| − description | String [0..1] |
+| − goal | String [0..1] |
+| − daysPerWeek | Short [0..1] |
+| − durationWeeks | Short [0..1] |
+| − template | boolean |
+| − createdAt | Instant |
+| − updatedAt | Instant |
+| + builder() | RoutineBuilder |
+| + rename(newName: String) | void |
+| + isOwnedBy(coachId: UUID) | boolean |
 
 ### RoutineDay
 `− id: UUID`, `− dayNumber: int`, `− name: String`, `+ addExercise(exercise): void`
@@ -356,12 +372,18 @@ class Exercise {
 
 class Routine {
   - id: UUID
+  - coach: Coach
   - name: String
-  - goal: String
-  - startDate: Date
-  - endDate: Date
-  - daysPerWeek: int
-  + addDay(day): void
+  - description: String [0..1]
+  - goal: String [0..1]
+  - daysPerWeek: Short [0..1]
+  - durationWeeks: Short [0..1]
+  - template: boolean
+  - createdAt: Instant
+  - updatedAt: Instant
+  + {static} builder(): RoutineBuilder
+  + rename(newName: String): void
+  + isOwnedBy(coachId: UUID): boolean
 }
 
 class RoutineDay {
