@@ -50,6 +50,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    // Validación de un campo hecha en el service (ej. fecha futura según el reloj y la zona de la app, US-26):
+    // mismo formato que los errores de Bean Validation
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleFieldValidation(FieldValidationException ex,
+                                                                  HttpServletRequest request) {
+        List<FieldErrorDetail> fieldErrors = List.of(new FieldErrorDetail(ex.getField(), ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiErrorResponse.of(HttpStatus.BAD_REQUEST,
+                VALIDATION_MESSAGE, request.getRequestURI(), fieldErrors));
+    }
+
     // Red de seguridad para constraints de la base (ej. carrera contra un índice único).
     // Mensaje genérico: el detalle SQL (tablas, índices, valores) no se expone al cliente
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -14,6 +14,10 @@ spring:
         max-page-size: 100
 
 app:
+  # Zona horaria de la app (US-26): define qué fecha es "hoy" para las reglas de negocio (por ahora, la fecha no
+  # futura de los registros de peso). ID IANA, no un offset fijo. Los instantes siguen en UTC.
+  # Si está vacía se usa el valor por defecto; un valor inválido no deja arrancar la app (TimeZoneProperties)
+  time-zone: ${APP_TIME_ZONE:America/Argentina/Buenos_Aires}
   security:
     jwt:
       # Sin valor por defecto: si falta JWT_SECRET la app no arranca (en dev lo define application-dev.yml).

@@ -27,6 +27,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       PORT: ${PORT:-8080}
+      # Zona en la que se calcula "hoy" (US-26). ":-" usa la de Argentina también si está vacía en .env
+      APP_TIME_ZONE: ${APP_TIME_ZONE:-America/Argentina/Buenos_Aires}
       # Dentro de la red de Compose se accede a la DB por el nombre del servicio y el puerto interno
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432

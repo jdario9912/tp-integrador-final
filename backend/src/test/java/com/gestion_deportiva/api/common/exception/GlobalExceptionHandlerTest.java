@@ -69,6 +69,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void fieldValidationExceptionReturns400WithTheSameFormatAsBeanValidation() throws Exception {
+        mockMvc.perform(get(BASE + "/field-validation"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.VALIDATION_MESSAGE))
+                .andExpect(jsonPath("$.path").value(BASE + "/field-validation"))
+                .andExpect(jsonPath("$.fieldErrors", hasSize(1)))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("date"))
+                .andExpect(jsonPath("$.fieldErrors[0].message").value("La fecha no puede ser futura"));
+    }
+
+    @Test
     void malformedJsonReturns400WithAClearMessage() throws Exception {
         mockMvc.perform(post(BASE + "/validation").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -220,6 +233,12 @@ class GlobalExceptionHandlerTest {
             }
         }
 
+        static class SampleFieldValidationException extends FieldValidationException {
+            SampleFieldValidationException(String field, String message) {
+                super(field, message);
+            }
+        }
+
         @PostMapping("/validation")
         void validation(@Valid @RequestBody SampleRequest request) {
         }
@@ -227,6 +246,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/not-found")
         void notFound() {
             throw new SampleNotFoundException("No se encontró el atleta");
+        }
+
+        @GetMapping("/field-validation")
+        void fieldValidation() {
+            throw new SampleFieldValidationException("date", "La fecha no puede ser futura");
         }
 
         @GetMapping("/conflict")

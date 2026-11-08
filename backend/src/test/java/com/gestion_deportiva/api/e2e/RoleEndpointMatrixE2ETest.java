@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 // Matriz rol × endpoint (US-04): qué pasa con cada endpoint sin token, con un entrenador y con un atleta.
 // ALLOWED = la autorización pasa (puede responder 2xx, 400, 404...), nunca 401 ni 403.
-// La pertenencia (qué atleta puede ver cada uno) se prueba en AthleteE2ETest; acá {id} es el atleta del
-// entrenador, así que los dos roles tienen acceso.
+// La pertenencia (qué atleta puede ver cada uno) se prueba en AthleteE2ETest; acá {id} y {athleteId} son el
+// atleta del entrenador, así que los dos roles tienen acceso.
 // Cada endpoint nuevo tiene que sumar su fila: shouldHaveARowForEveryEndpoint falla si falta alguno.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
@@ -104,7 +105,13 @@ class RoleEndpointMatrixE2ETest {
             // la pertenencia se prueba en RoutineE2ETest
             new Row(HttpMethod.POST, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            new Row(HttpMethod.GET, "/api/routines/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.GET, "/api/routines/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // registros de peso (US-26): el atleta pasa la autorización (con "{}" el POST y el PUT responden 400 y
+            // {weightId} no hace falta que exista); el entrenador solo lee. La pertenencia se prueba en
+            // WeightRecordE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/weights", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/weights/{weightId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/weights", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
@@ -201,7 +208,10 @@ class RoleEndpointMatrixE2ETest {
 
     private ResponseEntity<String> call(Row row, Caller caller) {
         RestClient.RequestBodySpec request = client.method(row.method())
-                .uri(row.path().replace("{id}", athlete.getId().toString()))
+                .uri(row.path()
+                        .replace("{id}", athlete.getId().toString())
+                        .replace("{athleteId}", athlete.getId().toString())
+                        .replace("{weightId}", UUID.randomUUID().toString()))
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));

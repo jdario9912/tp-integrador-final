@@ -49,6 +49,19 @@ class OpenApiE2ETest {
     }
 
     @Test
+    void shouldDocumentTheWeightRecordEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert: el alta documenta el 201 (@ResponseStatus) y el listado, los filtros como query params
+        JsonNode weights = paths.get("/api/athletes/{athleteId}/weights");
+        assertTrue(weights.get("post").get("responses").has("201"));
+        assertTrue(weights.get("get").get("parameters").toString().contains("\"from\""));
+        assertTrue(weights.get("get").get("parameters").toString().contains("\"to\""));
+        assertTrue(paths.get("/api/athletes/{athleteId}/weights/{weightId}").has("put"));
+    }
+
+    @Test
     void shouldServeSwaggerUiConfigOutsideTheApiPrefix() {
         assertEquals(HttpStatus.OK, get("/v3/api-docs/swagger-config").getStatusCode());
     }
