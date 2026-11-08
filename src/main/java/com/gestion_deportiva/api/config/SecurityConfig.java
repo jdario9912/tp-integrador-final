@@ -54,6 +54,8 @@ public class SecurityConfig {
     static final String MUSCLE_GROUPS_PATH = WebConfig.API_PREFIX + "/muscle-groups";
     static final String ROUTINES_PATH = WebConfig.API_PREFIX + "/routines";
     static final String ROUTINE_PATH = ROUTINES_PATH + "/{id}";
+    static final String ATHLETE_WEIGHTS_PATH = ATHLETES_PATH + "/{athleteId}/weights";
+    static final String ATHLETE_WEIGHT_PATH = ATHLETE_WEIGHTS_PATH + "/{weightId}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -87,6 +89,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, ATHLETE_DEACTIVATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.POST, ATHLETE_REACTIVATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PATCH, ATHLETE_UNLINK_PATH).hasRole("COACH")
+                        // Registros de peso (US-26): el atleta registra y corrige los suyos (el entrenador recibe
+                        // 403 aunque el atleta sea suyo); el listado lo ven los dos roles. Qué atleta puede usar
+                        // cada uno lo decide AthleteAccessGuard en WeightRecordService
+                        .requestMatchers(HttpMethod.POST, ATHLETE_WEIGHTS_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_WEIGHT_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_WEIGHTS_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Catálogo de ejercicios (US-38): solo entrenadores; la autoría la controla ExerciseService
                         .requestMatchers(HttpMethod.GET, MUSCLE_GROUPS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, EXERCISES_PATH, EXERCISE_PATH).hasRole("COACH")
