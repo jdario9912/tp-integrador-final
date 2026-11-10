@@ -215,6 +215,31 @@ class RoutineTest {
         assertTrue(routine("Fuerza", coachWithId()).duplicate("Copia de Fuerza").getDays().isEmpty());
     }
 
+    @Test
+    void shouldNotBeCompleteWithoutDays() {
+        assertFalse(routine("Fuerza", coachWithId()).isComplete());
+    }
+
+    @Test
+    void shouldNotBeCompleteWhenADayHasNoExercises() {
+        // Arrange
+        Routine routine = routine("Fuerza", coachWithId());
+        routine.addDay("Empuje").addExercise(routineExercise(exercise("Press banca", MuscleGroup.CHEST, null)));
+        routine.addDay("Tirón");
+
+        // Assert
+        assertFalse(routine.isComplete());
+    }
+
+    @Test
+    void shouldBeCompleteWhenEveryDayHasExercises() {
+        Routine routine = routine("Fuerza", coachWithId());
+        routine.addDay("Empuje").addExercise(routineExercise(exercise("Press banca", MuscleGroup.CHEST, null)));
+        routine.addDay("Tirón").addExercise(routineExercise(exercise("Remo", MuscleGroup.BACK, null)));
+
+        assertTrue(routine.isComplete());
+    }
+
     private static <T> T withId(T entity) {
         ReflectionTestUtils.setField(entity, "id", UUID.randomUUID());
         return entity;

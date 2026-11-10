@@ -114,7 +114,11 @@ class RoleEndpointMatrixE2ETest {
             // WeightRecordE2ETest
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/weights", UNAUTHORIZED, FORBIDDEN, ALLOWED),
             new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/weights/{weightId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
-            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/weights", UNAUTHORIZED, ALLOWED, ALLOWED));
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/weights", UNAUTHORIZED, ALLOWED, ALLOWED),
+            // asignación de rutinas (US-16): solo el entrenador (con "{}" el POST responde 400). La pertenencia y las
+            // reglas de negocio se prueban en RoutineAssignmentE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";

@@ -3,7 +3,7 @@
 TP Final · versión 1.1
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay` y `RoutineExercise` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay`, `RoutineExercise` y `RoutineAssignment` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -124,7 +124,7 @@ Ejercicio del catálogo (US-38). Sin autor (`createdBy` null) es un ejercicio de
 | + isDeleted() | boolean |
 
 ### Routine
-Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantilla reutilizable para distintos atletas. Sus días (`RoutineDay`) se configuran en US-14 y `duplicate` crea una copia independiente (US-15). Mientras se configura puede no tener días ni ejercicios: la multiplicidad 1..* se exige al asignarla a un atleta (US-16).
+Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantilla reutilizable para distintos atletas. Sus días (`RoutineDay`) se configuran en US-14 y `duplicate` crea una copia independiente (US-15). Mientras se configura puede no tener días ni ejercicios: la multiplicidad 1..* se exige al asignarla a un atleta (US-16), con `isComplete`.
 
 | Miembro | Tipo |
 |---|---|
@@ -142,6 +142,7 @@ Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantil
 | + builder() | RoutineBuilder |
 | + rename(newName: String) | void |
 | + isOwnedBy(coachId: UUID) | boolean |
+| + isComplete() | boolean |
 | + addDay(name: String) | RoutineDay |
 | + newDay(name: String) | RoutineDay |
 | + replaceDays(ordered: List&lt;RoutineDay&gt;) | void |
@@ -179,7 +180,17 @@ Ejercicio del catálogo planificado en un día (US-14). `sortOrder` es su posici
 | + builder() | RoutineExerciseBuilder |
 
 ### RoutineAssignment
-`− id: UUID`, `− assignmentDate: Date`, `− active: boolean`
+Rutina asignada a un atleta (US-16). `assignmentDate` es «hoy» en la zona de la app al asignarla. Cada atleta tiene a lo sumo una activa: al asignarle otra (con confirmación), la anterior pasa a inactiva con `deactivate` y queda en su historial.
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − athlete | Athlete |
+| − routine | Routine |
+| − assignmentDate | LocalDate |
+| − active | boolean |
+| + builder() | RoutineAssignmentBuilder |
+| + deactivate() | void |
 
 ### TrainingSession
 `− id: UUID`, `− date: Date`, `− status: SessionStatus`, `− duration: int`, `− athleteComment: String`, `− coachFeedback: String`, `− reviewed: boolean`, `+ start(day): void`, `+ finish(comment): void`
@@ -251,7 +262,6 @@ Ejercicio del catálogo planificado en un día (US-14). `sortOrder` es su posici
 ---
 
 ## 3. Pendiente de refinamiento (PO)
-- ¿Una única rutina activa por atleta o varias simultáneas + historial?
 - Umbrales concretos del estado «necesita revisión» (`NEEDS_REVIEW`).
 
 ---
@@ -415,6 +425,7 @@ class Routine {
   + {static} builder(): RoutineBuilder
   + rename(newName: String): void
   + isOwnedBy(coachId: UUID): boolean
+  + isComplete(): boolean
   + addDay(name: String): RoutineDay
   + newDay(name: String): RoutineDay
   + replaceDays(ordered: List<RoutineDay>): void
@@ -448,8 +459,12 @@ class RoutineExercise {
 
 class RoutineAssignment {
   - id: UUID
-  - assignmentDate: Date
+  - athlete: Athlete
+  - routine: Routine
+  - assignmentDate: LocalDate
   - active: boolean
+  + {static} builder(): RoutineAssignmentBuilder
+  + deactivate(): void
 }
 
 class TrainingSession {
@@ -574,8 +589,8 @@ ProgressPhoto ..> PhotoType
 Note ..> NoteType
 
 note right of RoutineAssignment
-  Pendiente PO: ¿una única rutina activa
-  o varias simultáneas + historial?
+  Una sola activa por atleta;
+  las anteriores, inactivas (historial).
 end note
 
 note right of Athlete

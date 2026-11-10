@@ -23,8 +23,7 @@ import com.gestion_deportiva.api.routine.model.RoutineDay;
 import com.gestion_deportiva.api.routine.model.RoutineExercise;
 import com.gestion_deportiva.api.routine.repository.RoutineRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -43,11 +42,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // Rutinas del entrenador (US-13, US-14, US-15). Recibe el id del entrenador y no el principal, igual que ExerciseService
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoutineService {
-
-    private static final Logger log = LoggerFactory.getLogger(RoutineService.class);
 
     // Orden fijo del listado: el "sort" del cliente se ignora (ver ExerciseService.CATALOG_SORT).
     // El id desempata para que la paginación sea estable
@@ -192,8 +190,8 @@ public class RoutineService {
     }
 
     // 404 si no existe; 403 si es de otro entrenador. Los ids son UUID: distinguir los dos casos
-    // no permite enumerar rutinas
-    private Routine findOwned(UUID coachId, UUID routineId) {
+    // no permite enumerar rutinas. Público para los módulos que usan rutinas del entrenador (asignaciones, US-16)
+    public Routine findOwned(UUID coachId, UUID routineId) {
         Routine routine = routineRepository.findById(routineId)
                 .orElseThrow(() -> new RoutineNotFoundException(routineId));
         if (!routine.isOwnedBy(coachId)) {
