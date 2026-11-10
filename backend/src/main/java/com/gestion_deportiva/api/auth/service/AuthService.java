@@ -12,8 +12,7 @@ import com.gestion_deportiva.api.auth.repository.RefreshTokenRepository;
 import com.gestion_deportiva.api.config.JwtProperties;
 import com.gestion_deportiva.api.user.model.User;
 import com.gestion_deportiva.api.user.repository.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +25,9 @@ import java.util.UUID;
 
 // Login, refresh y logout (US-02, US-03). Política: una sola sesión activa por usuario; cada login o refresh
 // borra los refresh tokens anteriores del usuario y emite uno nuevo.
+@Slf4j
 @Service
 public class AuthService {
-
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     // BCrypt solo procesa 72 bytes y Spring Security rechaza contraseñas más largas con una excepción
     static final int BCRYPT_MAX_BYTES = 72;

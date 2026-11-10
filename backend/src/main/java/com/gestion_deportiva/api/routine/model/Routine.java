@@ -151,6 +151,12 @@ public class Routine {
         return Collections.unmodifiableList(days);
     }
 
+    // Lista para asignar a un atleta (US-16): al menos un día y cada día con al menos un ejercicio
+    // (las multiplicidades 1..* del UML, que mientras se configura la rutina no se exigen)
+    public boolean isComplete() {
+        return !days.isEmpty() && days.stream().noneMatch(day -> day.getExercises().isEmpty());
+    }
+
     // Solo lee el id del entrenador: con el proxy LAZY no dispara una consulta
     public boolean isOwnedBy(UUID coachId) {
         return coach.getId() != null && coach.getId().equals(coachId);

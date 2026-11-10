@@ -14,8 +14,7 @@ import com.gestion_deportiva.api.exercise.exception.ExerciseNotFoundException;
 import com.gestion_deportiva.api.exercise.model.Exercise;
 import com.gestion_deportiva.api.exercise.repository.ExerciseRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -31,11 +30,10 @@ import static com.gestion_deportiva.api.exercise.repository.ExerciseSpecificatio
 import static com.gestion_deportiva.api.exercise.repository.ExerciseSpecifications.visibleTo;
 
 // Catálogo de ejercicios (US-38). Recibe el id del entrenador y no el principal, igual que AthleteService
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExerciseService {
-
-    private static final Logger log = LoggerFactory.getLogger(ExerciseService.class);
 
     // Orden fijo del listado: el "sort" del cliente se ignora (ver AthleteService.MY_ATHLETES_SORT).
     // El id desempata para que la paginación sea estable

@@ -5,8 +5,7 @@ import com.gestion_deportiva.api.athlete.exception.AthleteNotFoundException;
 import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -15,11 +14,10 @@ import java.util.UUID;
 // y un atleta solo a sus propios datos. Se llama desde los services, no solo desde el controller, para que ningún
 // camino nuevo a los datos de un atleta la saltee. Está aparte de AthleteService para que la usen también los
 // módulos de rutinas, sesiones y progreso.
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AthleteAccessGuard {
-
-    private static final Logger log = LoggerFactory.getLogger(AthleteAccessGuard.class);
 
     private final AthleteRepository athleteRepository;
 

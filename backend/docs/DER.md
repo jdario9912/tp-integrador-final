@@ -18,7 +18,6 @@ erDiagram
     %% ============ B · PLANIFICACION ============
     COACHES ||--o{ ROUTINES : creates
     COACHES ||--o{ EXERCISES : "contributes (NULL = global)"
-    COACHES ||--o{ ROUTINE_ASSIGNMENTS : "assigns (assigned_by)"
     ROUTINES ||--o{ ROUTINE_DAYS : contains
     ROUTINE_DAYS ||--o{ ROUTINE_EXERCISES : contains
     MUSCLE_GROUPS ||--o{ EXERCISES : classifies
@@ -184,12 +183,8 @@ erDiagram
         uuid id PK
         uuid athlete_id FK
         uuid routine_id FK
-        uuid assigned_by FK
-        date assignment_date
-        date start_date
-        date end_date
-        boolean active
-        varchar notes
+        date assignment_date "hoy en la zona de la app"
+        boolean active "una sola activa por atleta (indice parcial)"
     }
     TRAINING_SESSIONS {
         uuid id PK

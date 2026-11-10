@@ -58,6 +58,7 @@ public class SecurityConfig {
     static final String ROUTINE_DUPLICATE_PATH = ROUTINE_PATH + "/duplicate";
     static final String ATHLETE_WEIGHTS_PATH = ATHLETES_PATH + "/{athleteId}/weights";
     static final String ATHLETE_WEIGHT_PATH = ATHLETE_WEIGHTS_PATH + "/{weightId}";
+    static final String ATHLETE_ASSIGNMENTS_PATH = ATHLETES_PATH + "/{athleteId}/assignments";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -107,6 +108,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, ROUTINES_PATH, ROUTINE_DUPLICATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, ROUTINES_PATH, ROUTINE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PUT, ROUTINE_PATH, ROUTINE_DAYS_PATH).hasRole("COACH")
+                        // Asignación de rutinas e historial (US-16): solo entrenadores; la pertenencia del atleta y
+                        // de la rutina la controla RoutineAssignmentService
+                        .requestMatchers(HttpMethod.POST, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )
