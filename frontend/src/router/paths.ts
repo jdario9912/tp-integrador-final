@@ -21,6 +21,8 @@ export const paths = {
   newRoutine: '/routines/new',
   // convive con /routines/new: React Router prioriza el segmento estático
   routineDetail: '/routines/:id',
+  // solo atleta: registro de peso corporal (US-26)
+  progress: '/progress',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano

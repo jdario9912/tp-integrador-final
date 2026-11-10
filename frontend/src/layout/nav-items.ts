@@ -1,6 +1,7 @@
 import type { Role } from '../lib/auth'
 import { paths } from '../router/paths'
 import {
+  ChartLine,
   ClipboardList,
   Dumbbell,
   LayoutDashboard,
@@ -18,5 +19,8 @@ export const navItems: Record<Role, NavItem[]> = {
     { to: paths.routines, label: 'Rutinas', icon: ClipboardList },
     { to: paths.exercises, label: 'Ejercicios', icon: Dumbbell },
   ],
-  ATHLETE: [{ to: paths.dashboard, label: 'Panel', icon: LayoutDashboard }],
+  ATHLETE: [
+    { to: paths.dashboard, label: 'Panel', icon: LayoutDashboard },
+    { to: paths.progress, label: 'Progreso', icon: ChartLine },
+  ],
 }

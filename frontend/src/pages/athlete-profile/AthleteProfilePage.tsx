@@ -18,6 +18,7 @@ import { LatestWeightSection } from './components/LatestWeightSection'
 import { PersonalDataSection } from './components/PersonalDataSection'
 import { ProfileColumns } from './components/ProfileColumns'
 import { RecentSessionsSection } from './components/RecentSessionsSection'
+import { usePrefetchLatestWeight } from './hooks/use-latest-weight'
 
 // 404: no existe o se eliminó. 400: el id de la URL no es un UUID, para el usuario es lo mismo.
 // 403: de otro entrenador o desvinculado. Ninguno cambia al reintentar
@@ -43,6 +44,8 @@ export function AthleteProfilePage() {
     isFetching,
     refetch,
   } = useAthlete(id)
+  // en paralelo con el atleta: la sección "Último peso" lo toma de la caché
+  usePrefetchLatestWeight(id)
 
   const reason = error ? unavailableReason(error) : undefined
   if (reason) return <AthleteUnavailable reason={reason} />

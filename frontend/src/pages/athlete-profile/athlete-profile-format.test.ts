@@ -5,8 +5,6 @@ import {
   formatAge,
   formatAvailableDays,
   formatHeightCm,
-  formatIsoDate,
-  formatWeightKg,
   presentText,
   sexLabels,
 } from './athlete-profile-format'
@@ -24,13 +22,6 @@ describe('presentText', () => {
     ['  Hipertrofia ', 'Hipertrofia'],
   ])('%j → %j', (value, expected) => {
     expect(presentText(value)).toBe(expected)
-  })
-})
-
-describe('formatIsoDate', () => {
-  it('muestra la fecha completa en español sin correr el día por la zona horaria', () => {
-    expect(formatIsoDate('2000-05-20')).toBe('20 de mayo de 2000')
-    expect(formatIsoDate('2026-01-01')).toBe('1 de enero de 2026')
   })
 })
 
@@ -65,10 +56,9 @@ describe('formatos', () => {
     expect(formatAge(34)).toBe('34 años')
   })
 
-  it('medidas con coma decimal y su unidad', () => {
-    expect(formatWeightKg(80.25)).toBe('80,25 kg')
-    expect(formatWeightKg(62)).toBe('62 kg')
+  it('altura con coma decimal y su unidad', () => {
     expect(formatHeightCm(178.5)).toBe('178,5 cm')
+    expect(formatHeightCm(180)).toBe('180 cm')
   })
 
   it('días disponibles en singular y plural', () => {

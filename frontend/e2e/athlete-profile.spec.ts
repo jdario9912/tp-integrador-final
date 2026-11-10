@@ -14,6 +14,8 @@ import {
 
 const ATHLETES_URL = /\/api\/athletes(\?.*)?$/
 const ATHLETE_URL = /\/api\/athletes\/[^/?]+$/
+// último peso de la ficha (US-26): GET /athletes/{id}/weights?size=1
+const WEIGHTS_URL = /\/api\/athletes\/[^/]+\/weights(\?.*)?$/
 
 // ejemplo de AthleteResponse del contrato de API, de la cartera del entrenador
 const leoJson = () => ({
@@ -56,12 +58,48 @@ const withoutOptionals = (): AthleteJson => ({
   startDate: null,
 })
 
-// GET /athletes (listado) y GET /athletes/{id}: responde el atleta dado o el error indicado
+// registro de peso del contrato de API (8.2)
+const weightJson = () => ({
+  id: '6d0f8e2a-1b3c-4d5e-8f9a-0b1c2d3e4f5a',
+  date: '2026-11-06',
+  weightKg: 72.5,
+  comment: 'En ayunas' as string | null,
+  createdAt: '2026-11-06T11:20:31.123456Z',
+  updatedAt: '2026-11-06T11:20:31.123456Z',
+})
+
+type WeightJson = ReturnType<typeof weightJson>
+type ErrorJson = { status: number; message: string }
+
+// GET /athletes (listado), GET /athletes/{id} y GET /athletes/{id}/weights: responde el atleta
+// dado o el error indicado. Los pesos fallan igual que el atleta (mismo AthleteAccessGuard);
+// si no, responden los registros dados (por defecto, ninguno) o su propio error
 const routeBackend = async (
   page: Page,
-  detail: AthleteJson | { status: number; message: string },
+  detail: AthleteJson | ErrorJson,
+  weights: WeightJson[] | ErrorJson = [],
 ) => {
   const requests: Request[] = []
+  const weightRequests: Request[] = []
+  await page.route(WEIGHTS_URL, (route) => {
+    weightRequests.push(route.request())
+    const path = new URL(route.request().url()).pathname.replace('/api', '')
+    const failure = 'id' in detail ? weights : detail
+    if (!Array.isArray(failure) && 'status' in failure) {
+      return route.fulfill(apiError(failure.status, failure.message, path))
+    }
+    const content = Array.isArray(weights) ? weights : []
+    return route.fulfill({
+      status: 200,
+      json: {
+        content,
+        page: 0,
+        size: 1,
+        totalElements: content.length,
+        totalPages: content.length ? 1 : 0,
+      },
+    })
+  })
   await page.route(ATHLETES_URL, (route) => {
     const content = 'id' in detail ? [detail] : []
     return route.fulfill({
@@ -82,7 +120,7 @@ const routeBackend = async (
       ? route.fulfill({ status: 200, json: detail })
       : route.fulfill(apiError(detail.status, detail.message, path))
   })
-  return requests
+  return Object.assign(requests, { weights: weightRequests })
 }
 
 const section = (page: Page, name: string) => page.getByRole('region', { name })
@@ -139,6 +177,52 @@ test.describe('como entrenador', () => {
     )
 
     expect(requests[0].headers().authorization).toBe('Bearer access-1')
+    // sin registros de peso se muestra el inicial; igual se consultó el último registro
+    expect(
+      Object.fromEntries(new URL(requests.weights[0].url()).searchParams),
+    ).toEqual({ size: '1' })
+  })
+
+  test('ve el último peso registrado con su fecha y comentario', async ({
+    page,
+  }) => {
+    const leo = leoJson()
+    const requests = await routeBackend(page, leo, [weightJson()])
+
+    await page.goto(athleteProfilePath(leo.id))
+
+    const weight = section(page, 'Último peso')
+    await expect(weight).toContainText('Último registro')
+    await expect(weight).toContainText('72,5 kg')
+    await expect(weight).toContainText('Registrado el 6 de noviembre de 2026.')
+    await expect(weight).toContainText('En ayunas')
+    await expect(weight).not.toContainText('Peso inicial')
+    expect(new URL(requests.weights[0].url()).pathname).toBe(
+      `/api/athletes/${leo.id}/weights`,
+    )
+  })
+
+  test('si falla solo el último peso, el resto de la ficha se ve', async ({
+    page,
+  }) => {
+    const leo = leoJson()
+    await routeBackend(page, leo, {
+      status: 500,
+      message: 'Ocurrió un error inesperado. Intente nuevamente más tarde',
+    })
+
+    await page.goto(athleteProfilePath(leo.id))
+
+    const weight = section(page, 'Último peso')
+    await expect(weight.getByRole('alert')).toContainText(
+      'No se pudo cargar el último peso.',
+    )
+    await expect(
+      weight.getByRole('button', { name: 'Reintentar' }),
+    ).toBeVisible()
+    await expect(section(page, 'Datos personales')).toContainText(
+      'leo@test.com',
+    )
   })
 
   test('desde la ficha va a editar al atleta y vuelve al listado', async ({

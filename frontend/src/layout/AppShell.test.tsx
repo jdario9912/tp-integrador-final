@@ -67,6 +67,27 @@ describe('AppShell', () => {
     expect(
       within(nav).getByRole('link', { name: 'Ejercicios' }),
     ).toHaveAttribute('href', paths.exercises)
+    // Progreso es solo del atleta
+    expect(
+      within(nav).queryByRole('link', { name: 'Progreso' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('el atleta ve el acceso a su progreso', () => {
+    saveSession(session('ATHLETE'))
+
+    renderShell()
+
+    const nav = screen.getByRole('navigation', { name: 'Principal' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Panel', 'Progreso'])
+    expect(within(nav).getByRole('link', { name: 'Progreso' })).toHaveAttribute(
+      'href',
+      paths.progress,
+    )
   })
 
   it('el atleta no ve el acceso a atletas, rutinas ni ejercicios', () => {

@@ -1,4 +1,5 @@
 import type { Athlete } from '../../../lib/athletes'
+import { formatIsoDate } from '../../../lib/iso-date'
 import { Badge } from '../../../ui/badge'
 import { SectionCard } from '../../../ui/card'
 import { DescriptionItem, DescriptionList } from '../../../ui/description-list'
@@ -7,7 +8,6 @@ import { athleteStatusView } from '../../athletes/athlete-status'
 import {
   ageFromBirthDate,
   formatAge,
-  formatIsoDate,
   presentText,
   sexLabels,
 } from '../athlete-profile-format'

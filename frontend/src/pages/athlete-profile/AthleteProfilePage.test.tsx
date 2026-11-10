@@ -7,12 +7,15 @@ import type { Athlete } from '../../lib/athletes'
 import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
+import { getWeights } from '../../lib/weights/get-weights'
 import { athleteProfilePath, paths } from '../../router/paths'
 import { createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'
+import { weightRecord, weightsPage } from '../../test/weight-fixtures'
 import { AthleteProfilePage } from './AthleteProfilePage'
 
 vi.mock('../../lib/athletes/get-athlete', () => ({ getAthlete: vi.fn() }))
+vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
 const leo = createdAthlete({
@@ -68,6 +71,9 @@ const valueOf = (sectionName: string, label: string) =>
 
 beforeEach(() => {
   vi.mocked(getAthlete).mockReset()
+  vi.mocked(getWeights).mockReset()
+  // por defecto el atleta no tiene registros de peso (US-26)
+  vi.mocked(getWeights).mockResolvedValue(weightsPage([]))
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -147,9 +153,68 @@ describe('AthleteProfilePage', () => {
     )
   })
 
-  it('el último peso es el peso inicial, rotulado como tal, y rutina y sesiones están vacías (CA-3)', async () => {
+  it('pide el atleta y su último peso en paralelo', () => {
+    // el atleta no llega nunca: el último peso igual ya se pidió
+    vi.mocked(getAthlete).mockReturnValue(new Promise(() => {}))
+
+    renderPage()
+
+    expect(getWeights).toHaveBeenCalledWith(leo.id, { size: 1 })
+  })
+
+  it('muestra el último peso registrado con su fecha y comentario (US-26 CA-4)', async () => {
+    vi.mocked(getWeights).mockResolvedValue(
+      weightsPage([weightRecord({ comment: 'Después de entrenar' })]),
+    )
+
     await renderProfile(leo)
 
+    const weight = section('Último peso')
+    expect(
+      await within(weight).findByText('Último registro', { selector: 'dt' }),
+    ).toBeInTheDocument()
+    expect(valueOf('Último peso', 'Último registro')).toHaveTextContent(
+      '72,5 kg',
+    )
+    expect(weight).toHaveTextContent('Registrado el 6 de noviembre de 2026.')
+    expect(weight).toHaveTextContent('Después de entrenar')
+    expect(weight).not.toHaveTextContent('Peso inicial')
+  })
+
+  it('si falla solo el último peso, la sección muestra su error y el resto de la ficha se ve', async () => {
+    vi.mocked(getWeights).mockRejectedValue(
+      new ApiError(
+        'Ocurrió un error inesperado. Intente nuevamente más tarde',
+        500,
+      ),
+    )
+
+    await renderProfile(leo)
+
+    expect(
+      await within(section('Último peso')).findByRole('alert'),
+    ).toHaveTextContent('No se pudo cargar el último peso.')
+    expect(
+      within(section('Último peso')).getByRole('button', {
+        name: 'Reintentar',
+      }),
+    ).toBeInTheDocument()
+    expect(valueOf('Datos personales', 'Email')).toHaveTextContent(
+      'leo@test.com',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Leo Gil', level: 1 }),
+    ).toBeInTheDocument()
+  })
+
+  it('sin registros de peso, el último peso es el peso inicial rotulado como tal, y rutina y sesiones están vacías (CA-3)', async () => {
+    await renderProfile(leo)
+
+    expect(
+      await within(section('Último peso')).findByText('Peso inicial', {
+        selector: 'dt',
+      }),
+    ).toBeInTheDocument()
     expect(valueOf('Último peso', 'Peso inicial')).toHaveTextContent('80,25 kg')
     expect(
       within(section('Rutina activa')).getByRole('heading', {
@@ -215,7 +280,9 @@ describe('AthleteProfilePage', () => {
 
     const weight = section('Último peso')
     expect(
-      within(weight).getByRole('heading', { name: 'Sin registros de peso' }),
+      await within(weight).findByRole('heading', {
+        name: 'Sin registros de peso',
+      }),
     ).toBeInTheDocument()
     expect(
       within(weight).getByRole('link', { name: 'Cargar peso inicial' }),
