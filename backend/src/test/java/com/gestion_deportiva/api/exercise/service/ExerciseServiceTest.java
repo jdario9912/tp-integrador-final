@@ -8,6 +8,7 @@ import com.gestion_deportiva.api.exercise.dto.ExerciseRequest;
 import com.gestion_deportiva.api.exercise.dto.ExerciseResponse;
 import com.gestion_deportiva.api.exercise.dto.ExerciseSearchFilter;
 import com.gestion_deportiva.api.exercise.exception.ExerciseAccessDeniedException;
+import com.gestion_deportiva.api.exercise.exception.ExerciseInUseException;
 import com.gestion_deportiva.api.exercise.exception.ExerciseNameAlreadyExistsException;
 import com.gestion_deportiva.api.exercise.exception.ExerciseNotFoundException;
 import com.gestion_deportiva.api.exercise.model.Exercise;
@@ -315,6 +316,19 @@ class ExerciseServiceTest {
         assertThrows(ExerciseAccessDeniedException.class, () -> exerciseService.delete(COACH_ID, foreignId));
         assertFalse(global.isDeleted());
         assertFalse(foreign.isDeleted());
+        verify(exerciseRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldRejectDeletingAnExerciseUsedInRoutines() {
+        // Arrange
+        Exercise exercise = exercise("Press", MuscleGroup.CHEST, coach);
+        givenExercise(exercise);
+        when(exerciseRepository.isUsedInRoutines(EXERCISE_ID)).thenReturn(true);
+
+        // Act + Assert
+        assertThrows(ExerciseInUseException.class, () -> exerciseService.delete(COACH_ID, EXERCISE_ID));
+        assertFalse(exercise.isDeleted());
         verify(exerciseRepository, never()).saveAndFlush(any());
     }
 

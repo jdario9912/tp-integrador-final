@@ -19,8 +19,8 @@ erDiagram
     COACHES ||--o{ ROUTINES : creates
     COACHES ||--o{ EXERCISES : "contributes (NULL = global)"
     COACHES ||--o{ ROUTINE_ASSIGNMENTS : "assigns (assigned_by)"
-    ROUTINES ||--|{ ROUTINE_DAYS : contains
-    ROUTINE_DAYS ||--|{ ROUTINE_EXERCISES : contains
+    ROUTINES ||--o{ ROUTINE_DAYS : contains
+    ROUTINE_DAYS ||--o{ ROUTINE_EXERCISES : contains
     MUSCLE_GROUPS ||--o{ EXERCISES : classifies
     EXERCISES ||--o{ ROUTINE_EXERCISES : "is planned in"
     ATHLETES ||--o{ ROUTINE_ASSIGNMENTS : receives
@@ -147,10 +147,9 @@ erDiagram
     }
     ROUTINE_DAYS {
         uuid id PK
-        uuid routine_id FK
-        smallint day_number
+        uuid routine_id FK "ON DELETE CASCADE"
+        smallint day_number "desde 1, unico por rutina (diferido)"
         varchar name
-        varchar notes
     }
     EXERCISES {
         uuid id PK
@@ -171,16 +170,14 @@ erDiagram
     }
     ROUTINE_EXERCISES {
         uuid id PK
-        uuid routine_day_id FK
+        uuid routine_day_id FK "ON DELETE CASCADE"
         uuid exercise_id FK
-        smallint sort_order
-        smallint sets
-        smallint reps_min
-        smallint reps_max
-        numeric recommended_weight_kg
-        smallint rest_seconds
-        varchar rir_rpe
-        varchar tempo
+        smallint sort_order "desde 0, unico por dia (diferido)"
+        smallint sets "mayor a 0"
+        smallint reps "mayor a 0"
+        numeric recommended_weight_kg "mayor o igual a 0"
+        smallint rest_seconds "mayor o igual a 0"
+        varchar rir_rpe "RIR n o RPE n"
         varchar technique_note
     }
     ROUTINE_ASSIGNMENTS {

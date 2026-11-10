@@ -10,6 +10,8 @@ import com.gestion_deportiva.api.exercise.exception.ExerciseAccessDeniedExceptio
 import com.gestion_deportiva.api.exercise.model.Exercise;
 import com.gestion_deportiva.api.exercise.model.enums.MuscleGroup;
 import com.gestion_deportiva.api.exercise.repository.ExerciseRepository;
+import com.gestion_deportiva.api.routine.model.Routine;
+import com.gestion_deportiva.api.routine.repository.RoutineRepository;
 import com.gestion_deportiva.api.support.AuthHeaders;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +42,8 @@ import static com.gestion_deportiva.api.support.ExerciseFixtures.exercise;
 import static com.gestion_deportiva.api.support.ExerciseFixtures.exerciseRequest;
 import static com.gestion_deportiva.api.support.ExerciseFixtures.exerciseRequestWithOnlyRequired;
 import static com.gestion_deportiva.api.support.IdentityFixtures.RAW_PASSWORD;
+import static com.gestion_deportiva.api.support.RoutineFixtures.routine;
+import static com.gestion_deportiva.api.support.RoutineFixtures.routineExercise;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -77,6 +81,9 @@ class ExerciseE2ETest {
     @Autowired
     private ExerciseRepository exerciseRepository;
 
+    @Autowired
+    private RoutineRepository routineRepository;
+
     private RestClient client;
 
     private Coach coach;
@@ -86,8 +93,9 @@ class ExerciseE2ETest {
     @BeforeEach
     void setUp() {
         client = RestClient.create("http://localhost:" + port);
-        // Arranca sin ejercicios: si esta clase corre primero, todavía están los globales precargados
-        jdbcTemplate.execute("TRUNCATE exercises");
+        // Arranca sin ejercicios: si esta clase corre primero, todavía están los globales precargados.
+        // CASCADE: también vacía routine_exercises, que los referencia
+        jdbcTemplate.execute("TRUNCATE exercises CASCADE");
         // Hash BCrypt real: la autenticación valida la contraseña contra la base
         coach = coachRepository.saveAndFlush(
                 new Coach("Ana", "Paz", COACH_EMAIL, passwordEncoder.encode(RAW_PASSWORD)));
@@ -101,7 +109,7 @@ class ExerciseE2ETest {
     @AfterEach
     void cleanUp() {
         jdbcTemplate.execute("TRUNCATE users CASCADE");
-        jdbcTemplate.execute("TRUNCATE exercises");
+        jdbcTemplate.execute("TRUNCATE exercises CASCADE");
     }
 
     // ---------- alta ----------
@@ -363,6 +371,23 @@ class ExerciseE2ETest {
                 exchange(HttpMethod.DELETE, own.getId().toString(), null, COACH_EMAIL).getStatusCode());
         assertEquals(HttpStatus.CREATED,
                 exchange(HttpMethod.POST, "", exerciseRequest("Press"), COACH_EMAIL).getStatusCode());
+    }
+
+    @Test
+    void shouldReturn422WhenDeletingAnExerciseUsedInARoutine() {
+        // Arrange
+        Exercise own = exerciseRepository.saveAndFlush(exercise("Press", MuscleGroup.CHEST, coach));
+        Routine routine = routine("Fuerza", coach);
+        routine.addDay("Empuje").addExercise(routineExercise(own));
+        routineRepository.saveAndFlush(routine);
+
+        // Act
+        ResponseEntity<String> response = exchange(HttpMethod.DELETE, own.getId().toString(), null, COACH_EMAIL);
+
+        // Assert: sigue en el catálogo
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "select count(*) from exercises where deleted_at is not null", Integer.class));
     }
 
     @Test

@@ -54,6 +54,8 @@ public class SecurityConfig {
     static final String MUSCLE_GROUPS_PATH = WebConfig.API_PREFIX + "/muscle-groups";
     static final String ROUTINES_PATH = WebConfig.API_PREFIX + "/routines";
     static final String ROUTINE_PATH = ROUTINES_PATH + "/{id}";
+    static final String ROUTINE_DAYS_PATH = ROUTINE_PATH + "/days";
+    static final String ROUTINE_DUPLICATE_PATH = ROUTINE_PATH + "/duplicate";
     static final String ATHLETE_WEIGHTS_PATH = ATHLETES_PATH + "/{athleteId}/weights";
     static final String ATHLETE_WEIGHT_PATH = ATHLETE_WEIGHTS_PATH + "/{weightId}";
 
@@ -101,9 +103,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, EXERCISES_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PUT, EXERCISE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.DELETE, EXERCISE_PATH).hasRole("COACH")
-                        // Rutinas (US-13): solo entrenadores; la pertenencia la controla RoutineService
-                        .requestMatchers(HttpMethod.POST, ROUTINES_PATH).hasRole("COACH")
+                        // Rutinas (US-13 a US-15): solo entrenadores; la pertenencia la controla RoutineService
+                        .requestMatchers(HttpMethod.POST, ROUTINES_PATH, ROUTINE_DUPLICATE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, ROUTINES_PATH, ROUTINE_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.PUT, ROUTINE_PATH, ROUTINE_DAYS_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )
