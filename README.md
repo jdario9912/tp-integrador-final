@@ -27,7 +27,7 @@ echo '{ "coaches": [] }' > mock/db.json
 pnpm mock:api   # json-server en :3001, en otra terminal que pnpm dev
 ```
 
-json-server no valida datos ni devuelve los errores del backend (400, 409): sirve solo para desarrollo. Tampoco autentica: para probar el login hay que usar el backend real (`API_PROXY_TARGET=http://localhost:8080/api`).
+json-server no valida datos ni devuelve los errores del backend (400, 409): sirve solo para desarrollo. Tampoco autentica: para probar el login hay que usar el backend real (`API_PROXY_TARGET=http://localhost:8080/api`). Además, json-server solo sirve rutas de un nivel (`/recurso` y `/recurso/:id`): los registros de peso (`/athletes/{id}/weights`, paginados) no se pueden simular con `mock/db.json`; la página Progreso y el último peso de la ficha se prueban con el backend real o con los E2E.
 
 ### Tests E2E
 
@@ -55,7 +55,8 @@ componente React -> hook (TanStack Query) -> acción -> cliente REST (axios)
 - **Cliente REST** (`src/lib/api`): funciones tipadas `get`, `post`, `put`, `patch`, `del` que devuelven directamente el body. Todo error se normaliza a `ApiError` (`status`, `message`, `path`, `timestamp`); `status: 0` indica que no hubo respuesta del servidor.
 - **Acciones** (`src/pages/<modulo>/actions`): reciben los inputs de la operación y llaman al cliente REST.
 - **Hooks** (`src/pages/<modulo>/hooks`): envuelven las acciones con `useQuery` / `useMutation` y son lo único que consumen los componentes.
-- **Datos compartidos** (`src/lib/<dominio>`): la acción y el hook que usan varias páginas viven en `lib`, por ejemplo `useAthlete` (`GET /athletes/{id}`) en `src/lib/athletes`, que comparten la ficha y la edición del atleta con la misma clave de caché, o `useMuscleGroups` (`GET /muscle-groups`) en `src/lib/exercises`, que usan el catálogo y el formulario de ejercicios (se pide una sola vez por sesión: `staleTime: Infinity`).
+- **Datos compartidos** (`src/lib/<dominio>`): la acción y el hook que usan varias páginas viven en `lib`, por ejemplo `useAthlete` (`GET /athletes/{id}`) en `src/lib/athletes`, que comparten la ficha y la edición del atleta con la misma clave de caché, o `useMuscleGroups` (`GET /muscle-groups`) en `src/lib/exercises`, que usan el catálogo y el formulario de ejercicios (se pide una sola vez por sesión: `staleTime: Infinity`). Los registros de peso (`src/lib/weights`) cuelgan todos de la clave `['weights', usuario, atleta]`: el alta y la edición la invalidan entera, así se refrescan la lista de Progreso, el último peso de la ficha y cualquier rango de fechas.
+- **Fechas** (`src/lib/iso-date.ts`): las fechas sin hora (`YYYY-MM-DD`) se formatean en UTC para no correr el día, y "hoy" se calcula en la zona de la app (`America/Argentina/Buenos_Aires`, la misma que `APP_TIME_ZONE` del backend), no en la del navegador.
 
 ```ts
 // actions/create-coach.ts
@@ -75,7 +76,7 @@ Iconos y navegación se importan desde `src/ui/icons` y `src/lib/navigation`, nu
 - **Sesión** (`src/lib/auth`): el login (`POST /auth/login`) devuelve un access token (15 min) y un refresh token (2 h). Se guardan en `localStorage` (`tpif.session`) junto con el usuario y su rol. Los componentes la leen con `useAuth()`; no hace falta ningún Provider.
 - **Interceptores**: el cliente REST agrega `Authorization: Bearer <accessToken>` a cada request. Ante un 401 hace un único refresh (`POST /auth/refresh`, compartido entre requests simultáneos porque el backend rota el refresh token) y reintenta una vez. Si el refresh falla, borra la sesión y `RequireAuth` lleva al login.
 - **Rutas protegidas**: van dentro de `<RequireAuth />` en `AppRouter`. `/dashboard` es una sola ruta para los dos roles y muestra el panel según `user.role`.
-- **Rutas por rol**: las páginas de un solo rol van dentro de `<RequireRole roles={['COACH']} />`, anidado en `RequireAuth`. Con otro rol redirige a `/dashboard`. Es solo para la UI: si se llama a la API directo, el backend igual responde 403.
+- **Rutas por rol**: las páginas de un solo rol van dentro de `<RequireRole roles={['COACH']} />` o `<RequireRole roles={['ATHLETE']} />`, anidados en `RequireAuth`. Con otro rol redirige a `/dashboard`. Es solo para la UI: si se llama a la API directo, el backend igual responde 403.
 - **Datos del usuario**: `useCurrentUser()` (`GET /auth/me`) para mostrar datos frescos; `useAuth().user` tiene los de la sesión.
 - **Cierre de sesión**: `useLogout()` llama a `POST /auth/logout` (revoca el refresh token) y, pase lo que pase, borra `tpif.session` y la caché de TanStack Query y vuelve al login. Si el servidor no confirmó el cierre (sin conexión o cualquier error que no sea 401), el login muestra un aviso una sola vez; un 401 se considera un cierre exitoso porque la sesión del servidor ya no existía.
 - Después de registrarse, el front inicia sesión con las mismas credenciales y entra al dashboard.
@@ -84,24 +85,27 @@ Iconos y navegación se importan desde `src/ui/icons` y `src/lib/navigation`, nu
 
 Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts` (las rutas con parámetros se arman con helpers como `athleteProfilePath(id)`). El `handle.title` de cada ruta es el texto de la barra de ubicación.
 
-| Ruta                  | Página                    | Acceso     |
-| --------------------- | ------------------------- | ---------- |
-| `/`                   | Inicio                    | público    |
-| `/register-coach`     | Registro de entrenador    | público    |
-| `/login`              | Inicio de sesión          | público    |
-| `/dashboard`          | Panel (según el rol)      | con sesión |
-| `/athletes`           | Mis atletas               | solo COACH |
-| `/athletes/new`       | Agregar atleta            | solo COACH |
-| `/athletes/:id`       | Perfil del atleta (ficha) | solo COACH |
-| `/athletes/:id/edit`  | Editar atleta             | solo COACH |
-| `/exercises`          | Catálogo de ejercicios    | solo COACH |
-| `/exercises/new`      | Nuevo ejercicio           | solo COACH |
-| `/exercises/:id/edit` | Editar ejercicio          | solo COACH |
-| `/routines`           | Mis rutinas               | solo COACH |
-| `/routines/new`       | Nueva rutina              | solo COACH |
-| `/routines/:id`       | Detalle de la rutina      | solo COACH |
+| Ruta                  | Página                    | Acceso       |
+| --------------------- | ------------------------- | ------------ |
+| `/`                   | Inicio                    | público      |
+| `/register-coach`     | Registro de entrenador    | público      |
+| `/login`              | Inicio de sesión          | público      |
+| `/dashboard`          | Panel (según el rol)      | con sesión   |
+| `/athletes`           | Mis atletas               | solo COACH   |
+| `/athletes/new`       | Agregar atleta            | solo COACH   |
+| `/athletes/:id`       | Perfil del atleta (ficha) | solo COACH   |
+| `/athletes/:id/edit`  | Editar atleta             | solo COACH   |
+| `/exercises`          | Catálogo de ejercicios    | solo COACH   |
+| `/exercises/new`      | Nuevo ejercicio           | solo COACH   |
+| `/exercises/:id/edit` | Editar ejercicio          | solo COACH   |
+| `/routines`           | Mis rutinas               | solo COACH   |
+| `/routines/new`       | Nueva rutina              | solo COACH   |
+| `/routines/:id`       | Detalle de la rutina      | solo COACH   |
+| `/progress`           | Progreso (peso corporal)  | solo ATHLETE |
 
-`/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso (el peso inicial hasta que existan los registros de peso), rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado.
+`/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso, rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado. El último peso es el registro más reciente del atleta (`GET /athletes/{id}/weights?size=1`, pedido en paralelo con el atleta) con su fecha y comentario; sin registros, el peso inicial rotulado "Peso inicial". Si falla solo esa llamada, la sección muestra su error con "Reintentar" y el resto de la ficha se ve.
+
+Progreso (`/progress`, solo el atleta, entrada "Progreso" en su menú) es donde el atleta registra su peso corporal: fecha (por defecto, hoy en hora de Argentina; no admite fechas futuras), peso (20 a 300 kg, hasta 2 decimales) y comentario opcional (hasta 500 caracteres), con las mismas validaciones y mensajes que el backend. Además ve sus 10 registros más recientes y puede editar cualquiera desde la lista (el mismo formulario pasa a modo edición, con "Cancelar"). Hay un registro por día: si la fecha ya tiene uno (409), la página lo busca (`?from=<fecha>&to=<fecha>`) y ofrece editarlo. Los registros no se borran. El gráfico de evolución y las fotos llegan con US-29.
 
 El catálogo de ejercicios (`/exercises`) lista los ejercicios globales del sistema y los propios del entrenador, con búsqueda por nombre y filtro por grupo muscular (agrupado por región) guardados en la URL. Los globales son de solo lectura: su `/exercises/:id/edit` muestra los datos sin formulario. Los propios se editan y se dan de baja (baja lógica: las rutinas que ya los usan no cambian). El formulario es compartido entre alta y edición (`src/components/exercise-form`).
 

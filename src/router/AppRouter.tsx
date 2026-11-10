@@ -10,6 +10,7 @@ import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
 import { NewExercisePage } from '../pages/new-exercise'
 import { NewRoutinePage } from '../pages/new-routine'
+import { ProgressPage } from '../pages/progress'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
 import { RoutineDetailPage } from '../pages/routine-detail'
@@ -87,6 +88,16 @@ const router = createBrowserRouter([
                 path: paths.routineDetail,
                 element: <RoutineDetailPage />,
                 handle: { title: 'Detalle de la rutina' },
+              },
+            ],
+          },
+          {
+            element: <RequireRole roles={['ATHLETE']} />,
+            children: [
+              {
+                path: paths.progress,
+                element: <ProgressPage />,
+                handle: { title: 'Progreso' },
               },
             ],
           },

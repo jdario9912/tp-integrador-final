@@ -3,9 +3,10 @@ import { Avatar } from '../../../ui/avatar'
 import { Badge } from '../../../ui/badge'
 import { PrimaryButton } from '../../../ui/button'
 import { Card } from '../../../ui/card'
+import { formatIsoDate } from '../../../lib/iso-date'
 import { CalendarDays, Pencil, Target } from '../../../ui/icons'
 import { athleteStatusView } from '../../athletes/athlete-status'
-import { formatIsoDate, presentText } from '../athlete-profile-format'
+import { presentText } from '../athlete-profile-format'
 
 type AthleteProfileHeaderProps = {
   athlete: Athlete
