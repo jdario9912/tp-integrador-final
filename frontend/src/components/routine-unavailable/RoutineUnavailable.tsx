@@ -1,7 +1,7 @@
-import { paths } from '../../../router/paths'
-import { EmptyState } from '../../../ui/empty-state'
-import { ArrowLeft, Lock, SearchX } from '../../../ui/icons'
-import { TextLink } from '../../../ui/text-link'
+import { paths } from '../../router/paths'
+import { EmptyState } from '../../ui/empty-state'
+import { ArrowLeft, Lock, SearchX } from '../../ui/icons'
+import { TextLink } from '../../ui/text-link'
 
 export type UnavailableReason = 'not-found' | 'forbidden'
 

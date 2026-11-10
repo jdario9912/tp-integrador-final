@@ -9,7 +9,7 @@ import { ClipboardList } from '../../../ui/icons'
 
 type RoutineDetailsProps = { routine: Routine }
 
-// datos generales en modo lectura; los días y ejercicios llegan con US-14
+// datos generales en modo lectura; los días y ejercicios van en RoutineStructureSection
 export function RoutineDetails({ routine }: RoutineDetailsProps) {
   const { goal, daysPerWeek, durationWeeks, isTemplate, description } = routine
 

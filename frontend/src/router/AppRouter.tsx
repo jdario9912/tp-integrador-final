@@ -5,6 +5,7 @@ import { AthletesPage } from '../pages/athletes'
 import { DashboardPage } from '../pages/dashboard'
 import { EditAthletePage } from '../pages/edit-athlete'
 import { EditExercisePage } from '../pages/edit-exercise'
+import { EditRoutinePage } from '../pages/edit-routine'
 import { ExercisesPage } from '../pages/exercises'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
@@ -14,6 +15,7 @@ import { ProgressPage } from '../pages/progress'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
 import { RoutineDetailPage } from '../pages/routine-detail'
+import { RoutineStructurePage } from '../pages/routine-structure'
 import { RoutinesPage } from '../pages/routines'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'
@@ -88,6 +90,16 @@ const router = createBrowserRouter([
                 path: paths.routineDetail,
                 element: <RoutineDetailPage />,
                 handle: { title: 'Detalle de la rutina' },
+              },
+              {
+                path: paths.editRoutine,
+                element: <EditRoutinePage />,
+                handle: { title: 'Editar rutina' },
+              },
+              {
+                path: paths.routineStructure,
+                element: <RoutineStructurePage />,
+                handle: { title: 'Estructura de la rutina' },
               },
             ],
           },

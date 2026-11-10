@@ -21,6 +21,8 @@ export const paths = {
   newRoutine: '/routines/new',
   // convive con /routines/new: React Router prioriza el segmento estático
   routineDetail: '/routines/:id',
+  editRoutine: '/routines/:id/edit',
+  routineStructure: '/routines/:id/structure',
   // solo atleta: registro de peso corporal (US-26)
   progress: '/progress',
 } as const
@@ -37,3 +39,9 @@ export const exerciseEditPath = (id: string) =>
 
 export const routineDetailPath = (id: string) =>
   generatePath(paths.routineDetail, { id })
+
+export const routineEditPath = (id: string) =>
+  generatePath(paths.editRoutine, { id })
+
+export const routineStructurePath = (id: string) =>
+  generatePath(paths.routineStructure, { id })

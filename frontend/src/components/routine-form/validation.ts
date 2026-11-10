@@ -1,4 +1,4 @@
-// validadores espejo del backend (POST /routines)
+// validadores espejo del backend (POST y PUT /routines)
 type FieldValue = { value: string }
 
 export const ROUTINE_NAME_MAX_LENGTH = 100

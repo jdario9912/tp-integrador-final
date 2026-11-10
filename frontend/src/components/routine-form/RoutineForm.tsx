@@ -41,7 +41,7 @@ const DESCRIPTION_HINT = `Opcional. Hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`
 const TEMPLATE_HINT =
   'Una plantilla sirve de base para armar rutinas de distintos atletas.'
 
-// datos generales de la rutina; los días y ejercicios se cargan después (US-14)
+// datos generales de la rutina (alta y edición); los días y ejercicios se cargan aparte
 export function RoutineForm({
   defaultValues = emptyRoutineFormValues,
   onSubmit,

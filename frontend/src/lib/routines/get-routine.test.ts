@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, get } from '../../../lib/api'
-import { createdRoutine } from '../../../test/routine-fixtures'
+import { ApiError, get } from '../api'
+import { routineDetail } from '../../test/routine-fixtures'
 import { getRoutine } from './get-routine'
 
-vi.mock('../../../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../lib/api')>()),
+vi.mock('../api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api')>()),
   get: vi.fn(),
 }))
 
@@ -13,8 +13,8 @@ beforeEach(() => {
 })
 
 describe('getRoutine', () => {
-  it('pide GET /routines/{id}', async () => {
-    const routine = createdRoutine()
+  it('pide GET /routines/{id} con los días', async () => {
+    const routine = routineDetail()
     vi.mocked(get).mockResolvedValue(routine)
 
     await expect(getRoutine('abc')).resolves.toBe(routine)

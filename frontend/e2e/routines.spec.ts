@@ -21,6 +21,8 @@ type RoutineJson = {
   durationWeeks: number | null
   isTemplate: boolean
   createdAt: string
+  // el detalle trae la estructura; acá las rutinas no tienen días (la prueba routine-structure.spec)
+  days: unknown[]
   // solo del mock: dueño de la rutina
   coachId: string
 }
@@ -37,6 +39,7 @@ const routineJson = (
   durationWeeks: null,
   isTemplate: false,
   createdAt: '2026-11-05T12:00:00Z',
+  days: [],
   coachId: coach.id,
   ...overrides,
 })
@@ -81,7 +84,7 @@ const routeBackend = async (
           apiError(409, `Ya tiene una rutina llamada ${name}`, '/routines'),
         )
       }
-      const created = routineJson(nextId++, { ...body, name })
+      const created = routineJson(nextId++, { ...body, name, days: [] })
       routines = [...routines, created]
       return route.fulfill({
         status: 201,

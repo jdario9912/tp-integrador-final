@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
@@ -9,15 +9,33 @@ import {
   RouterProvider,
   type RouterProviderProps,
 } from '../../lib/navigation'
-import { paths, routineDetailPath } from '../../router/paths'
+import { getMuscleGroups } from '../../lib/exercises/get-muscle-groups'
+import { duplicateRoutine } from '../../lib/routines/duplicate-routine'
+import { getRoutine } from '../../lib/routines/get-routine'
+import {
+  paths,
+  routineDetailPath,
+  routineEditPath,
+  routineStructurePath,
+} from '../../router/paths'
 import { session } from '../../test/auth-fixtures'
-import { createdRoutine } from '../../test/routine-fixtures'
-import { getRoutine } from './actions/get-routine'
+import { muscleGroups } from '../../test/exercise-fixtures'
+import {
+  routineDay,
+  routineDetail,
+  routineExercise,
+} from '../../test/routine-fixtures'
 import { RoutineDetailPage } from './RoutineDetailPage'
 
-vi.mock('./actions/get-routine', () => ({ getRoutine: vi.fn() }))
+vi.mock('../../lib/routines/get-routine', () => ({ getRoutine: vi.fn() }))
+vi.mock('../../lib/routines/duplicate-routine', () => ({
+  duplicateRoutine: vi.fn(),
+}))
+vi.mock('../../lib/exercises/get-muscle-groups', () => ({
+  getMuscleGroups: vi.fn(),
+}))
 
-const volume = createdRoutine({
+const volume = routineDetail({
   goal: 'Hipertrofia',
   daysPerWeek: 4,
   durationWeeks: 8,
@@ -32,13 +50,23 @@ const renderPage = (state?: unknown) => {
     [
       { path: paths.routineDetail, element: <RoutineDetailPage /> },
       { path: paths.routines, element: <p>listado de rutinas</p> },
+      { path: paths.editRoutine, element: <p>edición de la rutina</p> },
+      {
+        path: paths.routineStructure,
+        element: <p>estructura de la rutina</p>,
+      },
     ],
     { initialEntries: [{ pathname: routineDetailPath(volume.id), state }] },
   )
   render(
     <QueryClientProvider
       client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false },
+          },
+        })
       }
     >
       <RouterProvider router={router} />
@@ -48,6 +76,8 @@ const renderPage = (state?: unknown) => {
 
 beforeEach(() => {
   vi.mocked(getRoutine).mockReset()
+  vi.mocked(duplicateRoutine).mockReset()
+  vi.mocked(getMuscleGroups).mockResolvedValue(muscleGroups)
   saveSession(session('COACH'))
 })
 
@@ -78,7 +108,7 @@ describe('RoutineDetailPage', () => {
   })
 
   it('sin los opcionales muestra textos de reemplazo', async () => {
-    vi.mocked(getRoutine).mockResolvedValue(createdRoutine())
+    vi.mocked(getRoutine).mockResolvedValue(routineDetail())
 
     renderPage()
 
@@ -87,6 +117,134 @@ describe('RoutineDetailPage', () => {
     expect(screen.getByText('Sin descripción')).toBeInTheDocument()
     expect(screen.getByText('No')).toBeInTheDocument()
     expect(screen.queryByText('Plantilla', { selector: 'span' })).toBeNull()
+  })
+
+  it('muestra los días y ejercicios en orden con lo que se cargó', async () => {
+    vi.mocked(getRoutine).mockResolvedValue({
+      ...volume,
+      days: [
+        routineDay({
+          name: 'Empuje',
+          exercises: [
+            routineExercise({
+              recommendedWeight: 82.5,
+              rest: 90,
+              rirRpe: 'RIR 2',
+              techniqueNote: 'Escápulas retraídas',
+            }),
+            routineExercise({
+              id: 'e2',
+              exerciseName: 'Fondos',
+              muscleGroup: 'TRICEPS',
+              sortOrder: 1,
+              sets: 3,
+              reps: 12,
+            }),
+          ],
+        }),
+        routineDay({ id: 'd2', dayNumber: 2, name: 'Descanso activo' }),
+      ],
+    })
+
+    renderPage()
+
+    const push = await screen.findByRole('listitem', { name: 'Día 1: Empuje' })
+    const exercises = within(push).getAllByRole('listitem')
+    expect(exercises).toHaveLength(2)
+    expect(exercises[0]).toHaveTextContent('Press de banca')
+    expect(exercises[0]).toHaveTextContent('Pecho')
+    expect(exercises[0]).toHaveTextContent(
+      '4 × 10 · 82,5 kg · Descanso 1 min 30 s · RIR 2',
+    )
+    expect(exercises[0]).toHaveTextContent('Escápulas retraídas')
+    expect(exercises[1]).toHaveTextContent('Fondos')
+    expect(exercises[1]).toHaveTextContent('3 × 12')
+    expect(within(push).getByText('2 ejercicios')).toBeInTheDocument()
+    expect(
+      within(
+        screen.getByRole('listitem', { name: 'Día 2: Descanso activo' }),
+      ).getByText('Sin ejercicios cargados.'),
+    ).toBeInTheDocument()
+  })
+
+  it('sin días invita a configurar la estructura', async () => {
+    vi.mocked(getRoutine).mockResolvedValue(volume)
+
+    renderPage()
+
+    expect(
+      await screen.findByText('Todavía no cargaste los días'),
+    ).toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole('link', { name: 'Configurar estructura' }),
+    )
+    expect(screen.getByText('estructura de la rutina')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['Editar', 'edición de la rutina', routineEditPath(volume.id)],
+    [
+      'Configurar estructura',
+      'estructura de la rutina',
+      routineStructurePath(volume.id),
+    ],
+  ])('el botón %s lleva a su página', async (button, text, pathname) => {
+    vi.mocked(getRoutine).mockResolvedValue(volume)
+
+    renderPage()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: new RegExp(button) }),
+    )
+    expect(screen.getByText(text)).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(pathname)
+  })
+
+  it('duplica la rutina y muestra la copia con el aviso', async () => {
+    const copy = routineDetail({
+      id: '11111111-2222-4333-8444-555555555555',
+      name: 'Copia de Fase de volumen',
+    })
+    vi.mocked(getRoutine).mockImplementation(async (id) =>
+      id === copy.id ? copy : volume,
+    )
+    vi.mocked(duplicateRoutine).mockResolvedValue(copy)
+
+    renderPage()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Duplicar/ }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Copia de Fase de volumen',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Creaste Copia de Fase de volumen.'),
+    ).toBeInTheDocument()
+    expect(vi.mocked(duplicateRoutine).mock.calls[0][0]).toBe(volume.id)
+    expect(router.state.location.pathname).toBe(routineDetailPath(copy.id))
+  })
+
+  it('muestra el error al duplicar y se queda en la rutina', async () => {
+    vi.mocked(getRoutine).mockResolvedValue(volume)
+    vi.mocked(duplicateRoutine).mockRejectedValue(
+      new ApiError('No tiene permisos para acceder a esta rutina', 403),
+    )
+
+    renderPage()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Duplicar/ }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No tiene permisos para acceder a esta rutina',
+    )
+    expect(router.state.location.pathname).toBe(routineDetailPath(volume.id))
   })
 
   it('muestra el aviso del alta una sola vez', async () => {

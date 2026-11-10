@@ -4,7 +4,9 @@
 // biblioteca; para cambiar de biblioteca, solo cambia este archivo.
 export {
   Activity,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Bell,
   CalendarCheck,
   CalendarDays,
@@ -13,6 +15,7 @@ export {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Copy,
   Dumbbell,
   Eye,
   HeartPulse,
@@ -20,6 +23,7 @@ export {
   IdCard,
   ImagePlus,
   LayoutDashboard,
+  ListOrdered,
   LoaderCircle,
   Lock,
   LogOut,
@@ -42,6 +46,7 @@ export {
   UserX,
   Users,
   Weight,
+  X,
   type LucideIcon,
   type LucideProps,
 } from 'lucide-react'
