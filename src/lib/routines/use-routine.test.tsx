@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { saveSession } from '../../../lib/auth'
-import { session } from '../../../test/auth-fixtures'
-import { createdRoutine } from '../../../test/routine-fixtures'
-import { getRoutine } from '../actions/get-routine'
+import { saveSession } from '../auth'
+import { session } from '../../test/auth-fixtures'
+import { routineDetail } from '../../test/routine-fixtures'
+import { getRoutine } from './get-routine'
 import { routineDetailKey, useRoutine } from './use-routine'
 
-vi.mock('../actions/get-routine', () => ({ getRoutine: vi.fn() }))
+vi.mock('./get-routine', () => ({ getRoutine: vi.fn() }))
 
 const queryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -27,7 +27,7 @@ describe('useRoutine', () => {
   it('pide la rutina y la guarda bajo la clave de detalle del usuario', async () => {
     const coach = session('COACH')
     saveSession(coach)
-    const routine = createdRoutine()
+    const routine = routineDetail()
     vi.mocked(getRoutine).mockResolvedValue(routine)
     const client = queryClient()
 
@@ -42,7 +42,7 @@ describe('useRoutine', () => {
     ).toBe(routine)
   })
 
-  it('la clave cuelga de routines: el alta de una rutina la invalida', () => {
+  it('la clave cuelga de routines: las mutaciones de rutinas la invalidan', () => {
     expect(routineDetailKey('u1', 'r1')).toEqual([
       'routines',
       'u1',

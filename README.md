@@ -85,23 +85,25 @@ Iconos y navegación se importan desde `src/ui/icons` y `src/lib/navigation`, nu
 
 Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts` (las rutas con parámetros se arman con helpers como `athleteProfilePath(id)`). El `handle.title` de cada ruta es el texto de la barra de ubicación.
 
-| Ruta                  | Página                    | Acceso       |
-| --------------------- | ------------------------- | ------------ |
-| `/`                   | Inicio                    | público      |
-| `/register-coach`     | Registro de entrenador    | público      |
-| `/login`              | Inicio de sesión          | público      |
-| `/dashboard`          | Panel (según el rol)      | con sesión   |
-| `/athletes`           | Mis atletas               | solo COACH   |
-| `/athletes/new`       | Agregar atleta            | solo COACH   |
-| `/athletes/:id`       | Perfil del atleta (ficha) | solo COACH   |
-| `/athletes/:id/edit`  | Editar atleta             | solo COACH   |
-| `/exercises`          | Catálogo de ejercicios    | solo COACH   |
-| `/exercises/new`      | Nuevo ejercicio           | solo COACH   |
-| `/exercises/:id/edit` | Editar ejercicio          | solo COACH   |
-| `/routines`           | Mis rutinas               | solo COACH   |
-| `/routines/new`       | Nueva rutina              | solo COACH   |
-| `/routines/:id`       | Detalle de la rutina      | solo COACH   |
-| `/progress`           | Progreso (peso corporal)  | solo ATHLETE |
+| Ruta                      | Página                    | Acceso       |
+| ------------------------- | ------------------------- | ------------ |
+| `/`                       | Inicio                    | público      |
+| `/register-coach`         | Registro de entrenador    | público      |
+| `/login`                  | Inicio de sesión          | público      |
+| `/dashboard`              | Panel (según el rol)      | con sesión   |
+| `/athletes`               | Mis atletas               | solo COACH   |
+| `/athletes/new`           | Agregar atleta            | solo COACH   |
+| `/athletes/:id`           | Perfil del atleta (ficha) | solo COACH   |
+| `/athletes/:id/edit`      | Editar atleta             | solo COACH   |
+| `/exercises`              | Catálogo de ejercicios    | solo COACH   |
+| `/exercises/new`          | Nuevo ejercicio           | solo COACH   |
+| `/exercises/:id/edit`     | Editar ejercicio          | solo COACH   |
+| `/routines`               | Mis rutinas               | solo COACH   |
+| `/routines/new`           | Nueva rutina              | solo COACH   |
+| `/routines/:id`           | Detalle de la rutina      | solo COACH   |
+| `/routines/:id/edit`      | Editar rutina             | solo COACH   |
+| `/routines/:id/structure` | Estructura de la rutina   | solo COACH   |
+| `/progress`               | Progreso (peso corporal)  | solo ATHLETE |
 
 `/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, último peso, rutina activa y últimas sesiones (estas dos, vacías hasta que existan esos módulos). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado. El último peso es el registro más reciente del atleta (`GET /athletes/{id}/weights?size=1`, pedido en paralelo con el atleta) con su fecha y comentario; sin registros, el peso inicial rotulado "Peso inicial". Si falla solo esa llamada, la sección muestra su error con "Reintentar" y el resto de la ficha se ve.
 
@@ -109,7 +111,9 @@ Progreso (`/progress`, solo el atleta, entrada "Progreso" en su menú) es donde 
 
 El catálogo de ejercicios (`/exercises`) lista los ejercicios globales del sistema y los propios del entrenador, con búsqueda por nombre y filtro por grupo muscular (agrupado por región) guardados en la URL. Los globales son de solo lectura: su `/exercises/:id/edit` muestra los datos sin formulario. Los propios se editan y se dan de baja (baja lógica: las rutinas que ya los usan no cambian). El formulario es compartido entre alta y edición (`src/components/exercise-form`).
 
-Las rutinas (`/routines`) muestran solo las del entrenador, ordenadas por nombre y paginadas (la página va en la URL). El alta (`/routines/new`, formulario en `src/components/routine-form`) carga los datos generales: nombre (obligatorio y único entre las rutinas propias, sin distinguir mayúsculas; el 409 se muestra en el campo), objetivo, días por semana (1 a 7), duración en semanas (1 a 52), descripción y si es plantilla. Después del alta se va al detalle (`/routines/:id`), de solo lectura; ante un 403 (rutina de otro entrenador) o un 404 muestra un aviso con la salida al listado. Los días y ejercicios de la rutina y la asignación a atletas llegan con US-14 a US-16.
+Las rutinas (`/routines`) muestran solo las del entrenador, ordenadas por nombre y paginadas (la página va en la URL). El alta (`/routines/new`, formulario en `src/components/routine-form`) carga los datos generales: nombre (obligatorio y único entre las rutinas propias, sin distinguir mayúsculas; el 409 se muestra en el campo), objetivo, días por semana (1 a 7), duración en semanas (1 a 52), descripción y si es plantilla. Después del alta se va al detalle (`/routines/:id`), de solo lectura, que muestra los datos generales y los días con sus ejercicios; ante un 403 (rutina de otro entrenador) o un 404 muestra un aviso con la salida al listado (lo mismo en la edición y la estructura).
+
+Desde el detalle se edita (`/routines/:id/edit`, con el mismo formulario del alta), se duplica (`POST /routines/{id}/duplicate`: la copia se llama «Copia de X» y se navega a su detalle) y se configura la estructura (`/routines/:id/structure`, formulario en `src/components/routine-structure-form`). En la estructura se agregan, renombran, reordenan y quitan días (hasta 7) y se cargan ejercicios del catálogo con un buscador (hasta 30 por día), con series, repeticiones, peso recomendado (kg), descanso (segundos), RIR/RPE (`RIR n` o `RPE n`) y nota técnica. Todo se edita en el navegador y se guarda en una sola llamada (`PUT /routines/{id}/days`): el orden de los arrays define el número de día y el orden de los ejercicios, los ítems guardados se envían con su `id` y los nuevos sin `id`. Los ejercicios se reordenan dentro de su día (el backend no acepta el `id` de un ejercicio en otro día). Los errores por campo del backend (`days[0].exercises[1].sets`) se muestran en el campo correspondiente; si se quita un día o ejercicio que ya tiene series registradas (422) se ofrece duplicar la rutina y editar la copia. La asignación a atletas llega con US-16.
 
 ### Estructura
 
