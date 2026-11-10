@@ -13,6 +13,7 @@ import {
   useRoutine,
 } from '../../lib/routines'
 import {
+  athleteProfilePath,
   paths,
   routineDetailPath,
   routineEditPath,
@@ -21,9 +22,20 @@ import {
 import { Badge } from '../../ui/badge'
 import { OutlineButton, PrimaryButton } from '../../ui/button'
 import { Callout } from '../../ui/callout'
-import { ArrowLeft, Copy, ListOrdered, Pencil, RotateCw } from '../../ui/icons'
+import {
+  ArrowLeft,
+  Copy,
+  ListOrdered,
+  Pencil,
+  RotateCw,
+  UserPlus,
+} from '../../ui/icons'
 import { Skeleton } from '../../ui/skeleton'
 import { TextLink } from '../../ui/text-link'
+import {
+  AssignRoutineToAthletePanel,
+  type AssignedAthlete,
+} from './components/AssignRoutineToAthletePanel'
 import { RoutineDetails } from './components/RoutineDetails'
 import { RoutineStructureSection } from './components/RoutineStructureSection'
 
@@ -48,6 +60,8 @@ function RoutineDetail({ id }: { id: string }) {
   const { data: routine, error, isFetching, refetch } = useRoutine(id)
   const { data: muscleGroups } = useMuscleGroups()
   const duplicateRoutine = useDuplicateRoutine()
+  const [isAssigning, setIsAssigning] = useState(false)
+  const [assignedTo, setAssignedTo] = useState<AssignedAthlete>()
 
   // se lee una sola vez y se limpia el state: si no, vuelve a aparecer al recargar
   const [notice] = useState(
@@ -149,6 +163,15 @@ function RoutineDetail({ id }: { id: string }) {
               <Copy aria-hidden="true" />
               {duplicateRoutine.isPending ? 'Duplicando…' : 'Duplicar'}
             </OutlineButton>
+            <OutlineButton
+              aria-expanded={isAssigning}
+              onClick={() => {
+                setAssignedTo(undefined)
+                setIsAssigning(true)
+              }}
+            >
+              <UserPlus aria-hidden="true" /> Asignar a atleta
+            </OutlineButton>
             <PrimaryButton
               onClick={() => navigate(routineStructurePath(routine.id))}
             >
@@ -159,6 +182,24 @@ function RoutineDetail({ id }: { id: string }) {
       />
       {duplicateRoutine.error && (
         <Callout tone="danger">{errorMessage(duplicateRoutine.error)}</Callout>
+      )}
+      {assignedTo && (
+        <Callout tone="success" role="status">
+          Asignaste la rutina a {assignedTo.name}.{' '}
+          <TextLink to={athleteProfilePath(assignedTo.id)}>
+            Ver ficha de {assignedTo.name}
+          </TextLink>
+        </Callout>
+      )}
+      {isAssigning && (
+        <AssignRoutineToAthletePanel
+          routine={routine}
+          onAssigned={(athlete) => {
+            setIsAssigning(false)
+            setAssignedTo(athlete)
+          }}
+          onClose={() => setIsAssigning(false)}
+        />
       )}
       <RoutineDetails routine={routine} />
       <RoutineStructureSection

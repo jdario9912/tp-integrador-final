@@ -4,11 +4,16 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
 import type { Athlete } from '../../lib/athletes'
+import { getAssignments } from '../../lib/assignments/get-assignments'
 import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
 import { getWeights } from '../../lib/weights/get-weights'
 import { athleteProfilePath, paths } from '../../router/paths'
+import {
+  assignmentsPage,
+  routineAssignment,
+} from '../../test/assignment-fixtures'
 import { createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'
 import { weightRecord, weightsPage } from '../../test/weight-fixtures'
@@ -16,6 +21,9 @@ import { AthleteProfilePage } from './AthleteProfilePage'
 
 vi.mock('../../lib/athletes/get-athlete', () => ({ getAthlete: vi.fn() }))
 vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
+vi.mock('../../lib/assignments/get-assignments', () => ({
+  getAssignments: vi.fn(),
+}))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
 const leo = createdAthlete({
@@ -74,6 +82,9 @@ beforeEach(() => {
   vi.mocked(getWeights).mockReset()
   // por defecto el atleta no tiene registros de peso (US-26)
   vi.mocked(getWeights).mockResolvedValue(weightsPage([]))
+  vi.mocked(getAssignments).mockReset()
+  // por defecto no tiene rutinas asignadas (US-16)
+  vi.mocked(getAssignments).mockResolvedValue(assignmentsPage([]))
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -153,13 +164,53 @@ describe('AthleteProfilePage', () => {
     )
   })
 
-  it('pide el atleta y su último peso en paralelo', () => {
-    // el atleta no llega nunca: el último peso igual ya se pidió
+  it('pide el atleta, su último peso y su historial de rutinas en paralelo', () => {
+    // el atleta no llega nunca: el último peso y el historial igual ya se pidieron
     vi.mocked(getAthlete).mockReturnValue(new Promise(() => {}))
 
     renderPage()
 
     expect(getWeights).toHaveBeenCalledWith(leo.id, { size: 1 })
+    expect(getAssignments).toHaveBeenCalledWith(leo.id, { page: 0, size: 10 })
+  })
+
+  it('la rutina activa y el historial comparten la primera página del historial (US-16)', async () => {
+    vi.mocked(getAssignments).mockResolvedValue(
+      assignmentsPage([
+        routineAssignment(),
+        routineAssignment({
+          id: 'a2',
+          routineName: 'Fuerza',
+          assignmentDate: '2026-10-01',
+          active: false,
+        }),
+      ]),
+    )
+
+    await renderProfile(leo)
+
+    expect(
+      await within(section('Rutina activa')).findByRole('link', {
+        name: 'Fase de volumen',
+      }),
+    ).toBeInTheDocument()
+    const history = section('Historial de rutinas')
+    expect(await within(history).findAllByRole('listitem')).toHaveLength(2)
+    expect(history).toHaveTextContent('Inactiva')
+    // las dos secciones leen la misma consulta: nunca se pide otra página
+    for (const call of vi.mocked(getAssignments).mock.calls) {
+      expect(call).toEqual([leo.id, { page: 0, size: 10 }])
+    }
+  })
+
+  it('con la cuenta desactivada no permite asignar una rutina', async () => {
+    await renderProfile({ ...leo, active: false })
+
+    expect(
+      await within(section('Rutina activa')).findByRole('button', {
+        name: 'Asignar rutina',
+      }),
+    ).toBeDisabled()
   })
 
   it('muestra el último peso registrado con su fecha y comentario (US-26 CA-4)', async () => {
@@ -217,7 +268,7 @@ describe('AthleteProfilePage', () => {
     ).toBeInTheDocument()
     expect(valueOf('Último peso', 'Peso inicial')).toHaveTextContent('80,25 kg')
     expect(
-      within(section('Rutina activa')).getByRole('heading', {
+      await within(section('Rutina activa')).findByRole('heading', {
         name: 'Sin rutina asignada',
       }),
     ).toBeInTheDocument()

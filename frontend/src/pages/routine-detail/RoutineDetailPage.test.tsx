@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
+import { assignRoutine } from '../../lib/assignments/assign-routine'
 import { saveSession } from '../../lib/auth'
 import {
   createMemoryRouter,
@@ -13,11 +14,14 @@ import { getMuscleGroups } from '../../lib/exercises/get-muscle-groups'
 import { duplicateRoutine } from '../../lib/routines/duplicate-routine'
 import { getRoutine } from '../../lib/routines/get-routine'
 import {
+  athleteProfilePath,
   paths,
   routineDetailPath,
   routineEditPath,
   routineStructurePath,
 } from '../../router/paths'
+import { routineAssignment } from '../../test/assignment-fixtures'
+import { athletesPage, createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'
 import { muscleGroups } from '../../test/exercise-fixtures'
 import {
@@ -25,11 +29,18 @@ import {
   routineDetail,
   routineExercise,
 } from '../../test/routine-fixtures'
+import { getAthleteOptions } from './actions/get-athlete-options'
 import { RoutineDetailPage } from './RoutineDetailPage'
 
 vi.mock('../../lib/routines/get-routine', () => ({ getRoutine: vi.fn() }))
 vi.mock('../../lib/routines/duplicate-routine', () => ({
   duplicateRoutine: vi.fn(),
+}))
+vi.mock('../../lib/assignments/assign-routine', () => ({
+  assignRoutine: vi.fn(),
+}))
+vi.mock('./actions/get-athlete-options', () => ({
+  getAthleteOptions: vi.fn(),
 }))
 vi.mock('../../lib/exercises/get-muscle-groups', () => ({
   getMuscleGroups: vi.fn(),
@@ -43,6 +54,19 @@ const volume = routineDetail({
   isTemplate: true,
 })
 
+// rutina con un día y un ejercicio: el backend la acepta para asignar
+const complete = {
+  ...volume,
+  days: [routineDay({ exercises: [routineExercise()] })],
+}
+
+const leo = createdAthlete({
+  id: '3f1c2a9e-8b7d-4c1e-9a2b-5d6e7f8a9b0c',
+  firstName: 'Leo',
+  lastName: 'Gil',
+})
+const inactiveAthlete = createdAthlete({ active: false })
+
 let router: RouterProviderProps['router']
 
 const renderPage = (state?: unknown) => {
@@ -55,6 +79,7 @@ const renderPage = (state?: unknown) => {
         path: paths.routineStructure,
         element: <p>estructura de la rutina</p>,
       },
+      { path: paths.athleteProfile, element: <p>ficha del atleta</p> },
     ],
     { initialEntries: [{ pathname: routineDetailPath(volume.id), state }] },
   )
@@ -77,6 +102,11 @@ const renderPage = (state?: unknown) => {
 beforeEach(() => {
   vi.mocked(getRoutine).mockReset()
   vi.mocked(duplicateRoutine).mockReset()
+  vi.mocked(assignRoutine).mockReset()
+  vi.mocked(getAthleteOptions).mockReset()
+  vi.mocked(getAthleteOptions).mockResolvedValue(
+    athletesPage([leo, inactiveAthlete]),
+  )
   vi.mocked(getMuscleGroups).mockResolvedValue(muscleGroups)
   saveSession(session('COACH'))
 })
@@ -301,5 +331,146 @@ describe('RoutineDetailPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Fase de volumen' }),
     ).toBeInTheDocument()
+  })
+
+  describe('asignar a un atleta (US-16)', () => {
+    const openPanel = async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: /Asignar a atleta/ }),
+      )
+      return screen.findByRole('region', { name: 'Asignar a atleta' })
+    }
+
+    const chooseAndAssign = async (panel: HTMLElement, athleteId: string) => {
+      await userEvent.selectOptions(
+        await within(panel).findByRole('combobox', { name: /Atleta/ }),
+        athleteId,
+      )
+      await userEvent.click(
+        within(panel).getByRole('button', { name: 'Asignar' }),
+      )
+    }
+
+    it('lista los atletas con los desactivados deshabilitados', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(complete)
+
+      renderPage()
+      const panel = await openPanel()
+
+      expect(
+        await within(panel).findByRole('option', { name: 'Leo Gil' }),
+      ).toBeEnabled()
+      expect(
+        within(panel).getByRole('option', {
+          name: 'Juana Pérez (cuenta desactivada)',
+        }),
+      ).toBeDisabled()
+    })
+
+    it('asigna la rutina y muestra el aviso con el link a la ficha', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(complete)
+      vi.mocked(assignRoutine).mockResolvedValue(routineAssignment())
+
+      renderPage()
+      await chooseAndAssign(await openPanel(), leo.id)
+
+      const notice = await screen.findByRole('status')
+      expect(notice).toHaveTextContent('Asignaste la rutina a Leo Gil.')
+      expect(assignRoutine).toHaveBeenCalledWith(leo.id, {
+        routineId: complete.id,
+        replaceActive: false,
+      })
+      expect(
+        screen.queryByRole('region', { name: 'Asignar a atleta' }),
+      ).not.toBeInTheDocument()
+
+      await userEvent.click(
+        within(notice).getByRole('link', { name: 'Ver ficha de Leo Gil' }),
+      )
+      expect(router.state.location.pathname).toBe(athleteProfilePath(leo.id))
+    })
+
+    it('ante el 409 confirma el reemplazo y reenvía con replaceActive', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(complete)
+      vi.mocked(assignRoutine)
+        .mockRejectedValueOnce(
+          new ApiError(
+            'El atleta ya tiene asignada la rutina «Fuerza». Confirme el reemplazo para asignar la nueva',
+            409,
+          ),
+        )
+        .mockResolvedValueOnce(routineAssignment())
+
+      renderPage()
+      await chooseAndAssign(await openPanel(), leo.id)
+
+      const dialog = await screen.findByRole('dialog', {
+        name: '¿Reemplazar la rutina activa?',
+      })
+      expect(dialog).toHaveTextContent('«Fuerza»')
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: 'Reemplazar' }),
+      )
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Asignaste la rutina a Leo Gil.',
+      )
+      expect(assignRoutine).toHaveBeenLastCalledWith(leo.id, {
+        routineId: complete.id,
+        replaceActive: true,
+      })
+    })
+
+    it('el 422 de una rutina incompleta ofrece configurar la estructura', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(volume)
+      vi.mocked(assignRoutine).mockRejectedValue(
+        new ApiError(
+          'La rutina no tiene días o tiene días sin ejercicios. Complete su estructura antes de asignarla',
+          422,
+        ),
+      )
+
+      renderPage()
+      const panel = await openPanel()
+      await chooseAndAssign(panel, leo.id)
+
+      const alert = await within(panel).findByRole('alert')
+      expect(alert).toHaveTextContent(
+        'La rutina no tiene días o tiene días sin ejercicios.',
+      )
+      expect(
+        within(alert).getByRole('link', { name: 'Configurar estructura' }),
+      ).toHaveAttribute('href', routineStructurePath(volume.id))
+    })
+
+    it('el 422 de una rutina completa (ya activa) no ofrece la estructura', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(complete)
+      vi.mocked(assignRoutine).mockRejectedValue(
+        new ApiError('El atleta ya tiene asignada esta rutina', 422),
+      )
+
+      renderPage()
+      const panel = await openPanel()
+      await chooseAndAssign(panel, leo.id)
+
+      const alert = await within(panel).findByRole('alert')
+      expect(alert).toHaveTextContent('El atleta ya tiene asignada esta rutina')
+      expect(within(alert).queryByRole('link')).not.toBeInTheDocument()
+    })
+
+    it('Cancelar cierra el panel sin asignar', async () => {
+      vi.mocked(getRoutine).mockResolvedValue(complete)
+
+      renderPage()
+      const panel = await openPanel()
+      await userEvent.click(
+        within(panel).getByRole('button', { name: 'Cancelar' }),
+      )
+
+      expect(
+        screen.queryByRole('region', { name: 'Asignar a atleta' }),
+      ).not.toBeInTheDocument()
+      expect(assignRoutine).not.toHaveBeenCalled()
+    })
   })
 })

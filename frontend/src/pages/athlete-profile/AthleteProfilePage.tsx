@@ -18,6 +18,8 @@ import { LatestWeightSection } from './components/LatestWeightSection'
 import { PersonalDataSection } from './components/PersonalDataSection'
 import { ProfileColumns } from './components/ProfileColumns'
 import { RecentSessionsSection } from './components/RecentSessionsSection'
+import { RoutineHistorySection } from './components/RoutineHistorySection'
+import { usePrefetchAssignments } from './hooks/use-active-assignment'
 import { usePrefetchLatestWeight } from './hooks/use-latest-weight'
 
 // 404: no existe o se eliminó. 400: el id de la URL no es un UUID, para el usuario es lo mismo.
@@ -46,6 +48,8 @@ export function AthleteProfilePage() {
   } = useAthlete(id)
   // en paralelo con el atleta: la sección "Último peso" lo toma de la caché
   usePrefetchLatestWeight(id)
+  // también en paralelo: la rutina activa y el historial comparten la primera página
+  usePrefetchAssignments(id)
 
   const reason = error ? unavailableReason(error) : undefined
   if (reason) return <AthleteUnavailable reason={reason} />
@@ -101,6 +105,8 @@ export function AthleteProfilePage() {
           <>
             <PersonalDataSection athlete={athlete} />
             <HealthTrainingSection athlete={athlete} />
+            {/* con key: al cambiar de atleta el historial vuelve a la primera página */}
+            <RoutineHistorySection key={athlete.id} athleteId={athlete.id} />
           </>
         }
         aside={
@@ -109,7 +115,11 @@ export function AthleteProfilePage() {
               athleteId={athlete.id}
               initialWeightKg={athlete.initialWeightKg}
             />
-            <ActiveRoutineSection />
+            <ActiveRoutineSection
+              key={athlete.id}
+              athleteId={athlete.id}
+              athleteActive={athlete.active}
+            />
             <RecentSessionsSection />
           </>
         }

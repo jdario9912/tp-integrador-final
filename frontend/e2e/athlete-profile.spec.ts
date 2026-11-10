@@ -16,6 +16,8 @@ const ATHLETES_URL = /\/api\/athletes(\?.*)?$/
 const ATHLETE_URL = /\/api\/athletes\/[^/?]+$/
 // último peso de la ficha (US-26): GET /athletes/{id}/weights?size=1
 const WEIGHTS_URL = /\/api\/athletes\/[^/]+\/weights(\?.*)?$/
+// rutina activa e historial (US-16): se cubren en routine-assignment.spec; acá, sin asignaciones
+const ASSIGNMENTS_URL = /\/api\/athletes\/[^/]+\/assignments(\?.*)?$/
 
 // ejemplo de AthleteResponse del contrato de API, de la cartera del entrenador
 const leoJson = () => ({
@@ -100,6 +102,12 @@ const routeBackend = async (
       },
     })
   })
+  await page.route(ASSIGNMENTS_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
+    }),
+  )
   await page.route(ATHLETES_URL, (route) => {
     const content = 'id' in detail ? [detail] : []
     return route.fulfill({
