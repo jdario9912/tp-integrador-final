@@ -3,7 +3,7 @@
 TP Final · versión 1.1
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`) y `Routine` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay` y `RoutineExercise` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -124,7 +124,7 @@ Ejercicio del catálogo (US-38). Sin autor (`createdBy` null) es un ejercicio de
 | + isDeleted() | boolean |
 
 ### Routine
-Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantilla reutilizable para distintos atletas. Los días (`RoutineDay`) se agregan en US-14.
+Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantilla reutilizable para distintos atletas. Sus días (`RoutineDay`) se configuran en US-14 y `duplicate` crea una copia independiente (US-15). Mientras se configura puede no tener días ni ejercicios: la multiplicidad 1..* se exige al asignarla a un atleta (US-16).
 
 | Miembro | Tipo |
 |---|---|
@@ -138,15 +138,45 @@ Rutina de entrenamiento del entrenador (US-13). `template` la marca como plantil
 | − template | boolean |
 | − createdAt | Instant |
 | − updatedAt | Instant |
+| − days | List&lt;RoutineDay&gt; |
 | + builder() | RoutineBuilder |
 | + rename(newName: String) | void |
 | + isOwnedBy(coachId: UUID) | boolean |
+| + addDay(name: String) | RoutineDay |
+| + newDay(name: String) | RoutineDay |
+| + replaceDays(ordered: List&lt;RoutineDay&gt;) | void |
+| + duplicate(newName: String) | Routine |
 
 ### RoutineDay
-`− id: UUID`, `− dayNumber: int`, `− name: String`, `+ addExercise(exercise): void`
+Día de una rutina (US-14). `dayNumber` es su posición dentro de la rutina, desde 1.
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − routine | Routine |
+| − dayNumber | short |
+| − name | String |
+| − exercises | List&lt;RoutineExercise&gt; |
+| + rename(newName: String) | void |
+| + addExercise(exercise: RoutineExercise) | void |
+| + replaceExercises(ordered: List&lt;RoutineExercise&gt;) | void |
 
 ### RoutineExercise
-`− id: UUID`, `− sortOrder: int`, `− sets: int`, `− reps: int`, `− recommendedWeight: float`, `− rest: int`, `− rirRpe: String`, `− techniqueNote: String`
+Ejercicio del catálogo planificado en un día (US-14). `sortOrder` es su posición dentro del día, desde 0; `rest` está en segundos; `rirRpe` es «RIR n» (0 a 10) o «RPE n» (1 a 10, admite medios puntos).
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − routineDay | RoutineDay |
+| − exercise | Exercise |
+| − sortOrder | short |
+| − sets | short |
+| − reps | short |
+| − recommendedWeight | BigDecimal [0..1] |
+| − rest | Short [0..1] |
+| − rirRpe | String [0..1] |
+| − techniqueNote | String [0..1] |
+| + builder() | RoutineExerciseBuilder |
 
 ### RoutineAssignment
 `− id: UUID`, `− assignmentDate: Date`, `− active: boolean`
@@ -381,27 +411,39 @@ class Routine {
   - template: boolean
   - createdAt: Instant
   - updatedAt: Instant
+  - days: List<RoutineDay>
   + {static} builder(): RoutineBuilder
   + rename(newName: String): void
   + isOwnedBy(coachId: UUID): boolean
+  + addDay(name: String): RoutineDay
+  + newDay(name: String): RoutineDay
+  + replaceDays(ordered: List<RoutineDay>): void
+  + duplicate(newName: String): Routine
 }
 
 class RoutineDay {
   - id: UUID
-  - dayNumber: int
+  - routine: Routine
+  - dayNumber: short
   - name: String
-  + addExercise(exercise): void
+  - exercises: List<RoutineExercise>
+  + rename(newName: String): void
+  + addExercise(exercise: RoutineExercise): void
+  + replaceExercises(ordered: List<RoutineExercise>): void
 }
 
 class RoutineExercise {
   - id: UUID
-  - sortOrder: int
-  - sets: int
-  - reps: int
-  - recommendedWeight: float
-  - rest: int
-  - rirRpe: String
-  - techniqueNote: String
+  - routineDay: RoutineDay
+  - exercise: Exercise
+  - sortOrder: short
+  - sets: short
+  - reps: short
+  - recommendedWeight: BigDecimal [0..1]
+  - rest: Short [0..1]
+  - rirRpe: String [0..1]
+  - techniqueNote: String [0..1]
+  + {static} builder(): RoutineExerciseBuilder
 }
 
 class RoutineAssignment {

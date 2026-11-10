@@ -8,6 +8,7 @@ import com.gestion_deportiva.api.exercise.dto.ExerciseRequest;
 import com.gestion_deportiva.api.exercise.dto.ExerciseResponse;
 import com.gestion_deportiva.api.exercise.dto.ExerciseSearchFilter;
 import com.gestion_deportiva.api.exercise.exception.ExerciseAccessDeniedException;
+import com.gestion_deportiva.api.exercise.exception.ExerciseInUseException;
 import com.gestion_deportiva.api.exercise.exception.ExerciseNameAlreadyExistsException;
 import com.gestion_deportiva.api.exercise.exception.ExerciseNotFoundException;
 import com.gestion_deportiva.api.exercise.model.Exercise;
@@ -110,10 +111,14 @@ public class ExerciseService {
         return ExerciseResponse.from(exerciseRepository.saveAndFlush(exercise));
     }
 
-    // Baja lógica: sale del catálogo y su nombre queda libre, pero la fila sigue para las rutinas que lo usan
+    // Baja lógica: sale del catálogo y su nombre queda libre. Si alguna rutina lo usa responde 422: las rutinas
+    // cargan sus ejercicios por JPA y un eliminado no se puede leer (@SQLRestriction de Exercise)
     @Transactional
     public void delete(UUID coachId, UUID exerciseId) {
         Exercise exercise = findEditable(coachId, exerciseId);
+        if (exerciseRepository.isUsedInRoutines(exerciseId)) {
+            throw new ExerciseInUseException();
+        }
         exercise.markDeleted(clock.instant());
         exerciseRepository.saveAndFlush(exercise);
     }

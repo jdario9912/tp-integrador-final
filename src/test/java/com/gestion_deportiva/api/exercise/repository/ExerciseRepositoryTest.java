@@ -190,6 +190,26 @@ class ExerciseRepositoryTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void findVisibleByIdInReturnsOnlyGlobalsAndOwnThatAreNotDeleted() {
+        // Arrange
+        Exercise global = exerciseRepository.saveAndFlush(exercise("ZZ global visible", MuscleGroup.CHEST, null));
+        Exercise own = exerciseRepository.saveAndFlush(exercise("Propio", MuscleGroup.CHEST, ana));
+        Exercise foreign = exerciseRepository.saveAndFlush(exercise("Ajeno", MuscleGroup.CHEST, bruno));
+        Exercise deleted = exerciseRepository.saveAndFlush(exercise("Eliminado", MuscleGroup.CHEST, ana));
+        deleted.markDeleted(Instant.now());
+        exerciseRepository.saveAndFlush(deleted);
+        entityManager.clear();
+
+        // Act
+        List<Exercise> visible = exerciseRepository.findVisibleByIdIn(ana.getId(),
+                List.of(global.getId(), own.getId(), foreign.getId(), deleted.getId(), UUID.randomUUID()));
+
+        // Assert
+        assertEquals(Set.of(global.getId(), own.getId()),
+                visible.stream().map(Exercise::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
     void unknownMuscleGroupIdIsRejectedByForeignKey() {
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
                 "insert into exercises (muscle_group_id, name) values (99, 'X')"));

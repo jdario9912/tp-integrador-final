@@ -101,11 +101,14 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.GET, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.PUT, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.DELETE, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            // rutinas (US-13): {id} es el del atleta, así que el entrenador recibe 404 (pasa la autorización);
+            // rutinas (US-13 a US-15): {id} es el del atleta, así que el entrenador recibe 404 (pasa la autorización);
             // la pertenencia se prueba en RoutineE2ETest
             new Row(HttpMethod.POST, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/routines", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/routines/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.PUT, "/api/routines/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.PUT, "/api/routines/{id}/days", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.POST, "/api/routines/{id}/duplicate", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             // registros de peso (US-26): el atleta pasa la autorización (con "{}" el POST y el PUT responden 400 y
             // {weightId} no hace falta que exista); el entrenador solo lee. La pertenencia se prueba en
             // WeightRecordE2ETest
