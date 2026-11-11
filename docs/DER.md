@@ -245,12 +245,14 @@ erDiagram
     }
     FOODS {
         uuid id PK
-        varchar name
-        numeric reference_portion_g
-        numeric calories_kcal
-        numeric protein_g
-        numeric carbs_g
-        numeric fat_g
+        varchar name "unico sin distinguir mayusculas (catalogo global)"
+        numeric reference_portion_g "mayor a 0, hasta 10000"
+        numeric calories_kcal "0 a 10000"
+        numeric protein_g "0 a 10000"
+        numeric carbs_g "0 a 10000"
+        numeric fat_g "0 a 10000"
+        timestamptz created_at
+        timestamptz updated_at
     }
     WEIGHT_LOGS {
         uuid id PK

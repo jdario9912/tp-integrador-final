@@ -118,6 +118,8 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `POST /api/athletes/{athleteId}/weights` · `PUT /api/athletes/{athleteId}/weights/{weightId}` | 401 | 403 | ✓ solo él mismo |
 | `GET /api/athletes/{athleteId}/weights` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `POST /api/athletes/{athleteId}/assignments` · `GET /api/athletes/{athleteId}/assignments` | 401 | ✓ solo sus atletas y rutinas | 403 |
+| `GET /api/foods` · `GET /api/foods/{id}` | 401 | ✓ | ✓ |
+| `POST /api/foods` · `PUT /api/foods/{id}` | 401 | ✓ | 403 |
 
 `GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
 
@@ -151,6 +153,11 @@ Registros de peso (US-26): el atleta registra y corrige su peso; él y su entren
 - `PUT /api/athletes/{athleteId}/weights/{weightId}` lo corrige (edición completa: el comentario que no se envía queda en null). Mover el registro a una fecha que ya tiene otro → 409. Un registro de otro atleta responde 404, igual que uno inexistente.
 - `GET /api/athletes/{athleteId}/weights` los lista del más reciente al más antiguo con el formato `PageResponse`, para el propio atleta (también si está desvinculado) y para su entrenador. Query params opcionales: `from` y `to` (`YYYY-MM-DD`, inclusivos; `from` posterior a `to` → 400), `page` y `size`. Con `size=1` devuelve el último peso (ficha del entrenador).
 - "Hoy" se calcula en la zona horaria de la app y no en UTC (a las 22:00 de Argentina en UTC ya es el día siguiente). Variable `APP_TIME_ZONE`: ID IANA, por defecto `America/Argentina/Buenos_Aires`; si está vacía se usa ese valor, y un valor inválido no deja arrancar la app.
+
+Catálogo de alimentos (US-39): es global (sin autor), lo consultan los dos roles y solo los entrenadores crean y editan. Los valores nutricionales corresponden a la porción de referencia. No hay baja: las comidas (US-23) lo van a referenciar.
+- `GET /api/foods` devuelve los alimentos (precargados por la V9 y los que agregan los entrenadores), ordenados por nombre y con el formato `PageResponse`. Query params opcionales: `page`, `size` y `name` (contiene, sin distinguir mayúsculas). `GET /api/foods/{id}` devuelve uno; inexistente → 404.
+- `POST /api/foods` lo crea (201): `name` (máximo 100), `referencePortionG` (gramos, mayor a 0), `caloriesKcal`, `proteinG`, `carbsG` y `fatG` (0 o más), todos obligatorios, hasta 10000 y con 2 decimales como máximo. Nombre repetido, sin distinguir mayúsculas → 409.
+- `PUT /api/foods/{id}` edita todos sus datos; cualquier entrenador puede editar cualquier alimento. Renombrarlo al nombre de otro → 409.
 
 Para agregar un endpoint:
 

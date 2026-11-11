@@ -59,6 +59,8 @@ public class SecurityConfig {
     static final String ATHLETE_WEIGHTS_PATH = ATHLETES_PATH + "/{athleteId}/weights";
     static final String ATHLETE_WEIGHT_PATH = ATHLETE_WEIGHTS_PATH + "/{weightId}";
     static final String ATHLETE_ASSIGNMENTS_PATH = ATHLETES_PATH + "/{athleteId}/assignments";
+    static final String FOODS_PATH = WebConfig.API_PREFIX + "/foods";
+    static final String FOOD_PATH = FOODS_PATH + "/{id}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -112,6 +114,11 @@ public class SecurityConfig {
                         // de la rutina la controla RoutineAssignmentService
                         .requestMatchers(HttpMethod.POST, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
+                        // Catálogo de alimentos (US-39): global, lo consultan los dos roles y solo los
+                        // entrenadores crean y editan
+                        .requestMatchers(HttpMethod.GET, FOODS_PATH, FOOD_PATH).hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.POST, FOODS_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.PUT, FOOD_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

@@ -118,7 +118,13 @@ class RoleEndpointMatrixE2ETest {
             // asignación de rutinas (US-16): solo el entrenador (con "{}" el POST responde 400). La pertenencia y las
             // reglas de negocio se prueban en RoutineAssignmentE2ETest
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // catálogo de alimentos (US-39): lo consultan los dos roles y solo el entrenador crea y edita (con "{}"
+            // el POST y el PUT responden 400). Las reglas de negocio se prueban en FoodE2ETest
+            new Row(HttpMethod.POST, "/api/foods", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/foods", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.GET, "/api/foods/{id}", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/foods/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";

@@ -3,7 +3,7 @@
 TP Final · versión 1.1
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay`, `RoutineExercise` y `RoutineAssignment` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay`, `RoutineExercise`, `RoutineAssignment` y `Food` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -200,6 +200,24 @@ Rutina asignada a un atleta (US-16). `assignmentDate` es «hoy» en la zona de l
 
 ### Meal
 `− id: UUID`, `− date: Date`, `− mealType: String`, `− description: String`, `− approximateQuantity: String`, `− calories: float [0..1]`, `− protein: float [0..1]`, `− photo: String [0..1]`, `− comment: String`, `− coachFeedback: String`, `− reviewed: boolean`
+
+### Food
+Alimento del catálogo (US-39). El catálogo es global: no tiene autor, los entrenadores crean y editan y los dos roles lo consultan. El nombre es único sin distinguir mayúsculas. Los valores nutricionales corresponden a la porción de referencia, en gramos. Queda preparado para el detalle de las comidas (US-23).
+
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − name | String |
+| − referencePortionG | BigDecimal |
+| − caloriesKcal | BigDecimal |
+| − proteinG | BigDecimal |
+| − carbsG | BigDecimal |
+| − fatG | BigDecimal |
+| − createdAt | Instant |
+| − updatedAt | Instant |
+| + builder() | FoodBuilder |
+| + rename(newName: String) | void |
+| + updateNutrition(referencePortionG, caloriesKcal, proteinG, carbsG, fatG: BigDecimal) | void |
 
 ### WeightLog
 `− id: UUID`, `− date: Date`, `− weight: float`, `− comment: String`
@@ -503,6 +521,21 @@ class Meal {
   - reviewed: boolean
 }
 
+class Food {
+  - id: UUID
+  - name: String
+  - referencePortionG: BigDecimal
+  - caloriesKcal: BigDecimal
+  - proteinG: BigDecimal
+  - carbsG: BigDecimal
+  - fatG: BigDecimal
+  - createdAt: Instant
+  - updatedAt: Instant
+  + {static} builder(): FoodBuilder
+  + rename(newName: String): void
+  + updateNutrition(referencePortionG, caloriesKcal, proteinG, carbsG, fatG: BigDecimal): void
+}
+
 class WeightLog {
   - id: UUID
   - date: Date
@@ -591,6 +624,11 @@ Note ..> NoteType
 note right of RoutineAssignment
   Una sola activa por atleta;
   las anteriores, inactivas (historial).
+end note
+
+note right of Food
+  Catálogo global, sin autor.
+  Nombre único sin distinguir mayúsculas.
 end note
 
 note right of Athlete
