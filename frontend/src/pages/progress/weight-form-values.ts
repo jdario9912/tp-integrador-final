@@ -1,6 +1,6 @@
+import { normalizeDecimal } from '../../lib/decimal'
 import type { WeightRecord, WeightRecordInput } from '../../lib/weights'
 import type { WeightFormValues } from './types'
-import { normalizeDecimal } from './validation'
 
 // alta: la fecha arranca en "hoy" (zona de la app)
 export const emptyWeightFormValues = (today: string): WeightFormValues => ({

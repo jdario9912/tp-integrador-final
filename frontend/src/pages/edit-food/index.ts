@@ -1,0 +1,1 @@
+export { EditFoodPage } from './EditFoodPage'

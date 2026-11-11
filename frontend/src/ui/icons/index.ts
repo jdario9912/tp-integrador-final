@@ -4,6 +4,7 @@
 // biblioteca; para cambiar de biblioteca, solo cambia este archivo.
 export {
   Activity,
+  Apple,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
@@ -16,8 +17,11 @@ export {
   ChevronRight,
   ClipboardList,
   Copy,
+  Droplet,
   Dumbbell,
+  Egg,
   Eye,
+  Flame,
   HeartPulse,
   History,
   IdCard,
@@ -46,6 +50,7 @@ export {
   UserX,
   Users,
   Weight,
+  Wheat,
   X,
   type LucideIcon,
   type LucideProps,

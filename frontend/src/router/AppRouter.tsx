@@ -5,11 +5,14 @@ import { AthletesPage } from '../pages/athletes'
 import { DashboardPage } from '../pages/dashboard'
 import { EditAthletePage } from '../pages/edit-athlete'
 import { EditExercisePage } from '../pages/edit-exercise'
+import { EditFoodPage } from '../pages/edit-food'
 import { EditRoutinePage } from '../pages/edit-routine'
 import { ExercisesPage } from '../pages/exercises'
+import { FoodsPage } from '../pages/foods'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
 import { NewExercisePage } from '../pages/new-exercise'
+import { NewFoodPage } from '../pages/new-food'
 import { NewRoutinePage } from '../pages/new-routine'
 import { ProgressPage } from '../pages/progress'
 import { RegisterAthletePage } from '../pages/register-athlete'
@@ -36,6 +39,12 @@ const router = createBrowserRouter([
             path: paths.dashboard,
             element: <DashboardPage />,
             handle: { title: 'Panel' },
+          },
+          // catálogo global de alimentos (US-39): lo consultan los dos roles
+          {
+            path: paths.foods,
+            element: <FoodsPage />,
+            handle: { title: 'Alimentos' },
           },
           // páginas de un solo rol (US-04): van dentro de RequireRole
           {
@@ -100,6 +109,16 @@ const router = createBrowserRouter([
                 path: paths.routineStructure,
                 element: <RoutineStructurePage />,
                 handle: { title: 'Estructura de la rutina' },
+              },
+              {
+                path: paths.newFood,
+                element: <NewFoodPage />,
+                handle: { title: 'Nuevo alimento' },
+              },
+              {
+                path: paths.editFood,
+                element: <EditFoodPage />,
+                handle: { title: 'Editar alimento' },
               },
             ],
           },

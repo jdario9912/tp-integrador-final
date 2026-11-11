@@ -1,3 +1,4 @@
+import { normalizeDecimal } from '../../lib/decimal'
 import { todayInAppTimeZone } from '../../lib/iso-date'
 
 // validadores espejo del backend (POST/PUT /athletes/{athleteId}/weights, contrato 8.3),
@@ -10,10 +11,6 @@ export const COMMENT_MAX_LENGTH = 500
 
 // numeric(5,2) en la base: hasta 3 enteros y 2 decimales
 const WEIGHT_PATTERN = /^\d{1,3}(\.\d{1,2})?$/
-
-// algunos navegadores entregan la coma decimal tal como se escribió
-export const normalizeDecimal = (value: string) =>
-  value.trim().replace(',', '.')
 
 export const validateWeightDate = ({ value }: FieldValue) => {
   if (!value) return 'La fecha es obligatoria'

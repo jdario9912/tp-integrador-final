@@ -23,6 +23,10 @@ export const paths = {
   routineDetail: '/routines/:id',
   editRoutine: '/routines/:id/edit',
   routineStructure: '/routines/:id/structure',
+  // catálogo global de alimentos (US-39): lo consultan los dos roles, editan solo los entrenadores
+  foods: '/foods',
+  newFood: '/foods/new',
+  editFood: '/foods/:id/edit',
   // solo atleta: registro de peso corporal (US-26)
   progress: '/progress',
 } as const
@@ -36,6 +40,8 @@ export const athleteEditPath = (id: string) =>
 
 export const exerciseEditPath = (id: string) =>
   generatePath(paths.editExercise, { id })
+
+export const foodEditPath = (id: string) => generatePath(paths.editFood, { id })
 
 export const routineDetailPath = (id: string) =>
   generatePath(paths.routineDetail, { id })

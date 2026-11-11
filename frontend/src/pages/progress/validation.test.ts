@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  normalizeDecimal,
   validateWeightComment,
   validateWeightDate,
   validateWeightKg,
@@ -99,12 +98,5 @@ describe('validateWeightComment', () => {
     expect(validateWeightComment(value('a'.repeat(501)))).toBe(
       'El comentario no puede superar los 500 caracteres',
     )
-  })
-})
-
-describe('normalizeDecimal', () => {
-  it('recorta y usa punto decimal', () => {
-    expect(normalizeDecimal(' 72,5 ')).toBe('72.5')
-    expect(normalizeDecimal('72.5')).toBe('72.5')
   })
 })
