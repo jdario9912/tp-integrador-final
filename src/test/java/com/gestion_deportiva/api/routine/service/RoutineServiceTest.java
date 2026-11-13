@@ -13,6 +13,7 @@ import com.gestion_deportiva.api.routine.dto.RoutineExerciseRequest;
 import com.gestion_deportiva.api.routine.dto.RoutineRequest;
 import com.gestion_deportiva.api.routine.dto.RoutineResponse;
 import com.gestion_deportiva.api.routine.exception.RoutineAccessDeniedException;
+import com.gestion_deportiva.api.routine.exception.RoutineDayHasTrainingSessionsException;
 import com.gestion_deportiva.api.routine.exception.RoutineHasPerformedSetsException;
 import com.gestion_deportiva.api.routine.exception.RoutineItemNotInRoutineException;
 import com.gestion_deportiva.api.routine.exception.RoutineNameAlreadyExistsException;
@@ -83,6 +84,9 @@ class RoutineServiceTest {
     @Mock
     private PerformedSetChecker performedSetChecker;
 
+    @Mock
+    private TrainingSessionChecker trainingSessionChecker;
+
     private RoutineService routineService;
 
     private Coach coach;
@@ -90,7 +94,7 @@ class RoutineServiceTest {
     @BeforeEach
     void setUp() {
         routineService = new RoutineService(routineRepository, coachRepository, exerciseRepository,
-                performedSetChecker);
+                performedSetChecker, trainingSessionChecker);
         coach = coachWithId("ana@test.com", COACH_ID);
     }
 
@@ -427,6 +431,62 @@ class RoutineServiceTest {
                 () -> routineService.replaceStructure(COACH_ID, ROUTINE_ID, structure(day(push.getId(), "Empuje"))));
         assertEquals(List.of(planned), push.getExercises());
         verify(routineRepository, never()).flush();
+    }
+
+    // ---------- días con sesiones de entrenamiento (US-18) ----------
+
+    @Test
+    void shouldRejectRemovingDaysThatHaveTrainingSessions() {
+        // Arrange: Empuje y Tirón; Tirón ya se entrenó
+        Routine routine = routine("Fuerza", coach);
+        RoutineDay push = withId(routine.addDay("Empuje"));
+        RoutineDay pull = withId(routine.addDay("Tirón"));
+        givenOwnRoutine(routine);
+        when(trainingSessionChecker.hasTrainingSessions(Set.of(pull.getId()))).thenReturn(true);
+
+        // Act + Assert: no se toca nada
+        RoutineDayHasTrainingSessionsException ex = assertThrows(RoutineDayHasTrainingSessionsException.class,
+                () -> routineService.replaceStructure(COACH_ID, ROUTINE_ID, structure(day(push.getId(), "Empuje"))));
+        assertEquals("No se pueden quitar días que ya tienen entrenamientos registrados. "
+                + "Duplique la rutina y edite la copia", ex.getMessage());
+        assertEquals(List.of(push, pull), routine.getDays());
+        verify(routineRepository, never()).flush();
+    }
+
+    @Test
+    void shouldAskAboutTrainingSessionsOnlyForTheRemovedDays() {
+        // Arrange
+        Routine routine = routine("Fuerza", coach);
+        RoutineDay push = withId(routine.addDay("Empuje"));
+        RoutineDay pull = withId(routine.addDay("Tirón"));
+        RoutineDay legs = withId(routine.addDay("Pierna"));
+        givenOwnRoutine(routine);
+
+        // Act: queda Pierna (primera) y uno nuevo
+        routineService.replaceStructure(COACH_ID, ROUTINE_ID, structure(day(legs.getId(), "Pierna"),
+                day(null, "Core")));
+
+        // Assert
+        verify(trainingSessionChecker).hasTrainingSessions(Set.of(push.getId(), pull.getId()));
+        assertEquals(List.of("Pierna", "Core"), routine.getDays().stream().map(RoutineDay::getName).toList());
+    }
+
+    @Test
+    void shouldNotAskAboutTrainingSessionsWhenNoDayIsRemoved() {
+        // Arrange: un día entrenado se puede renombrar y reordenar
+        Routine routine = routine("Fuerza", coach);
+        RoutineDay push = withId(routine.addDay("Empuje"));
+        RoutineDay pull = withId(routine.addDay("Tirón"));
+        givenOwnRoutine(routine);
+
+        // Act
+        routineService.replaceStructure(COACH_ID, ROUTINE_ID, structure(day(pull.getId(), "Espalda"),
+                day(push.getId(), "Empuje")));
+
+        // Assert
+        verify(trainingSessionChecker, never()).hasTrainingSessions(anyCollection());
+        assertEquals(List.of(pull, push), routine.getDays());
+        assertEquals("Espalda", pull.getName());
     }
 
     @Test

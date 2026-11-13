@@ -1,6 +1,8 @@
 package com.gestion_deportiva.api.e2e;
 
 import com.gestion_deportiva.api.TestcontainersConfiguration;
+import com.gestion_deportiva.api.assignment.model.RoutineAssignment;
+import com.gestion_deportiva.api.assignment.repository.RoutineAssignmentRepository;
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.athlete.repository.AthleteRepository;
 import com.gestion_deportiva.api.coach.model.Coach;
@@ -11,10 +13,12 @@ import com.gestion_deportiva.api.exercise.repository.ExerciseRepository;
 import com.gestion_deportiva.api.routine.dto.RoutineExerciseRequest;
 import com.gestion_deportiva.api.routine.dto.RoutineRequest;
 import com.gestion_deportiva.api.routine.exception.RoutineAccessDeniedException;
+import com.gestion_deportiva.api.routine.exception.RoutineDayHasTrainingSessionsException;
 import com.gestion_deportiva.api.routine.model.Routine;
 import com.gestion_deportiva.api.routine.model.RoutineDay;
 import com.gestion_deportiva.api.routine.repository.RoutineRepository;
 import com.gestion_deportiva.api.support.AuthHeaders;
+import com.gestion_deportiva.api.training.repository.TrainingSessionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +36,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -39,6 +44,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.gestion_deportiva.api.support.AssignmentFixtures.assignment;
 import static com.gestion_deportiva.api.support.ExerciseFixtures.exercise;
 import static com.gestion_deportiva.api.support.IdentityFixtures.RAW_PASSWORD;
 import static com.gestion_deportiva.api.support.RoutineFixtures.day;
@@ -49,6 +55,7 @@ import static com.gestion_deportiva.api.support.RoutineFixtures.routineExercise;
 import static com.gestion_deportiva.api.support.RoutineFixtures.routineRequest;
 import static com.gestion_deportiva.api.support.RoutineFixtures.routineRequestWithOnlyRequired;
 import static com.gestion_deportiva.api.support.RoutineFixtures.structure;
+import static com.gestion_deportiva.api.support.TrainingSessionFixtures.session;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -89,11 +96,19 @@ class RoutineE2ETest {
     @Autowired
     private ExerciseRepository exerciseRepository;
 
+    @Autowired
+    private RoutineAssignmentRepository routineAssignmentRepository;
+
+    @Autowired
+    private TrainingSessionRepository trainingSessionRepository;
+
     private RestClient client;
 
     private Coach coach;
 
     private Coach otherCoach;
+
+    private Athlete athlete;
 
     @BeforeEach
     void setUp() {
@@ -103,7 +118,7 @@ class RoutineE2ETest {
                 new Coach("Ana", "Paz", COACH_EMAIL, passwordEncoder.encode(RAW_PASSWORD)));
         otherCoach = coachRepository.saveAndFlush(
                 new Coach("Bruno", "Sosa", OTHER_COACH_EMAIL, passwordEncoder.encode(RAW_PASSWORD)));
-        athleteRepository.saveAndFlush(
+        athlete = athleteRepository.saveAndFlush(
                 new Athlete("Leo", "Gil", ATHLETE_EMAIL, passwordEncoder.encode(RAW_PASSWORD), coach));
     }
 
@@ -489,6 +504,50 @@ class RoutineE2ETest {
                 structure(day(null, "Empuje")), COACH_EMAIL).getStatusCode());
     }
 
+    // ---------- días con sesiones de entrenamiento (US-18, CE-6) ----------
+
+    @Test
+    void shouldReturn422WhenRemovingADayThatHasTrainingSessions() {
+        // Arrange: Empuje y Tirón; el atleta ya entrenó Tirón
+        Routine own = trainedRoutine();
+        RoutineDay push = own.getDays().get(0);
+        UUID benchId = push.getExercises().get(0).getExercise().getId();
+
+        // Act: la estructura nueva deja solo Empuje
+        ResponseEntity<String> response = exchange(HttpMethod.PUT, own.getId() + "/days",
+                structure(day(push.getId(), "Empuje", exerciseRequest(push.getExercises().get(0).getId(), benchId))),
+                COACH_EMAIL);
+
+        // Assert: no se toca nada
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
+        assertEquals(RoutineDayHasTrainingSessionsException.MESSAGE, json(response).get("message").asString());
+        assertEquals(2, count("routine_days"));
+        assertEquals(2, count("routine_exercises"));
+    }
+
+    @Test
+    void shouldRenameReorderAndChangeTheExercisesOfADayThatHasTrainingSessions() {
+        // Arrange
+        Routine own = trainedRoutine();
+        RoutineDay push = own.getDays().get(0);
+        RoutineDay pull = own.getDays().get(1);
+        UUID benchId = push.getExercises().get(0).getExercise().getId();
+
+        // Act: Tirón pasa primero como "Espalda" y sin su ejercicio (todavía no hay series, US-19)
+        ResponseEntity<String> response = exchange(HttpMethod.PUT, own.getId() + "/days", structure(
+                day(pull.getId(), "Espalda"),
+                day(push.getId(), "Empuje", exerciseRequest(push.getExercises().get(0).getId(), benchId))),
+                COACH_EMAIL);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        JsonNode days = json(response).get("days");
+        assertEquals(pull.getId().toString(), days.get(0).get("id").asString());
+        assertEquals("Espalda", days.get(0).get("name").asString());
+        assertEquals(0, days.get(0).get("exercises").size());
+        assertEquals(1, count("training_sessions"));
+    }
+
     // ---------- edición (US-15) ----------
 
     @Test
@@ -618,6 +677,18 @@ class RoutineE2ETest {
         assertEquals(HttpStatus.NOT_FOUND,
                 exchange(HttpMethod.POST, UUID.randomUUID() + "/duplicate", null, COACH_EMAIL).getStatusCode());
         assertEquals(1, count());
+    }
+
+    // Empuje [press] y Tirón [press], asignada al atleta, con una sesión de entrenamiento en Tirón
+    private Routine trainedRoutine() {
+        Exercise bench = exerciseRepository.saveAndFlush(exercise("Press banca", MuscleGroup.CHEST, null));
+        Routine own = routine("Fuerza", coach);
+        own.addDay("Empuje").addExercise(routineExercise(bench));
+        own.addDay("Tirón").addExercise(routineExercise(bench));
+        own = routineRepository.saveAndFlush(own);
+        RoutineAssignment active = routineAssignmentRepository.saveAndFlush(assignment(athlete, own, LocalDate.now()));
+        trainingSessionRepository.saveAndFlush(session(active, own.getDays().get(1), LocalDate.now()));
+        return own;
     }
 
     private ResponseEntity<String> exchange(HttpMethod method, String suffix, Object body, String email) {

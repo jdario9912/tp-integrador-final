@@ -21,7 +21,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 // Rutina asignada a un atleta (US-16). Nace activa; al asignarle otra, esta pasa a inactiva y queda en el
-// historial (una sola activa por atleta, ux_routine_assignments_athlete_active)
+// historial (una sola activa por atleta, ux_routine_assignments_athlete_active). La vigencia (US-17) no se guarda:
+// se calcula con assignmentDate y la duración de la rutina
 @Entity
 @Table(name = "routine_assignments")
 @Getter
@@ -59,6 +60,22 @@ public class RoutineAssignment {
     // La reemplaza otra asignación: queda en el historial
     public void deactivate() {
         this.active = false;
+    }
+
+    // Último día vigente (US-17): la rutina rige desde assignmentDate durante durationWeeks semanas.
+    // null = la rutina no tiene duración y no vence. Usa la duración actual de la rutina: si el entrenador la
+    // edita, cambia (no se guarda una fecha de fin)
+    public LocalDate endDate() {
+        Short durationWeeks = routine.getDurationWeeks();
+        return durationWeeks == null ? null : assignmentDate.plusWeeks(durationWeeks).minusDays(1);
+    }
+
+    // Vencida si "hoy" es posterior al último día vigente: endDate todavía es vigente. "Hoy" lo calcula quien
+    // llama, en la zona de la app (no en UTC)
+    public boolean isExpiredOn(LocalDate today) {
+        Objects.requireNonNull(today, "today");
+        LocalDate endDate = endDate();
+        return endDate != null && today.isAfter(endDate);
     }
 
     // equals/hashCode por id: patrón seguro para entidades JPA (no usar @Data)

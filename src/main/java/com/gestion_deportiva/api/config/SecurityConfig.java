@@ -59,6 +59,10 @@ public class SecurityConfig {
     static final String ATHLETE_WEIGHTS_PATH = ATHLETES_PATH + "/{athleteId}/weights";
     static final String ATHLETE_WEIGHT_PATH = ATHLETE_WEIGHTS_PATH + "/{weightId}";
     static final String ATHLETE_ASSIGNMENTS_PATH = ATHLETES_PATH + "/{athleteId}/assignments";
+    static final String ATHLETE_ROUTINE_PATH = ATHLETES_PATH + "/{athleteId}/routine";
+    static final String ATHLETE_SESSIONS_PATH = ATHLETES_PATH + "/{athleteId}/sessions";
+    static final String ATHLETE_SESSION_IN_PROGRESS_PATH = ATHLETE_SESSIONS_PATH + "/in-progress";
+    static final String ATHLETE_SESSION_PATH = ATHLETE_SESSIONS_PATH + "/{sessionId}";
     static final String FOODS_PATH = WebConfig.API_PREFIX + "/foods";
     static final String FOOD_PATH = FOODS_PATH + "/{id}";
 
@@ -100,8 +104,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, ATHLETE_WEIGHTS_PATH).hasRole("ATHLETE")
                         .requestMatchers(HttpMethod.PUT, ATHLETE_WEIGHT_PATH).hasRole("ATHLETE")
                         .requestMatchers(HttpMethod.GET, ATHLETE_WEIGHTS_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // Grupos musculares (US-38): catálogo fijo; también el atleta, para mostrar el nombre del
+                        // grupo de cada ejercicio de su rutina (US-17, D-019)
+                        .requestMatchers(HttpMethod.GET, MUSCLE_GROUPS_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Catálogo de ejercicios (US-38): solo entrenadores; la autoría la controla ExerciseService
-                        .requestMatchers(HttpMethod.GET, MUSCLE_GROUPS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, EXERCISES_PATH, EXERCISE_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.POST, EXERCISES_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PUT, EXERCISE_PATH).hasRole("COACH")
@@ -114,6 +120,15 @@ public class SecurityConfig {
                         // de la rutina la controla RoutineAssignmentService
                         .requestMatchers(HttpMethod.POST, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.GET, ATHLETE_ASSIGNMENTS_PATH).hasRole("COACH")
+                        // Rutina activa del atleta (US-17): los dos roles; qué atleta puede ver cada uno lo decide
+                        // AthleteAccessGuard en AthleteRoutineService
+                        .requestMatchers(HttpMethod.GET, ATHLETE_ROUTINE_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // Sesiones de entrenamiento (US-18): solo el atleta inicia las suyas (el entrenador recibe
+                        // 403 aunque el atleta sea suyo); la sesión en progreso y el detalle los leen los dos roles.
+                        // Qué atleta puede usar cada uno lo decide AthleteAccessGuard en TrainingSessionService
+                        .requestMatchers(HttpMethod.POST, ATHLETE_SESSIONS_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_SESSION_IN_PROGRESS_PATH, ATHLETE_SESSION_PATH)
+                                .hasAnyRole("COACH", "ATHLETE")
                         // Catálogo de alimentos (US-39): global, lo consultan los dos roles y solo los
                         // entrenadores crean y editan
                         .requestMatchers(HttpMethod.GET, FOODS_PATH, FOOD_PATH).hasAnyRole("COACH", "ATHLETE")

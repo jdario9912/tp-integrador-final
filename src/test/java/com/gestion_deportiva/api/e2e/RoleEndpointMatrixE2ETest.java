@@ -94,8 +94,9 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/athletes/{id}/deactivate", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.POST, "/api/athletes/{id}/reactivate", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             // catálogo de ejercicios (US-38): {id} es el del atleta, así que el entrenador recibe 404 (pasa la
-            // autorización); la autoría se prueba en ExerciseE2ETest
-            new Row(HttpMethod.GET, "/api/muscle-groups", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // autorización); la autoría se prueba en ExerciseE2ETest. Los grupos musculares los lee también el
+            // atleta (US-17, D-019)
+            new Row(HttpMethod.GET, "/api/muscle-groups", UNAUTHORIZED, ALLOWED, ALLOWED),
             new Row(HttpMethod.POST, "/api/exercises", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/exercises", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/exercises/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
@@ -119,6 +120,15 @@ class RoleEndpointMatrixE2ETest {
             // reglas de negocio se prueban en RoutineAssignmentE2ETest
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/athletes/{athleteId}/assignments", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // rutina activa del atleta (US-17): los dos roles (el atleta del test no tiene rutina: 204). La pertenencia
+            // se prueba en AthleteRoutineE2ETest
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/routine", UNAUTHORIZED, ALLOWED, ALLOWED),
+            // sesiones de entrenamiento (US-18): solo el atleta inicia (con "{}" el POST responde 400) y los dos roles
+            // leen (el atleta del test no tiene sesión en progreso: 204; {sessionId} no existe: 404). La pertenencia
+            // y las reglas de negocio se prueban en TrainingSessionE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/sessions", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/sessions/in-progress", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/sessions/{sessionId}", UNAUTHORIZED, ALLOWED, ALLOWED),
             // catálogo de alimentos (US-39): lo consultan los dos roles y solo el entrenador crea y edita (con "{}"
             // el POST y el PUT responden 400). Las reglas de negocio se prueban en FoodE2ETest
             new Row(HttpMethod.POST, "/api/foods", UNAUTHORIZED, ALLOWED, FORBIDDEN),
@@ -224,7 +234,8 @@ class RoleEndpointMatrixE2ETest {
                 .uri(row.path()
                         .replace("{id}", athlete.getId().toString())
                         .replace("{athleteId}", athlete.getId().toString())
-                        .replace("{weightId}", UUID.randomUUID().toString()))
+                        .replace("{weightId}", UUID.randomUUID().toString())
+                        .replace("{sessionId}", UUID.randomUUID().toString()))
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));

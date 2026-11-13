@@ -265,6 +265,23 @@ class ExerciseE2ETest {
         assertEquals("UPPER", body.get(0).get("region").asString());
     }
 
+    // El atleta los usa para mostrar el grupo de cada ejercicio de su rutina (US-17, D-019)
+    @Test
+    void shouldListTheMuscleGroupsToAnAthlete() {
+        // Act
+        ResponseEntity<String> response = client.get()
+                .uri("/api/muscle-groups")
+                .headers(headers -> AuthHeaders.authenticate(headers, client, ATHLETE_EMAIL, RAW_PASSWORD))
+                .retrieve()
+                .toEntity(String.class);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        JsonNode body = json(response);
+        assertEquals(MuscleGroup.values().length, body.size());
+        assertEquals("Pecho", body.get(0).get("name").asString());
+    }
+
     // ---------- consulta ----------
 
     @Test

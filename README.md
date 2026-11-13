@@ -110,7 +110,7 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `GET /api/athletes/{id}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `PUT /api/athletes/{id}` · `DELETE /api/athletes/{id}` · `PATCH /api/athletes/{id}/unlink` | 401 | ✓ solo sus atletas | 403 |
 | `POST /api/athletes/{id}/deactivate` · `POST /api/athletes/{id}/reactivate` | 401 | ✓ solo sus atletas | 403 |
-| `GET /api/muscle-groups` | 401 | ✓ | 403 |
+| `GET /api/muscle-groups` | 401 | ✓ | ✓ |
 | `GET /api/exercises` · `POST /api/exercises` · `GET /api/exercises/{id}` | 401 | ✓ globales y propios | 403 |
 | `PUT /api/exercises/{id}` · `DELETE /api/exercises/{id}` | 401 | ✓ solo los propios | 403 |
 | `POST /api/routines` · `GET /api/routines` · `GET /api/routines/{id}` | 401 | ✓ solo las propias | 403 |
@@ -118,6 +118,9 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `POST /api/athletes/{athleteId}/weights` · `PUT /api/athletes/{athleteId}/weights/{weightId}` | 401 | 403 | ✓ solo él mismo |
 | `GET /api/athletes/{athleteId}/weights` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `POST /api/athletes/{athleteId}/assignments` · `GET /api/athletes/{athleteId}/assignments` | 401 | ✓ solo sus atletas y rutinas | 403 |
+| `GET /api/athletes/{athleteId}/routine` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
+| `POST /api/athletes/{athleteId}/sessions` | 401 | 403 | ✓ solo él mismo |
+| `GET /api/athletes/{athleteId}/sessions/in-progress` · `GET /api/athletes/{athleteId}/sessions/{sessionId}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `GET /api/foods` · `GET /api/foods/{id}` | 401 | ✓ | ✓ |
 | `POST /api/foods` · `PUT /api/foods/{id}` | 401 | ✓ | 403 |
 
@@ -129,8 +132,8 @@ Gestión del atleta (US-07), solo para su entrenador:
 - `PATCH /api/athletes/{id}/unlink` lo desvincula (204): el atleta y su historial quedan en la base con `coachId = null`, deja de aparecer en "Mis atletas" y el entrenador recibe 403 al consultarlo. Su cuenta no se modifica.
 - `DELETE /api/athletes/{id}` lo elimina (204) con baja lógica: la fila, sus datos y su historial quedan en la base (`users.deleted_at`), pero la aplicación no lo ve más (`@SQLRestriction` en `User`): sale de "Mis atletas", cualquier operación sobre él responde 404, no puede iniciar sesión (se borran sus refresh tokens) y su email queda libre para un alta nueva (índice único parcial de la V2).
 
-Catálogo de ejercicios (US-38), solo para entrenadores:
-- `GET /api/muscle-groups` lista los 12 grupos musculares precargados: `{ code, name, region }` (`region`: `UPPER`, `CORE`, `LOWER` o `FULL`).
+Catálogo de ejercicios (US-38), solo para entrenadores (salvo los grupos musculares):
+- `GET /api/muscle-groups` lista los 12 grupos musculares precargados: `{ code, name, region }` (`region`: `UPPER`, `CORE`, `LOWER` o `FULL`). También lo usa el atleta, para mostrar el grupo de cada ejercicio de su rutina (US-17).
 - `GET /api/exercises` devuelve los ejercicios del sistema (precargados por la V3, `global: true`) y los del entrenador autenticado, ordenados por nombre y con el formato `PageResponse`. Query params opcionales: `page`, `size`, `name` (contiene, sin distinguir mayúsculas) y `muscleGroup` (código).
 - `POST /api/exercises` lo crea a nombre del entrenador (201): `name` y `muscleGroup` obligatorios, `description` y `videoUrl` (http/https) opcionales. Nombre repetido en su catálogo, sin distinguir mayúsculas → 409; puede repetir el nombre de un global o de otro entrenador.
 - `PUT /api/exercises/{id}` edita todos sus datos (los opcionales que no se envían quedan en null). Un global o uno de otro entrenador → 403.
@@ -141,12 +144,25 @@ Rutinas (US-13 a US-15), solo para entrenadores. Rutina de otro entrenador → 4
 - `GET /api/routines` ("Mis rutinas") devuelve solo las del entrenador autenticado, ordenadas por nombre y con el formato `PageResponse`. Query params opcionales: `page` y `size`.
 - `GET /api/routines/{id}` devuelve una rutina propia con su estructura: `days` (ordenados por `dayNumber`, desde 1), cada uno con `exercises` (ordenados por `sortOrder`, desde 0): `exerciseId`, `exerciseName`, `muscleGroup`, `sets`, `reps`, `recommendedWeight` (kg), `rest` (segundos), `rirRpe` y `techniqueNote`.
 - `PUT /api/routines/{id}` edita sus datos (mismo body y mismas reglas que el alta). Nombre de otra de sus rutinas → 409.
-- `PUT /api/routines/{id}/days` reemplaza la estructura completa: `{ days: [{ id?, name, exercises: [{ id?, exerciseId, sets, reps, recommendedWeight?, rest?, rirRpe?, techniqueNote? }] }] }`. El orden de las listas define el orden de días y ejercicios. Con `id` se conserva el día o ejercicio existente (un ejercicio solo dentro de su mismo día), sin `id` se crea y lo que no se envía se borra. Hasta 7 días y 30 ejercicios por día; `sets` 1 a 99, `reps` 1 a 999, `recommendedWeight` 0 a 1000, `rest` 0 a 3600, `rirRpe` «RIR n» (0 a 10) o «RPE n» (1 a 10, admite .5). Datos inválidos o un `id` ajeno a la rutina → 400; ejercicio fuera del catálogo del entrenador → 404; quitar días o ejercicios con series registradas → 422 (se activa con el registro de series, US-19).
+- `PUT /api/routines/{id}/days` reemplaza la estructura completa: `{ days: [{ id?, name, exercises: [{ id?, exerciseId, sets, reps, recommendedWeight?, rest?, rirRpe?, techniqueNote? }] }] }`. El orden de las listas define el orden de días y ejercicios. Con `id` se conserva el día o ejercicio existente (un ejercicio solo dentro de su mismo día), sin `id` se crea y lo que no se envía se borra. Hasta 7 días y 30 ejercicios por día; `sets` 1 a 99, `reps` 1 a 999, `recommendedWeight` 0 a 1000, `rest` 0 a 3600, `rirRpe` «RIR n» (0 a 10) o «RPE n» (1 a 10, admite .5). Datos inválidos o un `id` ajeno a la rutina → 400; ejercicio fuera del catálogo del entrenador → 404; quitar días que ya tienen sesiones de entrenamiento → 422 (US-18); quitar ejercicios con series registradas → 422 (se activa con el registro de series, US-19).
 - `POST /api/routines/{id}/duplicate` crea una copia independiente con sus días y ejercicios (201): «Copia de X», o «Copia de X (2)», «(3)»… si el nombre ya está usado.
 
 Asignación de rutinas (US-16), solo para entrenadores. Cada atleta tiene a lo sumo una rutina activa; las anteriores quedan en su historial como inactivas. Asignar no cambia el estado del atleta:
 - `POST /api/athletes/{athleteId}/assignments` le asigna una rutina propia (201, sin header `Location`): `routineId` obligatorio y `replaceActive` opcional (`false` por defecto). La fecha de asignación es "hoy" en la zona de la app. Si el atleta ya tiene otra rutina activa y no se envía `replaceActive: true` → 409 con el nombre de la activa: el cliente pide confirmación y reintenta con `replaceActive: true`, y la anterior pasa a inactiva. Atleta o rutina inexistente → 404; de otro entrenador → 403; atleta desactivado o desvinculado, rutina sin días o con algún día sin ejercicios, o la misma rutina que ya tiene activa → 422.
 - `GET /api/athletes/{athleteId}/assignments` devuelve el historial con el formato `PageResponse`: `{ id, routineId, routineName, assignmentDate, active }`, primero la activa (si hay) y después de la más reciente a la más antigua. Query params opcionales: `page` y `size`. Atleta de otro entrenador o desvinculado → 403.
+
+Rutina del atleta (US-17): el atleta y su entrenador consultan la rutina activa con su estructura, su vigencia y el día que toca:
+- `GET /api/athletes/{athleteId}/routine` responde 200 con `{ assignmentId, assignmentDate, endDate, expired, nextDayId, routine }`. `routine` trae `id`, `name`, `description`, `goal`, `daysPerWeek`, `durationWeeks` y `days`, con los mismos días y ejercicios que `GET /api/routines/{id}`. Si el atleta no tiene una rutina activa → 204 sin body (no es un error).
+- Vigencia: la rutina rige desde `assignmentDate` durante `durationWeeks` semanas; `endDate` (último día vigente) = `assignmentDate` + 7 × `durationWeeks` − 1, y `expired` es `true` si "hoy" (zona de la app) es posterior. Sin `durationWeeks` no vence (`endDate: null`). Vencida igual responde 200 con la rutina. Se calcula en cada consulta: no hay fechas guardadas.
+- `nextDayId` es el día que toca (uno de `routine.days`): por ahora siempre el primero; cuando existan los entrenamientos (US-18/US-20) será el que sigue al último finalizado. `null` solo si la rutina no tiene días.
+- El atleta solo ve la suya (también si está desvinculado); el entrenador, la de sus atletas vinculados (de otro entrenador o desvinculado → 403). Atleta inexistente → 404.
+
+Sesiones de entrenamiento (US-18): el atleta inicia el entrenamiento de un día de su rutina activa y lo retoma; él y su entrenador consultan la sesión:
+- `POST /api/athletes/{athleteId}/sessions` con `{ routineDayId }` la inicia (201 con header `Location` al detalle): queda `IN_PROGRESS` con `sessionDate` ("hoy" en la zona de la app) y `startedAt` (instante). Solo el propio atleta: el entrenador recibe 403 aunque el atleta sea suyo. Se puede iniciar cualquier día de la rutina activa. Si ya tiene una sesión en progreso → 409 (el cliente pide la sesión en progreso y ofrece retomarla); sin rutina activa, rutina vencida, día que no es de su rutina activa o día sin ejercicios → 422.
+- `GET /api/athletes/{athleteId}/sessions/in-progress` devuelve la sesión en progreso, o 204 sin body si no tiene ninguna (no es un error). Hay a lo sumo una por atleta (índice único parcial de la V10, también con dos inicios simultáneos).
+- `GET /api/athletes/{athleteId}/sessions/{sessionId}` devuelve la sesión; una inexistente o de otro atleta → 404.
+- Respuesta: `{ id, status, sessionDate, startedAt, assignmentId, routineId, routineName, day }`. `day` es el día entrenado con sus ejercicios planificados, como en `GET /api/routines/{id}`, tal como está ahora (si el entrenador lo renombra, se ve el nombre nuevo). Estados (catálogo `session_statuses`): `IN_PROGRESS`, `FINISHED` y `CANCELLED` (los dos últimos, para finalizar o cancelar en US-20).
+- El atleta solo ve las suyas (también si está desvinculado); el entrenador, las de sus atletas vinculados (de otro entrenador o desvinculado → 403). Atleta inexistente → 404.
 
 Registros de peso (US-26): el atleta registra y corrige su peso; él y su entrenador lo consultan. Los registros no se borran: uno equivocado se corrige con `PUT`.
 - `POST /api/athletes/{athleteId}/weights` registra el peso de un día (201, sin header `Location`): `date` (`YYYY-MM-DD`, no futura) y `weightKg` (de 20 a 300, hasta 2 decimales) obligatorios; `comment` opcional (máximo 500 caracteres; se recorta y, vacío, queda en null). Solo el propio atleta: el entrenador recibe 403 aunque el atleta sea suyo. Hay un registro por día: si la fecha ya tiene uno → 409 "Ya existe un registro de peso para el DD/MM/AAAA".
