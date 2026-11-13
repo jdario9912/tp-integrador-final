@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { muscleGroups } from '../../test/exercise-fixtures'
 import {
+  findMuscleGroupName,
   groupByRegion,
   isMuscleGroupCode,
   muscleGroupName,
@@ -45,6 +46,16 @@ describe('groupByRegion', () => {
         groups: [{ code: 'ABS', name: 'Abdominales', region: 'CORE' }],
       },
     ])
+  })
+})
+
+describe('findMuscleGroupName', () => {
+  it('devuelve el nombre del grupo', () => {
+    expect(findMuscleGroupName(muscleGroups, 'BACK')).toBe('Espalda')
+  })
+
+  it('sin el catálogo cargado no hay nombre', () => {
+    expect(findMuscleGroupName(undefined, 'BACK')).toBeUndefined()
   })
 })
 

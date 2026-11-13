@@ -40,6 +40,16 @@ export const get = async <TResponse>(
   config?: AxiosRequestConfig,
 ) => (await httpClient.get<TResponse>(url, config)).data
 
+// GET de un recurso que puede no existir sin que sea un error: 204 No Content → null.
+// Se decide por el status: en un 204 axios deja data en '', no en null
+export const getOptional = async <TResponse>(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<TResponse | null> => {
+  const response = await httpClient.get<TResponse>(url, config)
+  return response.status === 204 ? null : response.data
+}
+
 export const post = async <TResponse, TBody = unknown>(
   url: string,
   body: TBody,

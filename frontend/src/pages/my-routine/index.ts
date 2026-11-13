@@ -1,0 +1,1 @@
+export { MyRoutinePage } from './MyRoutinePage'

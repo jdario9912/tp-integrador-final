@@ -23,6 +23,8 @@ export const navItems: Record<Role, NavItem[]> = {
   ],
   ATHLETE: [
     { to: paths.dashboard, label: 'Panel', icon: LayoutDashboard },
+    // mismo icono que Rutinas del entrenador: es la misma entidad vista por el atleta
+    { to: paths.myRoutine, label: 'Mi rutina', icon: ClipboardList },
     { to: paths.progress, label: 'Progreso', icon: ChartLine },
     { to: paths.foods, label: 'Alimentos', icon: Apple },
   ],
