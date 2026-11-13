@@ -6,7 +6,7 @@ import {
 } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api-error'
-import { del, get, httpClient, patch, post, put } from './client'
+import { del, get, getOptional, httpClient, patch, post, put } from './client'
 
 const adapter = vi.fn<AxiosAdapter>()
 
@@ -44,6 +44,38 @@ describe('rest client', () => {
     respondWith(200, [{ id: '1' }])
     await expect(get('/coaches')).resolves.toEqual([{ id: '1' }])
     expect(lastRequest()).toMatchObject({ method: 'get', url: '/coaches' })
+  })
+
+  it('getOptional devuelve el body de un 200', async () => {
+    respondWith(200, { id: '1' })
+    await expect(getOptional('/athletes/1/routine')).resolves.toEqual({
+      id: '1',
+    })
+    expect(lastRequest()).toMatchObject({
+      method: 'get',
+      url: '/athletes/1/routine',
+    })
+  })
+
+  it('getOptional devuelve null en un 204, aunque axios deje el body en ""', async () => {
+    respondWith(204, '')
+    await expect(getOptional('/athletes/1/routine')).resolves.toBeNull()
+  })
+
+  it('getOptional convierte el error del backend en ApiError', async () => {
+    respondWith(404, {
+      timestamp: '2026-11-10T18:00:00Z',
+      status: 404,
+      error: 'Not Found',
+      message: 'No existe el atleta con id 1',
+      path: '/api/athletes/1/routine',
+    })
+
+    await expect(getOptional('/athletes/1/routine')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 404,
+      message: 'No existe el atleta con id 1',
+    })
   })
 
   it.each([

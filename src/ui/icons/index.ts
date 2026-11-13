@@ -16,6 +16,7 @@ export {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Clock,
   Copy,
   Droplet,
   Dumbbell,

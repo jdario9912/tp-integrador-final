@@ -1,4 +1,5 @@
 export {
+  findMuscleGroupName,
   groupByRegion,
   isMuscleGroupCode,
   muscleGroupName,

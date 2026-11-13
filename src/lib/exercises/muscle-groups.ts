@@ -32,8 +32,14 @@ export const groupByRegion = (groups: MuscleGroup[]): MuscleRegionGroups[] =>
     groups: groups.filter((group) => group.region === region),
   })).filter(({ groups }) => groups.length > 0)
 
+// undefined mientras el catálogo no llegó (o si falló): quien lo muestra elige el reemplazo
+export const findMuscleGroupName = (
+  groups: MuscleGroup[] | undefined,
+  code: MuscleGroupCode,
+) => groups?.find((group) => group.code === code)?.name
+
 // mientras los grupos no llegaron se muestra el código: es preferible a un hueco vacío
 export const muscleGroupName = (
   groups: MuscleGroup[] | undefined,
   code: MuscleGroupCode,
-) => groups?.find((group) => group.code === code)?.name ?? code
+) => findMuscleGroupName(groups, code) ?? code

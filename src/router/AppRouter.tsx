@@ -11,6 +11,7 @@ import { ExercisesPage } from '../pages/exercises'
 import { FoodsPage } from '../pages/foods'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
+import { MyRoutinePage } from '../pages/my-routine'
 import { NewExercisePage } from '../pages/new-exercise'
 import { NewFoodPage } from '../pages/new-food'
 import { NewRoutinePage } from '../pages/new-routine'
@@ -20,6 +21,7 @@ import { RegisterCoachPage } from '../pages/register-coach'
 import { RoutineDetailPage } from '../pages/routine-detail'
 import { RoutineStructurePage } from '../pages/routine-structure'
 import { RoutinesPage } from '../pages/routines'
+import { TrainingSessionPage } from '../pages/training-session'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'
 import { RequireRole } from './RequireRole'
@@ -126,9 +128,20 @@ const router = createBrowserRouter([
             element: <RequireRole roles={['ATHLETE']} />,
             children: [
               {
+                path: paths.myRoutine,
+                element: <MyRoutinePage />,
+                handle: { title: 'Mi rutina' },
+              },
+              {
                 path: paths.progress,
                 element: <ProgressPage />,
                 handle: { title: 'Progreso' },
+              },
+              // se llega desde Mi rutina (iniciar o retomar): no tiene entrada en el menú
+              {
+                path: paths.training,
+                element: <TrainingSessionPage />,
+                handle: { title: 'Entrenamiento' },
               },
             ],
           },

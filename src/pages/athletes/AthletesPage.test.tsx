@@ -136,11 +136,15 @@ describe('AthletesPage', () => {
     )
 
     await waitFor(() => expect(currentSearch()).toBe('name=lu'))
-    expect(getAthletes).toHaveBeenLastCalledWith({
-      page: 1,
-      name: 'lu',
-      goal: undefined,
-    })
+    // la URL cambia antes de que la página vuelva a renderizar y dispare la consulta:
+    // sin waitFor el test dependía de la velocidad de la máquina y a veces fallaba en CI
+    await waitFor(() =>
+      expect(getAthletes).toHaveBeenLastCalledWith({
+        page: 1,
+        name: 'lu',
+        goal: undefined,
+      }),
+    )
   })
 
   it('pagina con Siguiente y Anterior y guarda la página en la URL', async () => {

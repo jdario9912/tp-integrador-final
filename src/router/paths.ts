@@ -29,6 +29,10 @@ export const paths = {
   editFood: '/foods/:id/edit',
   // solo atleta: registro de peso corporal (US-26)
   progress: '/progress',
+  // solo atleta: la rutina que le asignó su entrenador (US-17)
+  myRoutine: '/my-routine',
+  // solo atleta: el entrenamiento que inició o retomó desde Mi rutina (US-18), sin entrada en el menú
+  training: '/training/:sessionId',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano
@@ -51,3 +55,6 @@ export const routineEditPath = (id: string) =>
 
 export const routineStructurePath = (id: string) =>
   generatePath(paths.routineStructure, { id })
+
+export const trainingPath = (sessionId: string) =>
+  generatePath(paths.training, { sessionId })
