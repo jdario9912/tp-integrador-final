@@ -62,6 +62,30 @@ class OpenApiE2ETest {
     }
 
     @Test
+    void shouldDocumentTheAthleteRoutineEndpointWithItsNoContentResponse() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert: 200 con la rutina y 204 sin rutina activa (@ApiResponses del controller)
+        JsonNode responses = paths.get("/api/athletes/{athleteId}/routine").get("get").get("responses");
+        assertTrue(responses.has("200"));
+        assertTrue(responses.has("204"));
+    }
+
+    @Test
+    void shouldDocumentTheTrainingSessionEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert: el alta documenta el 201 (@ResponseStatus); la sesión en progreso, el 200 y el 204 (@ApiResponses)
+        assertTrue(paths.get("/api/athletes/{athleteId}/sessions").get("post").get("responses").has("201"));
+        JsonNode inProgress = paths.get("/api/athletes/{athleteId}/sessions/in-progress").get("get").get("responses");
+        assertTrue(inProgress.has("200"));
+        assertTrue(inProgress.has("204"));
+        assertTrue(paths.get("/api/athletes/{athleteId}/sessions/{sessionId}").has("get"));
+    }
+
+    @Test
     void shouldServeSwaggerUiConfigOutsideTheApiPrefix() {
         assertEquals(HttpStatus.OK, get("/v3/api-docs/swagger-config").getStatusCode());
     }

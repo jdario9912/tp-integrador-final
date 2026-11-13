@@ -14,6 +14,7 @@ import com.gestion_deportiva.api.routine.dto.RoutineRequest;
 import com.gestion_deportiva.api.routine.dto.RoutineResponse;
 import com.gestion_deportiva.api.routine.dto.RoutineStructureRequest;
 import com.gestion_deportiva.api.routine.exception.RoutineAccessDeniedException;
+import com.gestion_deportiva.api.routine.exception.RoutineDayHasTrainingSessionsException;
 import com.gestion_deportiva.api.routine.exception.RoutineHasPerformedSetsException;
 import com.gestion_deportiva.api.routine.exception.RoutineItemNotInRoutineException;
 import com.gestion_deportiva.api.routine.exception.RoutineNameAlreadyExistsException;
@@ -58,6 +59,7 @@ public class RoutineService {
     private final CoachRepository coachRepository;
     private final ExerciseRepository exerciseRepository;
     private final PerformedSetChecker performedSetChecker;
+    private final TrainingSessionChecker trainingSessionChecker;
 
     @Transactional
     public RoutineResponse create(UUID coachId, RoutineRequest request) {
@@ -139,6 +141,14 @@ public class RoutineService {
         request.days().forEach(day -> day.exercisesOrEmpty().forEach(exercise -> removedExercises.remove(exercise.id())));
         if (!removedExercises.isEmpty() && performedSetChecker.hasPerformedSets(removedExercises)) {
             throw new RoutineHasPerformedSetsException();
+        }
+
+        // Un día con sesiones de entrenamiento (US-18) no se quita: se puede renombrar, reordenar y cambiarle los
+        // ejercicios, pero borrarlo dejaría sesiones sin su día (la clave foránea no tiene cascada)
+        Set<UUID> removedDays = new HashSet<>(currentDays.keySet());
+        request.days().forEach(day -> removedDays.remove(day.id()));
+        if (!removedDays.isEmpty() && trainingSessionChecker.hasTrainingSessions(removedDays)) {
+            throw new RoutineDayHasTrainingSessionsException();
         }
 
         List<RoutineDay> days = new ArrayList<>();

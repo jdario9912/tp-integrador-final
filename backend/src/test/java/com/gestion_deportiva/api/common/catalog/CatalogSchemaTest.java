@@ -5,6 +5,7 @@ import com.gestion_deportiva.api.athlete.model.enums.AthleteStatus;
 import com.gestion_deportiva.api.athlete.model.enums.ExperienceLevel;
 import com.gestion_deportiva.api.athlete.model.enums.Sex;
 import com.gestion_deportiva.api.exercise.model.enums.MuscleGroup;
+import com.gestion_deportiva.api.training.model.enums.SessionStatus;
 import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
         assertCatalogInSync("experience_levels", ExperienceLevel.values());
         assertCatalogInSync("athlete_statuses", AthleteStatus.values());
         assertCatalogInSync("muscle_groups", MuscleGroup.values());
+        assertCatalogInSync("session_statuses", SessionStatus.values());
     }
 
     @Test
@@ -50,6 +52,16 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
 
         for (AthleteStatus status : AthleteStatus.values()) {
             assertEquals(status.requiresAttention(), fromDb.get(status.name()), status.name());
+        }
+    }
+
+    @Test
+    void isFinalMatchesTheTable() {
+        Map<String, Boolean> fromDb = jdbc.queryForList("select code, is_final from session_statuses").stream()
+                .collect(Collectors.toMap(row -> (String) row.get("code"), row -> (Boolean) row.get("is_final")));
+
+        for (SessionStatus status : SessionStatus.values()) {
+            assertEquals(status.isFinal(), fromDb.get(status.name()), status.name());
         }
     }
 
