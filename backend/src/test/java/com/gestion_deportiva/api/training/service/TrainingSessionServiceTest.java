@@ -26,6 +26,7 @@ import com.gestion_deportiva.api.training.exception.TrainingSessionInProgressExc
 import com.gestion_deportiva.api.training.exception.TrainingSessionNotFoundException;
 import com.gestion_deportiva.api.training.model.TrainingSession;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
+import com.gestion_deportiva.api.training.repository.PerformedSetRepository;
 import com.gestion_deportiva.api.training.repository.TrainingSessionRepository;
 import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +81,9 @@ class TrainingSessionServiceTest {
 
     @Mock
     private TrainingSessionRepository trainingSessionRepository;
+
+    @Mock
+    private PerformedSetRepository performedSetRepository;
 
     @Mock
     private RoutineAssignmentRepository routineAssignmentRepository;
@@ -424,7 +428,7 @@ class TrainingSessionServiceTest {
         AppClock appClock = new AppClock(Clock.fixed(now, ZoneOffset.UTC),
                 new TimeZoneProperties(TimeZoneProperties.DEFAULT_TIME_ZONE));
         return new TrainingSessionService(trainingSessionRepository, routineAssignmentRepository, routineDayRepository,
-                athleteAccessGuard, appClock);
+                athleteAccessGuard, appClock, performedSetRepository);
     }
 
     private void givenNoSessionInProgress() {

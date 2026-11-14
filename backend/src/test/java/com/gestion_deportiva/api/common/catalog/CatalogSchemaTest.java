@@ -6,6 +6,7 @@ import com.gestion_deportiva.api.athlete.model.enums.ExperienceLevel;
 import com.gestion_deportiva.api.athlete.model.enums.Sex;
 import com.gestion_deportiva.api.exercise.model.enums.MuscleGroup;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
+import com.gestion_deportiva.api.training.model.enums.SetStatus; // US-19
 import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
         assertCatalogInSync("athlete_statuses", AthleteStatus.values());
         assertCatalogInSync("muscle_groups", MuscleGroup.values());
         assertCatalogInSync("session_statuses", SessionStatus.values());
+        assertCatalogInSync("set_statuses", SetStatus.values()); // US-19
     }
 
     @Test

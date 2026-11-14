@@ -121,6 +121,7 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `GET /api/athletes/{athleteId}/routine` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
 | `POST /api/athletes/{athleteId}/sessions` | 401 | 403 | ✓ solo él mismo |
 | `GET /api/athletes/{athleteId}/sessions/in-progress` · `GET /api/athletes/{athleteId}/sessions/{sessionId}` | 401 | ✓ solo sus atletas | ✓ solo él mismo |
+| `PUT /api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}` | 401 | 403 | ✓ solo él mismo |
 | `GET /api/foods` · `GET /api/foods/{id}` | 401 | ✓ | ✓ |
 | `POST /api/foods` · `PUT /api/foods/{id}` | 401 | ✓ | 403 |
 
@@ -163,6 +164,15 @@ Sesiones de entrenamiento (US-18): el atleta inicia el entrenamiento de un día 
 - `GET /api/athletes/{athleteId}/sessions/{sessionId}` devuelve la sesión; una inexistente o de otro atleta → 404.
 - Respuesta: `{ id, status, sessionDate, startedAt, assignmentId, routineId, routineName, day }`. `day` es el día entrenado con sus ejercicios planificados, como en `GET /api/routines/{id}`, tal como está ahora (si el entrenador lo renombra, se ve el nombre nuevo). Estados (catálogo `session_statuses`): `IN_PROGRESS`, `FINISHED` y `CANCELLED` (los dos últimos, para finalizar o cancelar en US-20).
 - El atleta solo ve las suyas (también si está desvinculado); el entrenador, las de sus atletas vinculados (de otro entrenador o desvinculado → 403). Atleta inexistente → 404.
+
+Series registradas en vivo (US-19): con su sesión en progreso, el atleta registra cada serie prescrita de cada ejercicio del día (de `1` a `sets`) como realizada o como omitida, y la corrige. Él y su entrenador ven las series en la sesión.
+- `PUT /api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}` crea o reemplaza la serie y responde 200 con la sesión completa (con `performedSets`). Es idempotente: reenviar el mismo cuerpo tras un corte de red no duplica nada, y corregir una serie es el mismo `PUT` con otros valores. `{routineExerciseId}` es el id del ejercicio del día (`day.exercises[].id`), no el del catálogo.
+- Cuerpo: `status` (`DONE` o `SKIPPED`) es obligatorio. `DONE` exige `weight` (de 0 a 9999,99, hasta 2 decimales) y `reps` (de 1 a 999); `rpe` es opcional (de 1 a 10). `SKIPPED` exige `skipReason` (de 1 a 200 caracteres, sin espacios de los extremos). Lo que no corresponde al estado se descarta, sin 400.
+- Errores, en este orden: sin token → 401; el entrenador → 403 aunque el atleta sea suyo; otro atleta → 403; campos inválidos → 400 con `fieldErrors`; atleta inexistente o sesión inexistente o de otro atleta → 404; sesión que no está en curso → 409; ejercicio que no es del día de la sesión (también si no existe) → 422; serie fuera de `1..sets` → 422.
+- `performedSets` viene en `POST .../sessions`, `GET .../sessions/in-progress` y `GET .../sessions/{sessionId}`: solo las series registradas, por el orden del ejercicio en el día y luego por número de serie. Lo que no aparece está pendiente.
+- Concurrencia: el `PUT` bloquea la fila de la sesión mientras guarda, así que dos registros seguidos se ejecutan uno tras otro y una finalización concurrente espera.
+- Quitar de la rutina un ejercicio con series registradas responde 422 (`JpaPerformedSetChecker` sobre `performed_sets`, que reemplaza al provisorio de US-14). Bajar `sets` no se bloquea: las series que quedan por encima se siguen devolviendo.
+- Migración `V11`: catálogo `set_statuses` (`DONE`, `SKIPPED`) y tabla `performed_sets`, con una sola serie por sesión, ejercicio y número.
 
 Registros de peso (US-26): el atleta registra y corrige su peso; él y su entrenador lo consultan. Los registros no se borran: uno equivocado se corrige con `PUT`.
 - `POST /api/athletes/{athleteId}/weights` registra el peso de un día (201, sin header `Location`): `date` (`YYYY-MM-DD`, no futura) y `weightKg` (de 20 a 300, hasta 2 decimales) obligatorios; `comment` opcional (máximo 500 caracteres; se recorta y, vacío, queda en null). Solo el propio atleta: el entrenador recibe 403 aunque el atleta sea suyo. Hay un registro por día: si la fecha ya tiene uno → 409 "Ya existe un registro de peso para el DD/MM/AAAA".
