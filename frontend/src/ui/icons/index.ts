@@ -56,3 +56,6 @@ export {
   type LucideIcon,
   type LucideProps,
 } from 'lucide-react'
+
+// US-19: iconos del registro de series
+export { Check, SkipForward } from 'lucide-react'

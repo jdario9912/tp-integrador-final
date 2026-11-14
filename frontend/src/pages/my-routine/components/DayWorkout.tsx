@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { findMuscleGroupName, type MuscleGroup } from '../../../lib/exercises'
-import { formatExercisesCount, type RoutineDay } from '../../../lib/routines'
+import {
+  formatExercisesCount,
+  type RoutineDay,
+  type RoutineExercise,
+} from '../../../lib/routines'
 import { Badge } from '../../../ui/badge'
 import { Card } from '../../../ui/card'
 import { EmptyState } from '../../../ui/empty-state'
@@ -17,6 +21,8 @@ type DayWorkoutProps = {
   // acción sobre el día, entre el título y los ejercicios: en Mi rutina, iniciar el entrenamiento
   // (US-18); en la pantalla del entrenamiento, US-20 suma finalizar y cancelar
   action?: ReactNode
+  // contenido de cada ejercicio, debajo de sus datos (US-19: las series del entrenamiento en curso)
+  renderExerciseFooter?: (exercise: RoutineExercise) => ReactNode
 }
 
 // contenido del panel de un día: título, su acción si la hay y los ejercicios en orden.
@@ -26,6 +32,7 @@ export function DayWorkout({
   isNext,
   muscleGroups,
   action,
+  renderExerciseFooter,
 }: DayWorkoutProps) {
   const count = day.exercises.length
 
@@ -69,6 +76,7 @@ export function DayWorkout({
                 muscleGroups,
                 exercise.muscleGroup,
               )}
+              footer={renderExerciseFooter?.(exercise)}
             />
           ))}
         </ol>

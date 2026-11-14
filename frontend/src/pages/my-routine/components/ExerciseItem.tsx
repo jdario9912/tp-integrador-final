@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   formatRest,
   formatSetsReps,
@@ -13,6 +14,8 @@ type ExerciseItemProps = {
   position: number
   // undefined mientras el catálogo de grupos no llegó (o si falló): se omite el badge
   muscleGroupName?: string
+  // contenido extra debajo de la nota técnica (US-19: las series del entrenamiento en curso)
+  footer?: ReactNode
 }
 
 type Metric = { label: string; value: string }
@@ -41,6 +44,7 @@ export function ExerciseItem({
   exercise,
   position,
   muscleGroupName,
+  footer,
 }: ExerciseItemProps) {
   return (
     <li className="flex gap-3 px-5 py-4 sm:gap-4 sm:px-6">
@@ -86,6 +90,7 @@ export function ExerciseItem({
             </span>
           </p>
         )}
+        {footer}
       </div>
     </li>
   )

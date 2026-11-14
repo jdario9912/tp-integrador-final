@@ -159,3 +159,13 @@ Cada componente tiene un **base** con estilos estructurales (rounded, padding, t
 ### Colores
 
 Los colores se definen como tokens semánticos en `src/index.css` (`@theme`): `primary`, `secondary`, `background`, `foreground`, `muted`, `border`, `ring`, `danger` y sus `-foreground` / `-hover`. Los componentes usan solo estos tokens (`bg-primary`, `text-muted-foreground`), nunca colores crudos de Tailwind.
+
+## Registro de series en vivo (US-19)
+
+En `/training/:sessionId`, cada ejercicio del día muestra una fila por serie prescrita (`1..sets`). La fila viene precargada con lo planificado (repeticiones y peso recomendado), así que completar una serie es un toque. Desde la misma fila se corrige la serie, se edita el RPE opcional o se omite con un motivo.
+
+- Lógica: `src/lib/training-sessions/` (`putPerformedSet` y el hook `usePutPerformedSet`). La respuesta del PUT es la sesión completa y reemplaza la caché del detalle y de la sesión en progreso.
+- Pantalla: `src/pages/training-session/` (`components/ExerciseSets.tsx` y `components/SetRow.tsx`; las reglas de cada campo están en `validation.ts` y el paso del borrador al cuerpo en `set-draft.ts`).
+- Cada serie se envía con `PUT /api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}`. Reintentar reenvía el mismo cuerpo a la misma URL: el backend lo resuelve sin duplicar la serie. Las mutaciones de una misma sesión van en serie para que las respuestas no se pisen.
+- Con la sesión fuera de curso (`FINISHED` o `CANCELLED`) las series se muestran sin controles y la pantalla avisa.
+- Pruebas: `pnpm test -- --run src/pages/training-session src/lib/training-sessions` cubre validaciones, borrador, fila (completar, corregir, omitir, red, 409 y 400) y la pantalla. El E2E `e2e/log-sets.spec.ts` intercepta la API con un servidor falso en memoria y verifica que completar sea un toque y que el reintento no duplique.

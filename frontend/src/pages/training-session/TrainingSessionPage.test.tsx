@@ -93,7 +93,7 @@ describe('TrainingSessionPage · entrenamiento en curso', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('muestra los ejercicios planificados del día, en orden y de solo lectura', async () => {
+  it('muestra los ejercicios planificados del día, en orden, con sus series pendientes', async () => {
     vi.mocked(getTrainingSession).mockResolvedValue(trainingSession())
 
     renderPage()
@@ -113,9 +113,83 @@ describe('TrainingSessionPage · entrenamiento en curso', () => {
     expect(bench).toHaveTextContent(
       'Nota técnica: Bajar controlado hasta tocar el pecho',
     )
-    // US-19 y US-20 suman la carga de series y finalizar o cancelar: hoy no hay acciones
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    // cada ejercicio trae sus series (1..sets), todas pendientes
+    const benchSets = within(bench).getByRole('group', {
+      name: 'Series de Press de banca',
+    })
+    expect(within(benchSets).getByText('0 de 4 hechas')).toBeInTheDocument()
+    expect(
+      within(benchSets).getAllByRole('button', { name: /Completar la serie/ }),
+    ).toHaveLength(4)
     expect(screen.queryByText('Hoy te toca')).not.toBeInTheDocument()
+  })
+
+  it('una serie registrada aparece hecha y las demás siguen pendientes', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(
+      trainingSession({
+        performedSets: [
+          {
+            id: 'serie-1',
+            routineExerciseId: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b',
+            setNumber: 1,
+            status: 'DONE',
+            weight: 62.5,
+            reps: 8,
+            rpe: 7,
+            skipReason: null,
+          },
+        ],
+      }),
+    )
+
+    renderPage()
+
+    const bench = within(await exercises()).getAllByRole('listitem')[0]
+    const benchSets = within(bench).getByRole('group', {
+      name: 'Series de Press de banca',
+    })
+    expect(within(benchSets).getByText('1 de 4 hechas')).toBeInTheDocument()
+    expect(
+      within(benchSets).getByRole('button', { name: 'Serie 1 hecha' }),
+    ).toBeDisabled()
+    expect(
+      within(benchSets).getByRole('group', {
+        name: 'Serie 1 de Press de banca',
+      }),
+    ).toHaveTextContent('Hecha · RPE 7')
+  })
+
+  it('una sesión que ya no está en curso muestra las series sin controles', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(
+      trainingSession({
+        status: 'FINISHED',
+        performedSets: [
+          {
+            id: 'serie-2',
+            routineExerciseId: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b',
+            setNumber: 2,
+            status: 'SKIPPED',
+            weight: null,
+            reps: null,
+            rpe: null,
+            skipReason: 'Dolor de hombro',
+          },
+        ],
+      }),
+    )
+
+    renderPage()
+
+    await exercises()
+    // el aviso queda en la pantalla y las series no tienen controles
+    expect(
+      screen.getByText(
+        /Ya no podés cargar ni corregir series: el entrenamiento no está en curso/,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText('Omitida: Dolor de hombro')).toBeInTheDocument()
+    expect(screen.getAllByText('Sin registrar')).not.toHaveLength(0)
   })
 
   it('si quedó abierto de otro día muestra también la fecha de inicio', async () => {

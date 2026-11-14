@@ -16,5 +16,6 @@ export const trainingSession = (
   routineId: '5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d',
   routineName: 'Fuerza 2 días',
   day: torsoDay(),
+  performedSets: [],
   ...overrides,
 })
