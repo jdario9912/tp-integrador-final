@@ -33,6 +33,8 @@ export const paths = {
   myRoutine: '/my-routine',
   // solo atleta: el entrenamiento que inició o retomó desde Mi rutina (US-18), sin entrada en el menú
   training: '/training/:sessionId',
+  // US-23: solo atleta, registro de comidas del día
+  meals: '/meals',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano

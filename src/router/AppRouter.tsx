@@ -11,6 +11,7 @@ import { ExercisesPage } from '../pages/exercises'
 import { FoodsPage } from '../pages/foods'
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
+import { MealsPage } from '../pages/meals' // US-23
 import { MyRoutinePage } from '../pages/my-routine'
 import { NewExercisePage } from '../pages/new-exercise'
 import { NewFoodPage } from '../pages/new-food'
@@ -142,6 +143,12 @@ const router = createBrowserRouter([
                 path: paths.training,
                 element: <TrainingSessionPage />,
                 handle: { title: 'Entrenamiento' },
+              },
+              // US-23: registro de comidas del día
+              {
+                path: paths.meals,
+                element: <MealsPage />,
+                handle: { title: 'Comidas' },
               },
             ],
           },

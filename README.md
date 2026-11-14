@@ -110,6 +110,7 @@ Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts
 | `/my-routine`             | Mi rutina                 | solo ATHLETE |
 | `/progress`               | Progreso (peso y fotos)   | solo ATHLETE |
 | `/training/:sessionId`    | Entrenamiento en curso    | solo ATHLETE |
+| `/meals`                  | Comidas de hoy (US-23)    | solo ATHLETE |
 
 `/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, historial de rutinas, último peso, rutina activa y últimas sesiones (esta última, vacía hasta que exista ese módulo). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado. El último peso es el registro más reciente del atleta (`GET /athletes/{id}/weights?size=1`, pedido en paralelo con el atleta) con su fecha y comentario; sin registros, el peso inicial rotulado "Peso inicial". Si falla solo esa llamada, la sección muestra su error con "Reintentar" y el resto de la ficha se ve. La rutina activa y el historial salen de la primera página del historial (`GET /athletes/{id}/assignments?page=0&size=10`, también en paralelo con el atleta), que comparten las dos secciones; si falla, cada una muestra su error con "Reintentar".
 
@@ -144,6 +145,14 @@ En `/progress`, debajo de los pesos, el atleta sube sus fotos de progreso (front
 El código vive en `src/lib/progress-photos/` (tipos, reglas, validación del archivo, acciones, claves de caché, hooks y renovación de URL) y en `src/pages/progress/components/` (`ProgressPhotosCard`, `PhotoUploadForm`, `ProgressPhotoGrid`, `ProgressPhotoViewer`, `ProgressPhotoImage`). La subida multipart es `postForm` en `src/lib/api`, que también usa la foto de comidas (US-23).
 
 Pruebas: unitarias en `src/lib/progress-photos/*.test.*` y `src/pages/progress/**/*.test.*` (validación previa, renovación de URL, caché al borrar, subida, visor y borrado) y E2E en `e2e/progress-photos.spec.ts`, que intercepta la API y las imágenes firmadas con Playwright.
+
+### Comidas (US-23)
+
+Comidas (`/meals`, solo el atleta, entrada «Comidas» en su menú, US-23) registra lo que comió hoy, con la fecha de hoy en la zona de la app. El tipo de comida (desayuno, almuerzo, merienda, cena, colación, pre y post-entrenamiento) se preselecciona según la hora (antes de las 11, desayuno; hasta las 15, almuerzo; hasta las 19, merienda; después, cena) y un toque lo cambia. La comida se arma con una descripción, con alimentos del catálogo y su cantidad en gramos (el buscador usa `GET /foods?name=&size=20`; cada alimento arranca con su porción de referencia), o con las dos cosas: hace falta al menos una. Las validaciones y los mensajes son los del backend: hasta 50 alimentos, cantidad mayor a 0 con hasta 5 enteros y 2 decimales, descripción de hasta 500 caracteres. Enter en el buscador agrega el primer resultado y no envía la comida.
+
+La lista muestra las comidas del día (`GET /athletes/{id}/meals?date=`, sin paginación) con sus alimentos, cantidades y calorías. Una comida sin alimentos no tiene calorías calculables y muestra un guion, nunca 0. Editar abre la comida en el mismo formulario y la guarda completa (`PUT`, conserva el día de la comida); borrar pide confirmación (`DELETE`). Si la comida ya no existe (404), el formulario vuelve al alta y la lista se actualiza. Los errores 400 se muestran en el campo que corresponde (la cantidad de cada alimento o la descripción) y el resto en el aviso del formulario. El resumen por día y la navegación entre días son de US-24; la foto de comida, de la ola 2 (US-28).
+
+Las calorías y los macros los calcula el backend. json-server no simula esta página (ruta anidada y buscador paginado): se prueba con el backend real o con `e2e/meals.spec.ts`, que intercepta la API y cubre también un celular.
 
 ### Estructura
 

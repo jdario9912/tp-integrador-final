@@ -79,7 +79,7 @@ describe('AppShell', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('el atleta ve el acceso a su rutina, a su progreso y al catálogo de alimentos, en ese orden', () => {
+  it('el atleta ve el acceso a su rutina, a su progreso, al catálogo de alimentos y a sus comidas, en ese orden', () => {
     saveSession(session('ATHLETE'))
 
     renderShell()
@@ -89,7 +89,7 @@ describe('AppShell', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Panel', 'Mi rutina', 'Progreso', 'Alimentos'])
+    ).toEqual(['Panel', 'Mi rutina', 'Progreso', 'Alimentos', 'Comidas']) // US-23
     expect(
       within(nav).getByRole('link', { name: 'Mi rutina' }),
     ).toHaveAttribute('href', paths.myRoutine)
