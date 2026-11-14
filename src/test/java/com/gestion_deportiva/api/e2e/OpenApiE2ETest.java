@@ -106,6 +106,21 @@ class OpenApiE2ETest {
                 .has("204"));
     }
 
+    // US-23: las cuatro rutas de comidas, con su código de éxito y el parámetro ?date del listado
+    @Test
+    void shouldDocumentTheMealEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        assertTrue(paths.get("/api/athletes/{athleteId}/meals").get("post").get("responses").has("201"));
+        assertTrue(paths.get("/api/athletes/{athleteId}/meals").get("get").get("parameters").toString()
+                .contains("\"date\""));
+        assertTrue(paths.get("/api/athletes/{athleteId}/meals/{mealId}").has("put"));
+        assertTrue(paths.get("/api/athletes/{athleteId}/meals/{mealId}").get("delete").get("responses")
+                .has("204"));
+    }
+
     @Test
     void shouldServeSwaggerUiConfigOutsideTheApiPrefix() {
         assertEquals(HttpStatus.OK, get("/v3/api-docs/swagger-config").getStatusCode());
