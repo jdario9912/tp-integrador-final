@@ -2,7 +2,9 @@ package com.gestion_deportiva.api.training.repository;
 
 import com.gestion_deportiva.api.training.model.TrainingSession;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -45,4 +47,12 @@ public interface TrainingSessionRepository extends JpaRepository<TrainingSession
             order by e.sortOrder""")
     Optional<TrainingSession> findDetailByAthleteIdAndStatus(@Param("athleteId") UUID athleteId,
                                                              @Param("status") SessionStatus status);
+
+    // Bloqueo de la fila de la sesión para registrar una serie (US-19, contrato 11.5). Consulta sin joins: Postgres no
+    // admite FOR UPDATE sobre el lado nulo de un left join. Dos registros seguidos se ejecutan uno tras otro, y una
+    // finalización concurrente (US-20) espera. Vacío si no existe o es de otro atleta
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from TrainingSession s where s.id = :sessionId and s.athlete.id = :athleteId")
+    Optional<TrainingSession> findByIdAndAthleteIdForUpdate(@Param("sessionId") UUID sessionId,
+                                                            @Param("athleteId") UUID athleteId);
 }

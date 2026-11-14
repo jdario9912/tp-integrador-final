@@ -90,6 +90,20 @@ class OpenApiE2ETest {
         assertEquals(HttpStatus.OK, get("/v3/api-docs/swagger-config").getStatusCode());
     }
 
+    // US-19 · series registradas en vivo: el PUT de la serie documenta su 200 y sus errores de validación (400)
+    @Test
+    void shouldDocumentThePerformedSetEndpoint() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode put = paths
+                .get("/api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}")
+                .get("put");
+        assertTrue(put.get("responses").has("200"));
+        assertTrue(put.get("responses").has("400"));
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)

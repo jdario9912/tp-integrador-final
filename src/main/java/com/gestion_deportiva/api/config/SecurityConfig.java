@@ -65,6 +65,8 @@ public class SecurityConfig {
     static final String ATHLETE_SESSION_PATH = ATHLETE_SESSIONS_PATH + "/{sessionId}";
     static final String FOODS_PATH = WebConfig.API_PREFIX + "/foods";
     static final String FOOD_PATH = FOODS_PATH + "/{id}";
+    // US-19 · Series registradas en vivo (contrato 11)
+    static final String ATHLETE_SESSION_SET_PATH = ATHLETE_SESSION_PATH + "/exercises/{routineExerciseId}/sets/{setNumber}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -134,6 +136,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, FOODS_PATH, FOOD_PATH).hasAnyRole("COACH", "ATHLETE")
                         .requestMatchers(HttpMethod.POST, FOODS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PUT, FOOD_PATH).hasRole("COACH")
+                        // US-19 · Series registradas en vivo: solo el atleta registra y corrige las suyas (el entrenador
+                        // recibe 403 aunque el atleta sea suyo). Qué atleta puede usar cada uno lo decide PerformedSetService
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_SESSION_SET_PATH).hasRole("ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

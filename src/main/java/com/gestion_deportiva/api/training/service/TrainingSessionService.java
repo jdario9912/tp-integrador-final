@@ -17,6 +17,7 @@ import com.gestion_deportiva.api.training.exception.TrainingSessionInProgressExc
 import com.gestion_deportiva.api.training.exception.TrainingSessionNotFoundException;
 import com.gestion_deportiva.api.training.model.TrainingSession;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
+import com.gestion_deportiva.api.training.repository.PerformedSetRepository;
 import com.gestion_deportiva.api.training.repository.TrainingSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +45,8 @@ public class TrainingSessionService {
     private final RoutineDayRepository routineDayRepository;
     private final AthleteAccessGuard athleteAccessGuard;
     private final AppClock appClock;
+    // Series registradas en vivo (US-19): las lecturas de la sesión las traen (contrato 11.7)
+    private final PerformedSetRepository performedSetRepository;
 
     @Transactional
     public TrainingSessionResponse start(AuthenticatedUser user, UUID athleteId, StartTrainingSessionRequest request) {
@@ -78,7 +82,7 @@ public class TrainingSessionService {
         TrainingSession session = trainingSessionRepository.saveAndFlush(
                 TrainingSession.start(assignment, day, startedAt, sessionDate));
         log.info("El atleta {} inició la sesión de entrenamiento {} (día {})", athleteId, session.getId(), day.getId());
-        return TrainingSessionResponse.from(session);
+        return TrainingSessionResponse.from(session, List.of());
     }
 
     // Vacío si el atleta no tiene una sesión en progreso (el controller responde 204)
@@ -86,7 +90,7 @@ public class TrainingSessionService {
     public Optional<TrainingSessionResponse> findInProgress(AuthenticatedUser user, UUID athleteId) {
         athleteAccessGuard.verifyAccess(user, athleteId);
         return trainingSessionRepository.findDetailByAthleteIdAndStatus(athleteId, SessionStatus.IN_PROGRESS)
-                .map(TrainingSessionResponse::from);
+                .map(this::withPerformedSets);
     }
 
     // 404 si la sesión no existe o es de otro atleta; va después de la pertenencia: solo quien puede ver al atleta
@@ -95,7 +99,12 @@ public class TrainingSessionService {
     public TrainingSessionResponse findById(AuthenticatedUser user, UUID athleteId, UUID sessionId) {
         athleteAccessGuard.verifyAccess(user, athleteId);
         return trainingSessionRepository.findDetail(athleteId, sessionId)
-                .map(TrainingSessionResponse::from)
+                .map(this::withPerformedSets)
                 .orElseThrow(() -> new TrainingSessionNotFoundException(sessionId));
+    }
+
+    // Una consulta aparte por sesión (contrato 11.7): el detalle ya trae la lista de ejercicios del día
+    private TrainingSessionResponse withPerformedSets(TrainingSession session) {
+        return TrainingSessionResponse.from(session, performedSetRepository.findBySessionInOrder(session.getId()));
     }
 }

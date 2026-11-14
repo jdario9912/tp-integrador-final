@@ -134,7 +134,11 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/foods", UNAUTHORIZED, ALLOWED, FORBIDDEN),
             new Row(HttpMethod.GET, "/api/foods", UNAUTHORIZED, ALLOWED, ALLOWED),
             new Row(HttpMethod.GET, "/api/foods/{id}", UNAUTHORIZED, ALLOWED, ALLOWED),
-            new Row(HttpMethod.PUT, "/api/foods/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.PUT, "/api/foods/{id}", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // US-19 · series registradas en vivo: solo el atleta registra (con "{}" responde 400 por el estado que falta).
+            // La pertenencia y las reglas de la sesión se prueban en PerformedSetE2ETest
+            new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}",
+                    UNAUTHORIZED, FORBIDDEN, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
@@ -235,7 +239,10 @@ class RoleEndpointMatrixE2ETest {
                         .replace("{id}", athlete.getId().toString())
                         .replace("{athleteId}", athlete.getId().toString())
                         .replace("{weightId}", UUID.randomUUID().toString())
-                        .replace("{sessionId}", UUID.randomUUID().toString()))
+                        .replace("{sessionId}", UUID.randomUUID().toString())
+                        // US-19 · series registradas en vivo
+                        .replace("{routineExerciseId}", UUID.randomUUID().toString())
+                        .replace("{setNumber}", "1"))
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));
