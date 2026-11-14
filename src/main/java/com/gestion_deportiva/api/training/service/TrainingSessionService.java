@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 // Sesiones de entrenamiento (US-18, contrato 10). La regla de rol vive en SecurityConfig (solo ATHLETE inicia; los
 // dos roles leen); qué atleta puede usar cada uno lo decide AthleteAccessGuard, antes de cualquier otra consulta.
@@ -101,6 +102,30 @@ public class TrainingSessionService {
         return trainingSessionRepository.findDetail(athleteId, sessionId)
                 .map(this::withPerformedSets)
                 .orElseThrow(() -> new TrainingSessionNotFoundException(sessionId));
+    }
+
+    // US-20 · Finaliza la sesión (contrato 14.5). Orden: pertenencia (403) → sesión inexistente o de otro atleta (404)
+    // → ya cerrada (409) → cierre con la hora de AppClock. El bloqueo de la fila espera a un registro de serie en
+    // curso, como en PerformedSetService (contrato 11.5)
+    @Transactional
+    public TrainingSessionResponse finish(AuthenticatedUser user, UUID athleteId, UUID sessionId) {
+        return end(user, athleteId, sessionId, TrainingSession::finish);
+    }
+
+    // US-20 · Cancela la sesión (contrato 14.5): mismo orden y respuesta que finish. Las series se conservan
+    @Transactional
+    public TrainingSessionResponse cancel(AuthenticatedUser user, UUID athleteId, UUID sessionId) {
+        return end(user, athleteId, sessionId, TrainingSession::cancel);
+    }
+
+    private TrainingSessionResponse end(AuthenticatedUser user, UUID athleteId, UUID sessionId,
+                                        BiConsumer<TrainingSession, Instant> closing) {
+        athleteAccessGuard.verifyAccess(user, athleteId);
+        TrainingSession session = trainingSessionRepository.findByIdAndAthleteIdForUpdate(sessionId, athleteId)
+                .orElseThrow(() -> new TrainingSessionNotFoundException(sessionId));
+        closing.accept(session, appClock.now());
+        log.info("El atleta {} cerró la sesión {} como {}", athleteId, sessionId, session.getStatus());
+        return TrainingSessionResponse.from(session, performedSetRepository.findBySessionInOrder(sessionId));
     }
 
     // Una consulta aparte por sesión (contrato 11.7): el detalle ya trae la lista de ejercicios del día

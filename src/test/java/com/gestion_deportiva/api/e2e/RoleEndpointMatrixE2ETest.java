@@ -153,7 +153,14 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/meals", UNAUTHORIZED, FORBIDDEN, ALLOWED),
             new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/meals/{mealId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
             new Row(HttpMethod.DELETE, "/api/athletes/{athleteId}/meals/{mealId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
-            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/meals", UNAUTHORIZED, ALLOWED, ALLOWED));
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/meals", UNAUTHORIZED, ALLOWED, ALLOWED),
+            // US-20 · finalizar y cancelar la sesión: solo el atleta (el entrenador recibe 403 aunque el atleta sea
+            // suyo; {sessionId} no existe: 404). La pertenencia y las reglas de cierre se prueban en
+            // TrainingSessionEndE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/sessions/{sessionId}/finish", UNAUTHORIZED, FORBIDDEN,
+                    ALLOWED),
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/sessions/{sessionId}/cancel", UNAUTHORIZED, FORBIDDEN,
+                    ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
