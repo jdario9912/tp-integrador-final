@@ -17,5 +17,14 @@ export const trainingSession = (
   routineName: 'Fuerza 2 días',
   day: torsoDay(),
   performedSets: [],
+  // en curso: sin hora de fin. El día tiene 4 + 3 series prescritas y ninguna registrada (US-20)
+  endedAt: null,
+  summary: {
+    prescribedSets: 7,
+    doneSets: 0,
+    skippedSets: 0,
+    pendingSets: 7,
+    volumeKg: 0,
+  },
   ...overrides,
 })

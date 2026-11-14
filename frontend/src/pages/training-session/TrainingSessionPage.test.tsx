@@ -11,6 +11,8 @@ import {
   RouterProvider,
   type RouterProviderProps,
 } from '../../lib/navigation'
+import { cancelTrainingSession } from '../../lib/training-sessions/cancel-training-session'
+import { finishTrainingSession } from '../../lib/training-sessions/finish-training-session'
 import { getTrainingSession } from '../../lib/training-sessions/get-training-session'
 import { paths, trainingPath } from '../../router/paths'
 import { legsDay } from '../../test/athlete-routine-fixtures'
@@ -27,6 +29,12 @@ vi.mock('../../lib/training-sessions/get-training-session', () => ({
 }))
 vi.mock('../../lib/exercises/get-muscle-groups', () => ({
   getMuscleGroups: vi.fn(),
+}))
+vi.mock('../../lib/training-sessions/finish-training-session', () => ({
+  finishTrainingSession: vi.fn(),
+}))
+vi.mock('../../lib/training-sessions/cancel-training-session', () => ({
+  cancelTrainingSession: vi.fn(),
 }))
 
 const ATHLETE_ID = session('ATHLETE').user.id
@@ -347,5 +355,155 @@ describe('TrainingSessionPage · estados', () => {
     const bench = within(await exercises()).getAllByRole('listitem')[0]
     expect(metric(bench, 'Series × reps')).toBe('4 × 8')
     expect(within(bench).queryByText('Pecho')).not.toBeInTheDocument()
+  })
+})
+
+// US-20: finalizar y cancelar, y lo que se ve al cerrar
+describe('TrainingSessionPage · finalizar y cancelar (US-20)', () => {
+  const finishedSummary = {
+    prescribedSets: 7,
+    doneSets: 5,
+    skippedSets: 1,
+    pendingSets: 1,
+    volumeKg: 1250.5,
+  }
+
+  beforeEach(() => {
+    vi.mocked(finishTrainingSession).mockReset()
+    vi.mocked(cancelTrainingSession).mockReset()
+  })
+
+  it('en curso muestra las acciones y no el resumen', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(trainingSession())
+
+    renderPage()
+
+    await exercises()
+    expect(
+      screen.getByRole('button', { name: 'Finalizar entrenamiento' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Cancelar entrenamiento' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Resumen' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('finalizada muestra el resumen y la hora de fin, sin acciones', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(
+      trainingSession({
+        status: 'FINISHED',
+        endedAt: '2026-11-11T23:20:00Z',
+        summary: finishedSummary,
+      }),
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Entrenamiento finalizado',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Terminaste a las 20:20')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Resumen' })).toHaveTextContent(
+      '5 de 7',
+    )
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('cancelada muestra su estado y el aviso, sin resumen, con salida a Mi rutina', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(
+      trainingSession({
+        status: 'CANCELLED',
+        endedAt: '2026-11-11T22:40:00Z',
+      }),
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Entrenamiento cancelado',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Cancelaste a las 19:40')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Ya no podés cargar ni corregir series: el entrenamiento no está en curso/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Resumen' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Volver a Mi rutina' }),
+    ).toBeInTheDocument()
+  })
+
+  it('finalizar desde la pantalla pasa al resumen', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(
+      trainingSession({
+        summary: { ...finishedSummary, doneSets: 5, pendingSets: 2 },
+      }),
+    )
+    vi.mocked(finishTrainingSession).mockResolvedValue(
+      trainingSession({
+        status: 'FINISHED',
+        endedAt: '2026-11-11T23:20:00Z',
+        summary: finishedSummary,
+      }),
+    )
+    renderPage()
+    await exercises()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Finalizar entrenamiento' }),
+    )
+    await userEvent.click(
+      within(
+        screen.getByRole('dialog', { name: '¿Finalizar el entrenamiento?' }),
+      ).getByRole('button', { name: 'Sí, finalizar' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Entrenamiento finalizado',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(finishTrainingSession).toHaveBeenCalledWith(ATHLETE_ID, SESSION_ID)
+  })
+
+  it('cancelar desde la pantalla deja la sesión cancelada', async () => {
+    vi.mocked(getTrainingSession).mockResolvedValue(trainingSession())
+    vi.mocked(cancelTrainingSession).mockResolvedValue(
+      trainingSession({
+        status: 'CANCELLED',
+        endedAt: '2026-11-11T22:40:00Z',
+      }),
+    )
+    renderPage()
+    await exercises()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cancelar entrenamiento' }),
+    )
+    await userEvent.click(
+      within(
+        screen.getByRole('dialog', { name: '¿Cancelar el entrenamiento?' }),
+      ).getByRole('button', { name: 'Sí, cancelar' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Entrenamiento cancelado',
+        level: 1,
+      }),
+    ).toBeInTheDocument()
+    expect(cancelTrainingSession).toHaveBeenCalledWith(ATHLETE_ID, SESSION_ID)
   })
 })

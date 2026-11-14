@@ -192,3 +192,14 @@ En `/training/:sessionId`, cada ejercicio del día muestra una fila por serie pr
 - Cada serie se envía con `PUT /api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}`. Reintentar reenvía el mismo cuerpo a la misma URL: el backend lo resuelve sin duplicar la serie. Las mutaciones de una misma sesión van en serie para que las respuestas no se pisen.
 - Con la sesión fuera de curso (`FINISHED` o `CANCELLED`) las series se muestran sin controles y la pantalla avisa.
 - Pruebas: `pnpm test -- --run src/pages/training-session src/lib/training-sessions` cubre validaciones, borrador, fila (completar, corregir, omitir, red, 409 y 400) y la pantalla. El E2E `e2e/log-sets.spec.ts` intercepta la API con un servidor falso en memoria y verifica que completar sea un toque y que el reintento no duplique.
+
+## Finalizar o cancelar el entrenamiento (US-20)
+
+En `/training/:sessionId`, el atleta cierra la sesión en curso desde el bloque de acciones que está debajo del título del día: **Finalizar entrenamiento** (queda `FINISHED`, con hora de fin y resumen) o **Cancelar entrenamiento** (queda `CANCELLED`, sin borrar lo registrado). Las dos piden confirmación con un diálogo accesible.
+
+- Finalizar sin ninguna serie hecha no se bloquea, pero la confirmación avisa y ofrece cancelar en su lugar (CE-2). Las series que quedan sin registrar no cuentan como hechas.
+- Lógica: `src/lib/training-sessions/` (`finishTrainingSession` y `cancelTrainingSession`, `POST .../finish` y `POST .../cancel` sin body; los hooks `useFinishTrainingSession` y `useCancelTrainingSession`). La respuesta reemplaza el detalle y, si era la sesión en progreso, `in-progress` queda en `null`, sin invalidar. Un 409 vuelve a pedir la sesión para mostrar su estado real.
+- Pantalla: `src/pages/training-session/` (`components/TrainingSessionActions.tsx` con las dos confirmaciones, `components/TrainingSessionResult.tsx` con el resumen, y `end-session-copy.ts` con los textos y la confirmación según las series hechas).
+- Resumen (solo `FINISHED`, también al abrir el detalle después): series hechas sobre prescritas, omitidas, sin registrar, volumen (kg) y duración. Cancelada: el aviso de solo lectura y la salida a «Mi rutina».
+- Las acciones comparten la cola de mutaciones de la sesión con el registro de series: una finalización espera a que termine de guardarse una serie en curso.
+- Pruebas: `pnpm test -- --run src/lib/training-sessions src/pages/training-session` cubre las acciones, la caché, los hooks (incluido el 409), los textos de confirmación, el resumen y la pantalla. El E2E `e2e/finish-training.spec.ts` intercepta la API y cubre finalizar con resumen (CA-1), cancelar y volver a Mi rutina (CA-2), finalizar sin series (CE-2), cancelar la confirmación, el 409 y el error del servidor.
