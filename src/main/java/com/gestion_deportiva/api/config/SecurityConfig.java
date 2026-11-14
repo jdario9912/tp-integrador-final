@@ -67,6 +67,9 @@ public class SecurityConfig {
     static final String FOOD_PATH = FOODS_PATH + "/{id}";
     // US-19 · Series registradas en vivo (contrato 11)
     static final String ATHLETE_SESSION_SET_PATH = ATHLETE_SESSION_PATH + "/exercises/{routineExerciseId}/sets/{setNumber}";
+    // US-28 (bloque propio): fotos de progreso
+    static final String ATHLETE_PHOTOS_PATH = ATHLETES_PATH + "/{athleteId}/photos";
+    static final String ATHLETE_PHOTO_PATH = ATHLETE_PHOTOS_PATH + "/{photoId}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -139,6 +142,13 @@ public class SecurityConfig {
                         // US-19 · Series registradas en vivo: solo el atleta registra y corrige las suyas (el entrenador
                         // recibe 403 aunque el atleta sea suyo). Qué atleta puede usar cada uno lo decide PerformedSetService
                         .requestMatchers(HttpMethod.PUT, ATHLETE_SESSION_SET_PATH).hasRole("ATHLETE")
+                        // US-28 (bloque propio): fotos de progreso. Subir y borrar solo el atleta (el entrenador recibe
+                        // 403 aunque el atleta sea suyo); listar y ver el detalle, los dos roles. Qué atleta puede usar
+                        // cada uno lo decide AthleteAccessGuard en ProgressPhotoService
+                        .requestMatchers(HttpMethod.POST, ATHLETE_PHOTOS_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_PHOTOS_PATH, ATHLETE_PHOTO_PATH)
+                                .hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.DELETE, ATHLETE_PHOTO_PATH).hasRole("ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

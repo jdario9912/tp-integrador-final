@@ -85,6 +85,27 @@ class OpenApiE2ETest {
         assertTrue(paths.get("/api/athletes/{athleteId}/sessions/{sessionId}").has("get"));
     }
 
+    // US-28 (bloque propio): la subida es multipart, el 201 del alta sale en la documentación y el borrado responde 204
+    @Test
+    void shouldDocumentThePhotoEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode photos = paths.get("/api/athletes/{athleteId}/photos");
+        // Las tres partes del formulario, no query params: así Swagger UI puede subir la foto
+        JsonNode multipart = photos.get("post").get("requestBody").get("content").get("multipart/form-data");
+        assertTrue(multipart.get("schema").get("properties").has("file"));
+        assertTrue(multipart.get("schema").get("properties").has("type"));
+        assertTrue(multipart.get("schema").get("properties").has("takenOn"));
+        assertFalse(photos.get("post").get("parameters").toString().contains("\"name\":\"type\""));
+        assertTrue(photos.get("post").get("responses").has("201"));
+        assertTrue(photos.get("get").get("parameters").toString().contains("\"page\""));
+        assertTrue(paths.get("/api/athletes/{athleteId}/photos/{photoId}").has("get"));
+        assertTrue(paths.get("/api/athletes/{athleteId}/photos/{photoId}").get("delete").get("responses")
+                .has("204"));
+    }
+
     @Test
     void shouldServeSwaggerUiConfigOutsideTheApiPrefix() {
         assertEquals(HttpStatus.OK, get("/v3/api-docs/swagger-config").getStatusCode());

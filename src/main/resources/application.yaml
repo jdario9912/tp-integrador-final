@@ -12,6 +12,12 @@ spring:
       pageable:
         # Un ?size mayor se limita a este valor en lugar de traer todos los registros de una vez
         max-page-size: 100
+  # US-28: tope del contenedor para las subidas multipart. Spring admite solo 1 MB por archivo por defecto (una
+  # foto de 2 MB ya se rechazaría). Tiene que ser mayor que app.uploads.max-image-size (UploadConfig lo verifica)
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 7MB
 
 app:
   # Zona horaria de la app (US-26): define qué fecha es "hoy" para las reglas de negocio (por ahora, la fecha no
@@ -41,6 +47,10 @@ app:
       bucket: ${SUPABASE_STORAGE_BUCKET:}
       # Vencimiento de las URLs firmadas de lectura
       signed-url-ttl: ${STORAGE_SIGNED_URL_TTL:10m}
+  # US-28: límite por imagen (fotos de progreso y, en la ola 2, fotos de comida). Tiene que ser menor que
+  # spring.servlet.multipart.max-file-size; si se sube por encima de 6 MB, subir también ese tope
+  uploads:
+    max-image-size: ${UPLOAD_MAX_IMAGE_SIZE:5MB}
 
 server:
   port: ${PORT:8080}
