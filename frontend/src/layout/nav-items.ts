@@ -7,6 +7,7 @@ import {
   Dumbbell,
   LayoutDashboard,
   Users,
+  Utensils, // US-23
   type LucideIcon,
 } from '../ui/icons'
 
@@ -27,5 +28,7 @@ export const navItems: Record<Role, NavItem[]> = {
     { to: paths.myRoutine, label: 'Mi rutina', icon: ClipboardList },
     { to: paths.progress, label: 'Progreso', icon: ChartLine },
     { to: paths.foods, label: 'Alimentos', icon: Apple },
+    // US-23: registro de comidas del día
+    { to: paths.meals, label: 'Comidas', icon: Utensils },
   ],
 }

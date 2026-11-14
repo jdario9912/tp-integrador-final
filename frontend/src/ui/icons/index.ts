@@ -59,3 +59,5 @@ export {
 
 // US-19: iconos del registro de series
 export { Check, SkipForward } from 'lucide-react'
+// US-23: registro de comidas
+export { Utensils } from 'lucide-react'

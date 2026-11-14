@@ -17,6 +17,8 @@ vi.mock('../lib/exercises/get-muscle-groups', () => ({
   getMuscleGroups: vi.fn(),
 }))
 vi.mock('../pages/foods/actions/get-foods', () => ({ getFoods: vi.fn() }))
+// US-23: comidas del día
+vi.mock('../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
 vi.mock('../lib/training-sessions/get-in-progress-session', () => ({
   getInProgressSession: vi.fn(),
 }))
@@ -41,6 +43,9 @@ const renderAppAt = async (path: string, role: Role) => {
   vi.mocked(getMuscleGroups).mockResolvedValue([])
   const { getFoods } = await import('../pages/foods/actions/get-foods')
   vi.mocked(getFoods).mockResolvedValue(foodsPage([createdFood()]))
+  // US-23: comidas del día
+  const { getMealsOfDay } = await import('../lib/meals/get-meals')
+  vi.mocked(getMealsOfDay).mockResolvedValue([])
   const { getInProgressSession } =
     await import('../lib/training-sessions/get-in-progress-session')
   vi.mocked(getInProgressSession).mockResolvedValue(null)
@@ -158,6 +163,30 @@ describe('AppRouter · Progreso (US-26)', () => {
     expect(
       screen.queryByRole('heading', { name: 'Progreso', level: 1 }),
     ).not.toBeInTheDocument()
+  })
+})
+
+// US-23: el atleta entra a Comidas desde su menú; un entrenador que llega ahí vuelve al panel
+describe('AppRouter · Comidas (US-23)', () => {
+  it('el atleta entra a /meals y la barra muestra "Comidas"', async () => {
+    await renderAppAt(paths.meals, 'ATHLETE')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Comidas', level: 1 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'Ubicación' }),
+    ).toHaveTextContent('Comidas')
+    expect(window.location.pathname).toBe(paths.meals)
+  })
+
+  it('un entrenador que entra a /meals vuelve al panel', async () => {
+    await renderAppAt(paths.meals, 'COACH')
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Bienvenido/ }),
+    ).toBeInTheDocument()
+    expect(window.location.pathname).toBe(paths.dashboard)
   })
 })
 
