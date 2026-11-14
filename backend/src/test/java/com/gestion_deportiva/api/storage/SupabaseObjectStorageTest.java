@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -180,5 +181,71 @@ class SupabaseObjectStorageTest {
     void ttlShorterThanOneSecondIsRejected() {
         assertThatThrownBy(() -> storage.createSignedUrl(PATH, Duration.ofMillis(10)))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // US-28 (bloque propio): firma en lote con POST /object/sign/{bucket} y {expiresIn, paths}
+    @Test
+    void batchSignsEveryPathInOneRequestAndKeepsTheOrderOfTheList() {
+        server.expect(requestTo(STORAGE + "/object/sign/" + BUCKET))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer " + KEY))
+                .andExpect(content().json("{\"expiresIn\": 600, \"paths\": [\"poc/a.jpg\", \"poc/b.jpg\"]}"))
+                // Supabase devuelve las entradas en otro orden: se empareja por "path"
+                .andRespond(withSuccess("[{\"error\":null,\"path\":\"poc/b.jpg\",\"signedURL\":\"/object/sign/"
+                        + BUCKET + "/poc/b.jpg?token=bbb\"},{\"error\":null,\"path\":\"poc/a.jpg\",\"signedURL\":\"/object/sign/"
+                        + BUCKET + "/poc/a.jpg?token=aaa\"}]", MediaType.APPLICATION_JSON));
+
+        List<SignedUrl> urls = storage.createSignedUrls(List.of("poc/a.jpg", "poc/b.jpg"));
+
+        assertThat(urls).extracting(SignedUrl::url).containsExactly(
+                STORAGE + "/object/sign/" + BUCKET + "/poc/a.jpg?token=aaa",
+                STORAGE + "/object/sign/" + BUCKET + "/poc/b.jpg?token=bbb");
+        assertThat(urls).extracting(SignedUrl::expiresAt).containsOnly(NOW.plus(Duration.ofMinutes(10)));
+        server.verify();
+    }
+
+    @Test
+    void batchUsesTheConfiguredTtlAndTheExplicitOneWhenGiven() {
+        server.expect(requestTo(STORAGE + "/object/sign/" + BUCKET))
+                .andExpect(content().json("{\"expiresIn\": 600}"))
+                .andRespond(withSuccess("[{\"path\":\"poc/a.jpg\",\"signedURL\":\"/object/sign/x?token=t\"}]",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(storage.createSignedUrls(List.of("poc/a.jpg")).get(0).expiresAt())
+                .isEqualTo(NOW.plus(Duration.ofMinutes(10)));
+    }
+
+    @Test
+    void batchOfNothingDoesNotCallSupabase() {
+        assertThat(storage.createSignedUrls(List.of())).isEmpty();
+
+        server.verify();
+    }
+
+    @Test
+    void batchFailsIfSupabaseOmitsOneOfThePaths() {
+        server.expect(requestTo(STORAGE + "/object/sign/" + BUCKET))
+                .andRespond(withSuccess("[{\"error\":\"Object not found\",\"path\":\"poc/a.jpg\",\"signedURL\":null}]",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> storage.createSignedUrls(List.of("poc/a.jpg", "poc/b.jpg")))
+                .isInstanceOf(StorageUnavailableException.class)
+                .hasMessageContaining("poc/a.jpg");
+    }
+
+    @Test
+    void batchTranslatesAServerErrorWithoutExposingTheKey() {
+        server.expect(requestTo(STORAGE + "/object/sign/" + BUCKET)).andRespond(withServerError());
+
+        assertThatThrownBy(() -> storage.createSignedUrls(List.of(PATH)))
+                .isInstanceOf(StorageUnavailableException.class)
+                .message().doesNotContain(KEY);
+    }
+
+    @Test
+    void batchRejectsInvalidPathsBeforeCallingSupabase() {
+        assertThatThrownBy(() -> storage.createSignedUrls(List.of("../otro/foto.jpg")))
+                .isInstanceOf(IllegalArgumentException.class);
+        server.verify();
     }
 }

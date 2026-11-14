@@ -193,7 +193,7 @@ Para agregar un endpoint:
 
 **Almacenamiento de fotos (Supabase Storage)**
 
-Las fotos de progreso (US-28) se guardan en un bucket **privado** de Supabase Storage. La US-37 dejó lista la base: el puerto `ObjectStorage` (`upload`, `createSignedUrl`, `delete`) y su adaptador `SupabaseObjectStorage`, que usa la API REST de Storage con `RestClient` (sin dependencias nuevas). Todavía no hay endpoints: los agrega US-28.
+Las fotos de progreso (US-28) se guardan en un bucket **privado** de Supabase Storage. La US-37 dejó lista la base: el puerto `ObjectStorage` (`upload`, `createSignedUrl`, `delete`) y su adaptador `SupabaseObjectStorage`, que usa la API REST de Storage con `RestClient` (sin dependencias nuevas). Los endpoints de fotos los agrega US-28 (ver «Fotos de progreso»).
 
 Flujo elegido para US-28:
 
@@ -226,6 +226,26 @@ $env:SUPABASE_URL='https://<proyecto>.supabase.co'; $env:SUPABASE_SERVICE_ROLE_K
 ```
 
 Si el proyecto de Supabase está pausado por inactividad (plan gratuito), la prueba falla aunque el código esté bien: reactivarlo desde el panel.
+
+**Fotos de progreso (US-28)**
+
+El atleta sube sus fotos de progreso (frontal, lateral y espalda) y él y su entrenador las ven con URLs firmadas temporales. Las fotos viven en el bucket privado de Supabase: la API nunca devuelve la ruta del objeto, solo la `url` firmada y su `urlExpiresAt`.
+
+- `POST /api/athletes/{athleteId}/photos`: subida en multipart con `file`, `type` (`FRONT`, `SIDE` o `BACK`) y `takenOn` opcional (`AAAA-MM-DD`; si no viene, es hoy en la zona de la app, y nunca puede ser futura). Responde 201 con `Location` al detalle y la foto. Solo el atleta dueño.
+- `GET /api/athletes/{athleteId}/photos`: listado paginado (`PageResponse`) en orden cronológico, la más antigua primero, con `?page` y `?size` (máximo 100). El `sort` se ignora. Cada foto trae una URL firmada nueva. Lo ven el atleta y sus entrenadores vinculados.
+- `GET /api/athletes/{athleteId}/photos/{photoId}`: la foto con una URL firmada nueva. El front la pide de nuevo cuando `urlExpiresAt` venció. Lo ven los dos roles.
+- `DELETE /api/athletes/{athleteId}/photos/{photoId}`: 204, borra la fila y el objeto. Solo el atleta dueño; borrar dos veces responde 404.
+
+El archivo tiene que ser JPG, PNG o WebP. El formato se detecta por el contenido (la firma), no por el nombre ni por el `Content-Type` que manda el cliente. Tamaño máximo 5 MB (`UPLOAD_MAX_IMAGE_SIZE`, por defecto `5MB`). La imagen se guarda tal cual se subió, sin re-codificar.
+
+Errores: 400 (`fieldErrors` en `file`, `type` o `takenOn`, o imagen dañada o truncada), 413 (más de 5 MB), 415 (GIF, PDF, texto u otro formato), 403 (rol o pertenencia), 404 (atleta o foto inexistente, o de otro atleta) y 503 (Supabase no responde o no está configurado). Un 503 no deja fila ni objeto.
+
+Consistencia con Storage: la fila se inserta solo después de subir el objeto y firmar la URL, y si algo falla el objeto se borra. Al borrar, primero se borra la fila: si Storage falla, la respuesta sigue siendo 204 y el objeto huérfano queda en el log con su ruta. Las URLs de una página se firman en una sola llamada (`POST /storage/v1/object/sign/{bucket}` con `paths`, el mismo endpoint que usa `storage-js`).
+
+Límites: el tope del contenedor es `spring.servlet.multipart.max-file-size: 6MB` y `max-request-size: 7MB` (en `application.yaml`). `UPLOAD_MAX_IMAGE_SIZE` tiene que ser menor que ese tope: si no lo es, la app no arranca (`UploadConfig`). Un archivo mucho más grande que el tope puede cortarse antes de que el cliente lea la respuesta, por eso el front valida el tamaño antes de subir.
+
+Pendiente de configuración: el bucket tiene que ser **privado** (`public = false`) en el panel de Supabase. Que el acceso sin firma sea denegado se verifica ahí, no en los tests.
+
 
 **Tests**
 

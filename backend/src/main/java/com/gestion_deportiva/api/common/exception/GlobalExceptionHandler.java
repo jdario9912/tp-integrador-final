@@ -1,6 +1,9 @@
 package com.gestion_deportiva.api.common.exception;
 
 import com.gestion_deportiva.api.common.exception.ApiErrorResponse.FieldErrorDetail;
+import com.gestion_deportiva.api.common.upload.exception.ImageTooLargeException;
+import com.gestion_deportiva.api.common.upload.exception.UnsupportedImageFormatException;
+import com.gestion_deportiva.api.config.UploadProperties;
 import com.gestion_deportiva.api.storage.StorageUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.List;
@@ -36,6 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     static final String DATA_CONFLICT_MESSAGE = "La operación entra en conflicto con datos existentes";
     static final String STORAGE_UNAVAILABLE_MESSAGE =
             "El servicio de almacenamiento no está disponible. Intente nuevamente más tarde";
+    // US-28: bloque de subidas. Cuerpo multipart roto o incompleto (400), sin detalle de Spring
+    static final String INVALID_UPLOAD_MESSAGE = "La solicitud de subida no es válida";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException ex,
@@ -105,6 +112,43 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Almacenamiento no disponible en {} {}: {}", request.getMethod(), request.getRequestURI(),
                 ex.getMessage());
         return build(HttpStatus.SERVICE_UNAVAILABLE, STORAGE_UNAVAILABLE_MESSAGE, request);
+    }
+
+    // US-28 (bloque propio de subidas). 413: la imagen supera la política (app.uploads.max-image-size)
+    @ExceptionHandler(ImageTooLargeException.class)
+    public ResponseEntity<ApiErrorResponse> handleImageTooLarge(ImageTooLargeException ex,
+                                                                HttpServletRequest request) {
+        return build(HttpStatus.CONTENT_TOO_LARGE, ex.getMessage(), request);
+    }
+
+    // 415: el contenido no es JPG, PNG ni WebP (se detecta por la firma, no por el nombre ni el Content-Type)
+    @ExceptionHandler(UnsupportedImageFormatException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedImageFormat(UnsupportedImageFormatException ex,
+                                                                         HttpServletRequest request) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.getMessage(), request);
+    }
+
+    // Cuerpo multipart roto (partes mal formadas o cortadas): 400 con texto propio, en vez de 500. MaxUpload va aparte
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiErrorResponse> handleMultipart(MultipartException ex, HttpServletRequest request) {
+        log.warn("Subida multipart inválida en {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, INVALID_UPLOAD_MESSAGE, request);
+    }
+
+    // Tope del contenedor (spring.servlet.multipart.max-file-size, 6 MB): 413 con el mismo texto que la política.
+    // Se sobrescribe el método de ResponseEntityExceptionHandler (y no se agrega otro @ExceptionHandler) porque la
+    // clase base ya mapea MaxUploadSizeExceededException. El texto usa el límite por defecto de la política
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
+                                                                          HttpHeaders headers,
+                                                                          HttpStatusCode status,
+                                                                          WebRequest request) {
+        log.warn("Archivo mayor al tope del contenedor en {}", path(request));
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).headers(headers)
+                .body(ApiErrorResponse.of(HttpStatus.CONTENT_TOO_LARGE,
+                        ImageTooLargeException.messageFor(UploadProperties.DEFAULT_MAX_IMAGE_SIZE.toBytes()),
+                        path(request)));
     }
 
     @ExceptionHandler(Exception.class)
