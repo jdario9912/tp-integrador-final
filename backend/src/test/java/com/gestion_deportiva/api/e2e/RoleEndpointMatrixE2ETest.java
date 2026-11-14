@@ -146,7 +146,14 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.GET, "/api/athletes/{athleteId}/photos", UNAUTHORIZED, ALLOWED, ALLOWED),
             new Row(HttpMethod.GET, "/api/athletes/{athleteId}/photos/{photoId}", UNAUTHORIZED, ALLOWED, ALLOWED),
             new Row(HttpMethod.DELETE, "/api/athletes/{athleteId}/photos/{photoId}", UNAUTHORIZED, FORBIDDEN,
-                    ALLOWED));
+                    ALLOWED),
+            // US-23: registro de comidas. Alta, edición y borrado solo el atleta (con "{}" el POST y el PUT responden 400;
+            // {mealId} no existe: 404). El listado lo leen los dos roles (sin fecha, es hoy: lista vacía). La pertenencia
+            // y las reglas de negocio se prueban en MealE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/meals", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/meals/{mealId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.DELETE, "/api/athletes/{athleteId}/meals/{mealId}", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/meals", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
@@ -252,7 +259,8 @@ class RoleEndpointMatrixE2ETest {
                         .replace("{routineExerciseId}", UUID.randomUUID().toString())
                         .replace("{setNumber}", "1")
                         // US-28
-                        .replace("{photoId}", UUID.randomUUID().toString()))
+                        .replace("{photoId}", UUID.randomUUID().toString())
+                        .replace("{mealId}", UUID.randomUUID().toString())) // US-23
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));

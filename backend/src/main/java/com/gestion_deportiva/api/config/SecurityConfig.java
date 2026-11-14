@@ -70,6 +70,9 @@ public class SecurityConfig {
     // US-28 (bloque propio): fotos de progreso
     static final String ATHLETE_PHOTOS_PATH = ATHLETES_PATH + "/{athleteId}/photos";
     static final String ATHLETE_PHOTO_PATH = ATHLETE_PHOTOS_PATH + "/{photoId}";
+    // US-23: registro de comidas del atleta
+    static final String ATHLETE_MEALS_PATH = ATHLETES_PATH + "/{athleteId}/meals";
+    static final String ATHLETE_MEAL_PATH = ATHLETE_MEALS_PATH + "/{mealId}";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -149,6 +152,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, ATHLETE_PHOTOS_PATH, ATHLETE_PHOTO_PATH)
                                 .hasAnyRole("COACH", "ATHLETE")
                         .requestMatchers(HttpMethod.DELETE, ATHLETE_PHOTO_PATH).hasRole("ATHLETE")
+                        // US-23: registro de comidas. Alta, edición y borrado los hace solo el atleta (el entrenador
+                        // recibe 403 aunque el atleta sea suyo); el listado del día lo ven los dos roles. Qué atleta
+                        // puede usar cada uno lo decide AthleteAccessGuard en MealServiceImpl
+                        .requestMatchers(HttpMethod.POST, ATHLETE_MEALS_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_MEAL_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.DELETE, ATHLETE_MEAL_PATH).hasRole("ATHLETE")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_MEALS_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

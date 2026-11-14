@@ -185,6 +185,15 @@ Catálogo de alimentos (US-39): es global (sin autor), lo consultan los dos role
 - `POST /api/foods` lo crea (201): `name` (máximo 100), `referencePortionG` (gramos, mayor a 0), `caloriesKcal`, `proteinG`, `carbsG` y `fatG` (0 o más), todos obligatorios, hasta 10000 y con 2 decimales como máximo. Nombre repetido, sin distinguir mayúsculas → 409.
 - `PUT /api/foods/{id}` edita todos sus datos; cualquier entrenador puede editar cualquier alimento. Renombrarlo al nombre de otro → 409.
 
+Registro de comidas (US-23): el atleta registra, edita y borra sus comidas; él y su entrenador (solo los atletas vinculados a él) consultan las de un día. Las calorías y los macros las calcula el backend (migración `V13__meals.sql`: `meal_types`, `meals` y `meal_items`).
+- `POST /api/athletes/{athleteId}/meals` registra una comida (201, sin header `Location`): `date` (`YYYY-MM-DD`, no futura) y `type` (`BREAKFAST`, `LUNCH`, `SNACK`, `DINNER`, `COLLATION`, `PRE_WORKOUT` o `POST_WORKOUT`) obligatorios. Opcionales: `description` (máximo 500 caracteres; vacía queda en null) e `items`, hasta 50, cada uno con `foodId` y `quantityG` (mayor a 0, hasta 5 enteros y 2 decimales). Tiene que tener una descripción o al menos un alimento. Un alimento inexistente → 404 y no se guarda nada.
+- Cada ítem copia el nombre y los valores de referencia del alimento al momento de cargarlo: el historial no cambia si después se corrige el catálogo. `caloriesKcal`, `proteinG`, `carbsG` y `fatG` del ítem son `cantidad × valor de referencia / porción de referencia`, redondeados a 2 decimales (HALF_UP). `totalCaloriesKcal` de la comida es la suma de sus ítems, o `null` si no tiene ítems (una descripción sola no tiene calorías).
+- `PUT /api/athletes/{athleteId}/meals/{mealId}` edita la comida completa: reemplaza fecha, tipo, descripción e ítems (los ítems reciben id nuevo). Mismas validaciones; si un alimento no existe, no cambia nada.
+- `DELETE /api/athletes/{athleteId}/meals/{mealId}` borra la comida y sus ítems (204). Un segundo borrado → 404.
+- `GET /api/athletes/{athleteId}/meals?date=YYYY-MM-DD` lista las comidas de ese día, por tipo y, dentro de cada tipo, por alta, con sus ítems en orden de carga. Sin `date`, es hoy en la zona de la app. Sin comidas, o con una fecha futura, responde `[]`. Fecha con otro formato → 400 con el error en `date`.
+- Solo el atleta registra, edita y borra las suyas: el entrenador recibe 403 aunque el atleta sea suyo, y otro atleta también 403. Una comida de otro atleta o inexistente → 404. Un atleta desvinculado sigue registrando sus comidas; su ex entrenador recibe 403.
+- Los tipos de comida son fijos (catálogo de la V13, sin endpoint). La foto de la comida llega con US-28 (ola 2): la columna `photo_path` ya existe y no se usa todavía.
+
 Para agregar un endpoint:
 
 1. Si no es para los dos roles, su regla en `SecurityConfig` (`hasRole("COACH")` o `hasRole("ATHLETE")`). La regla corre antes de leer el body: un rol equivocado recibe 403 aunque el body sea inválido.

@@ -78,7 +78,8 @@ class FoodE2ETest {
     @BeforeEach
     void setUp() {
         client = RestClient.create("http://localhost:" + port);
-        jdbcTemplate.execute("TRUNCATE foods");
+        // CASCADE: meal_items (US-23) referencia a foods, y sin CASCADE PostgreSQL rechaza el TRUNCATE
+        jdbcTemplate.execute("TRUNCATE foods CASCADE");
         // Hash BCrypt real: la autenticación valida la contraseña contra la base
         Coach coach = coachRepository.saveAndFlush(
                 new Coach("Ana", "Paz", COACH_EMAIL, passwordEncoder.encode(RAW_PASSWORD)));
@@ -92,7 +93,8 @@ class FoodE2ETest {
     @AfterEach
     void cleanUp() {
         jdbcTemplate.execute("TRUNCATE users CASCADE");
-        jdbcTemplate.execute("TRUNCATE foods");
+        // CASCADE: meal_items (US-23) referencia a foods, y sin CASCADE PostgreSQL rechaza el TRUNCATE
+        jdbcTemplate.execute("TRUNCATE foods CASCADE");
     }
 
     // ---------- alta ----------
