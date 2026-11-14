@@ -16,11 +16,12 @@ import { DayWorkout } from '../my-routine/components/DayWorkout'
 import { TrainingSessionSkeleton } from './components/TrainingSessionSkeleton'
 import { TrainingSessionSummary } from './components/TrainingSessionSummary'
 import { TrainingSessionUnavailable } from './components/TrainingSessionUnavailable'
+import { ExerciseSets } from './components/ExerciseSets'
 import { sessionTitle } from './training-session-format'
 
 // pantalla del entrenamiento (US-18), solo del atleta: el día que inició o retomó desde Mi rutina,
-// con la hora de inicio y los ejercicios planificados de solo lectura. Acá US-19 suma la carga
-// de series de cada ejercicio y US-20 finalizar y cancelar (la acción del panel del día)
+// con la hora de inicio y los ejercicios planificados. US-19 suma las series de cada ejercicio
+// (editables mientras la sesión está en curso); US-20 suma finalizar y cancelar (la acción del día)
 export function TrainingSessionPage() {
   const { sessionId = '' } = useParams()
   const { user } = useAuth()
@@ -63,12 +64,32 @@ export function TrainingSessionPage() {
       )
     }
 
+    // las series se cargan solo mientras la sesión está en curso (contrato 11.6, 409). Fuera de
+    // curso, el aviso queda en la pantalla: la fila que recibió el 409 ya se muestra de solo lectura
+    const editable = session.status === 'IN_PROGRESS'
     return (
-      <DayWorkout
-        day={session.day}
-        isNext={false}
-        muscleGroups={muscleGroups}
-      />
+      <>
+        {!editable && (
+          <Callout tone="info">
+            Ya no podés cargar ni corregir series: el entrenamiento no está en
+            curso.
+          </Callout>
+        )}
+        <DayWorkout
+          day={session.day}
+          isNext={false}
+          muscleGroups={muscleGroups}
+          renderExerciseFooter={(exercise) => (
+            <ExerciseSets
+              athleteId={athleteId}
+              sessionId={session.id}
+              exercise={exercise}
+              performedSets={session.performedSets}
+              editable={editable}
+            />
+          )}
+        />
+      </>
     )
   }
 

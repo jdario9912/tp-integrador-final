@@ -111,6 +111,8 @@ const startedSession = (overrides: Record<string, unknown> = {}) => ({
   routineId: '5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d',
   routineName: 'Fuerza 2 días',
   day: torso,
+  // sin series registradas (contrato 11.4)
+  performedSets: [],
   ...overrides,
 })
 
