@@ -156,6 +156,19 @@ test.describe('como atleta', () => {
     await page.clock.setFixedTime(NOW)
     await seedSession(page, athlete, 'access-1')
     await routeCurrentUser(page, athlete)
+    // US-28: la página también pide las fotos de progreso; sin fotos no afecta estas pruebas
+    await page.route(/\/api\/athletes\/[^/]+\/photos(\?.*)?$/, (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        },
+      }),
+    )
   })
 
   test('entra a Progreso desde el menú y ve sus últimos registros', async ({

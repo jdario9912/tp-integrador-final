@@ -73,3 +73,17 @@ export const del = async <TResponse = void>(
   url: string,
   config?: AxiosRequestConfig,
 ) => (await httpClient.delete<TResponse>(url, config)).data
+
+// US-28: POST con archivos (multipart/form-data). Se quita el application/json por defecto del
+// cliente: el navegador pone el Content-Type con el boundary. Lo reutiliza la foto de comidas (US-23)
+export const postForm = async <TResponse>(
+  url: string,
+  form: FormData,
+  config?: Omit<AxiosRequestConfig<FormData>, 'headers'>,
+) =>
+  (
+    await httpClient.post<TResponse>(url, form, {
+      ...config,
+      headers: { 'Content-Type': false },
+    })
+  ).data
