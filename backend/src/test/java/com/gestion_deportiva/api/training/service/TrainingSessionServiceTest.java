@@ -18,12 +18,15 @@ import com.gestion_deportiva.api.routine.model.RoutineDay;
 import com.gestion_deportiva.api.routine.model.RoutineExercise;
 import com.gestion_deportiva.api.routine.repository.RoutineDayRepository;
 import com.gestion_deportiva.api.training.dto.TrainingSessionResponse;
+import com.gestion_deportiva.api.training.dto.TrainingSessionSummary;
 import com.gestion_deportiva.api.training.exception.EmptyRoutineDayException;
 import com.gestion_deportiva.api.training.exception.ExpiredRoutineException;
 import com.gestion_deportiva.api.training.exception.NoActiveRoutineException;
 import com.gestion_deportiva.api.training.exception.RoutineDayNotInActiveRoutineException;
+import com.gestion_deportiva.api.training.exception.TrainingSessionAlreadyEndedException;
 import com.gestion_deportiva.api.training.exception.TrainingSessionInProgressException;
 import com.gestion_deportiva.api.training.exception.TrainingSessionNotFoundException;
+import com.gestion_deportiva.api.training.model.PerformedSet;
 import com.gestion_deportiva.api.training.model.TrainingSession;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
 import com.gestion_deportiva.api.training.repository.PerformedSetRepository;
@@ -38,6 +41,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -422,6 +426,88 @@ class TrainingSessionServiceTest {
         verifyNoInteractions(trainingSessionRepository);
     }
 
+    // ---------- US-20 · finalizar y cancelar (contrato 14.5) ----------
+
+    @Test
+    void shouldFinishTheSessionAtTheClockInstantAndReturnItsSummary() {
+        // Arrange: la sesión del día "Pierna" (5 series prescritas) sin series registradas
+        TrainingSession inProgress = inProgressSession();
+        givenTheSessionLocked(inProgress);
+        givenTheSetsOfTheSession(List.of());
+
+        // Act
+        TrainingSessionResponse response = service(NOV_11_EVENING).finish(ATHLETE_USER, ATHLETE_ID, SESSION_ID);
+
+        // Assert: el estado y la hora de fin salen del reloj
+        assertEquals(SessionStatus.FINISHED, inProgress.getStatus());
+        assertEquals(NOV_11_EVENING, inProgress.getEndedAt());
+        assertEquals(SessionStatus.FINISHED, response.status());
+        assertEquals(NOV_11_EVENING, response.endedAt());
+        // Assert: el resumen con todo pendiente y volumen en cero
+        assertEquals(new TrainingSessionSummary(5, 0, 0, 5, new BigDecimal("0.00")), response.summary());
+        verify(athleteAccessGuard).verifyAccess(ATHLETE_USER, ATHLETE_ID);
+    }
+
+    @Test
+    void shouldCancelTheSessionKeepingTheSetsAlreadyRecorded() {
+        // Arrange: una serie realizada (80 kg × 5 = 400)
+        TrainingSession inProgress = inProgressSession();
+        PerformedSet done = new PerformedSet(inProgress, lower.getExercises().get(0), (short) 1);
+        done.markDone(new BigDecimal("80"), 5, null);
+        givenTheSessionLocked(inProgress);
+        givenTheSetsOfTheSession(List.of(done));
+
+        // Act
+        TrainingSessionResponse response = service(NOV_11_EVENING).cancel(ATHLETE_USER, ATHLETE_ID, SESSION_ID);
+
+        // Assert
+        assertEquals(SessionStatus.CANCELLED, inProgress.getStatus());
+        assertEquals(SessionStatus.CANCELLED, response.status());
+        assertEquals(NOV_11_EVENING, response.endedAt());
+        assertEquals(1, response.performedSets().size());
+        assertEquals(new TrainingSessionSummary(5, 1, 0, 4, new BigDecimal("400.00")), response.summary());
+    }
+
+    @Test
+    void shouldReturn404WhenClosingASessionThatIsNotOfTheAthlete() {
+        // Arrange: el bloqueo por id y atleta no encuentra nada
+        when(trainingSessionRepository.findByIdAndAthleteIdForUpdate(SESSION_ID, ATHLETE_ID))
+                .thenReturn(Optional.empty());
+
+        // Act + Assert: no se leen las series de una sesión que no es del atleta
+        TrainingSessionNotFoundException ex = assertThrows(TrainingSessionNotFoundException.class,
+                () -> service(NOV_11_EVENING).finish(ATHLETE_USER, ATHLETE_ID, SESSION_ID));
+        assertEquals("No existe la sesión de entrenamiento con id " + SESSION_ID, ex.getMessage());
+        verifyNoInteractions(performedSetRepository);
+    }
+
+    @Test
+    void shouldCheckTheAccessBeforeLockingTheSessionToClose() {
+        doThrow(new AthleteAccessDeniedException()).when(athleteAccessGuard).verifyAccess(COACH_USER, ATHLETE_ID);
+
+        assertThrows(AthleteAccessDeniedException.class,
+                () -> service(NOV_11_EVENING).finish(COACH_USER, ATHLETE_ID, SESSION_ID));
+        assertThrows(AthleteAccessDeniedException.class,
+                () -> service(NOV_11_EVENING).cancel(COACH_USER, ATHLETE_ID, SESSION_ID));
+        verifyNoInteractions(trainingSessionRepository);
+    }
+
+    @Test
+    void shouldReturn409AndKeepTheEndedSessionWhenClosingItAgain() {
+        // Arrange: ya finalizada el día anterior
+        TrainingSession ended = inProgressSession();
+        ended.finish(NOV_11_EVENING.minusSeconds(3600));
+        givenTheSessionLocked(ended);
+
+        // Act + Assert: ni finalizar ni cancelar; el estado y la hora de fin no cambian
+        assertThrows(TrainingSessionAlreadyEndedException.class,
+                () -> service(NOV_11_EVENING).finish(ATHLETE_USER, ATHLETE_ID, SESSION_ID));
+        assertThrows(TrainingSessionAlreadyEndedException.class,
+                () -> service(NOV_11_EVENING).cancel(ATHLETE_USER, ATHLETE_ID, SESSION_ID));
+        assertEquals(SessionStatus.FINISHED, ended.getStatus());
+        assertEquals(NOV_11_EVENING.minusSeconds(3600), ended.getEndedAt());
+    }
+
     // ---------- helpers ----------
 
     private TrainingSessionService service(Instant now) {
@@ -449,6 +535,20 @@ class TrainingSessionServiceTest {
     private void givenSaveAssignsTheId() {
         when(trainingSessionRepository.saveAndFlush(any(TrainingSession.class)))
                 .thenAnswer(invocation -> withId(invocation.<TrainingSession>getArgument(0), SESSION_ID));
+    }
+
+    // US-20: la sesión en progreso del día "Pierna", como la devuelve el bloqueo de la fila
+    private TrainingSession inProgressSession() {
+        return withId(session(assignment, lower, NOV_11), SESSION_ID);
+    }
+
+    private void givenTheSessionLocked(TrainingSession session) {
+        when(trainingSessionRepository.findByIdAndAthleteIdForUpdate(SESSION_ID, ATHLETE_ID))
+                .thenReturn(Optional.of(session));
+    }
+
+    private void givenTheSetsOfTheSession(List<PerformedSet> sets) {
+        when(performedSetRepository.findBySessionInOrder(SESSION_ID)).thenReturn(sets);
     }
 
     private TrainingSession captureSaved() {

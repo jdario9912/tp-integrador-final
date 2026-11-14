@@ -358,7 +358,7 @@ class PerformedSetE2ETest {
     @Test
     void shouldReturn409WhenTheSessionIsNoLongerInProgress() {
         // CE-2: la sesión terminó (la finalización es de US-20; acá se simula en la base)
-        jdbcTemplate.update("update training_sessions set status_id = 2 where id = ?", sessionId);
+        jdbcTemplate.update("update training_sessions set status_id = 2, ended_at = started_at where id = ?", sessionId);
 
         ResponseEntity<String> response = put(pressId, 1, done("60", 8, null), ATHLETE_EMAIL);
 
@@ -369,7 +369,7 @@ class PerformedSetE2ETest {
 
     @Test
     void shouldAnswer409BeforeTheExerciseAndSetChecksWhenTheSessionIsClosed() {
-        jdbcTemplate.update("update training_sessions set status_id = 3 where id = ?", sessionId);
+        jdbcTemplate.update("update training_sessions set status_id = 3, ended_at = started_at where id = ?", sessionId);
 
         // Un ejercicio de otro día y una serie fuera de rango: con la sesión cerrada, el 409 gana
         ResponseEntity<String> response = put(squatId, 9, done("60", 8, null), ATHLETE_EMAIL);

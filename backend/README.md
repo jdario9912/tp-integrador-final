@@ -174,6 +174,16 @@ Series registradas en vivo (US-19): con su sesión en progreso, el atleta regist
 - Quitar de la rutina un ejercicio con series registradas responde 422 (`JpaPerformedSetChecker` sobre `performed_sets`, que reemplaza al provisorio de US-14). Bajar `sets` no se bloquea: las series que quedan por encima se siguen devolviendo.
 - Migración `V11`: catálogo `set_statuses` (`DONE`, `SKIPPED`) y tabla `performed_sets`, con una sola serie por sesión, ejercicio y número.
 
+Finalizar o cancelar entrenamiento (US-20): con la sesión en progreso, el atleta la cierra. Finalizarla la deja `FINISHED` y cancelarla, `CANCELLED`; él y su entrenador la consultan después, de solo lectura.
+- `POST /api/athletes/{athleteId}/sessions/{sessionId}/finish` y `POST .../cancel` no llevan body. Responden 200 con la sesión cerrada: `status`, `endedAt` (la hora de fin, en UTC, la pone el backend) y `summary`.
+- `summary` resume lo prescrito contra lo registrado: `prescribedSets` (suma de las series del día), `doneSets` (realizadas), `skippedSets` (omitidas), `pendingSets` (sin registrar) y `volumeKg` (Σ peso × repeticiones de las realizadas, con dos decimales). Se calcula de las series, sin columnas nuevas. `endedAt` es `null` y el resumen sale parcial mientras la sesión está en progreso.
+- Finalizar sin series cumplidas se permite (200, resumen en cero): la confirmación la pide el frontend, que ofrece cancelar.
+- Solo el atleta dueño cierra su sesión: el entrenador recibe 403 aunque el atleta sea suyo; otro atleta, 403; una sesión inexistente o de otro atleta, 404. Sin token, 401.
+- Una sesión ya finalizada o cancelada no se vuelve a cerrar: 409. Después de cerrarla, las series responden 409 y se puede iniciar otra sesión.
+- Orden: 401 → 403 (rol) → 400 (ruta) → atleta 404 / pertenencia 403 → sesión 404 → 409 → 200.
+- Migración `V14`: columna `ended_at` y la restricción `ck_training_sessions_ended_at`, que exige hora de fin solo en las sesiones finalizadas o canceladas.
+- Contrato completo: `docs/contracts/24-us-20.md` (se integra en `api-contract.md` al mergear).
+
 Registros de peso (US-26): el atleta registra y corrige su peso; él y su entrenador lo consultan. Los registros no se borran: uno equivocado se corrige con `PUT`.
 - `POST /api/athletes/{athleteId}/weights` registra el peso de un día (201, sin header `Location`): `date` (`YYYY-MM-DD`, no futura) y `weightKg` (de 20 a 300, hasta 2 decimales) obligatorios; `comment` opcional (máximo 500 caracteres; se recorta y, vacío, queda en null). Solo el propio atleta: el entrenador recibe 403 aunque el atleta sea suyo. Hay un registro por día: si la fecha ya tiene uno → 409 "Ya existe un registro de peso para el DD/MM/AAAA".
 - `PUT /api/athletes/{athleteId}/weights/{weightId}` lo corrige (edición completa: el comentario que no se envía queda en null). Mover el registro a una fecha que ya tiene otro → 409. Un registro de otro atleta responde 404, igual que uno inexistente.

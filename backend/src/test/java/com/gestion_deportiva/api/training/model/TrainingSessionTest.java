@@ -5,6 +5,7 @@ import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.coach.model.Coach;
 import com.gestion_deportiva.api.routine.model.Routine;
 import com.gestion_deportiva.api.routine.model.RoutineDay;
+import com.gestion_deportiva.api.training.exception.TrainingSessionAlreadyEndedException;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -18,6 +19,7 @@ import static com.gestion_deportiva.api.support.IdentityFixtures.athlete;
 import static com.gestion_deportiva.api.support.IdentityFixtures.coach;
 import static com.gestion_deportiva.api.support.RoutineFixtures.routine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -90,5 +92,96 @@ class TrainingSessionTest {
         ReflectionTestUtils.setField(second, "id", id);
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
+    }
+
+    // ---------- US-20 · finalizar y cancelar (contrato 14.3) ----------
+
+    private static final Instant ENDED_AT = Instant.parse("2026-11-11T23:02:47Z");
+
+    private TrainingSession inProgress() {
+        return TrainingSession.start(active, upper, STARTED_AT, NOV_11);
+    }
+
+    @Test
+    void shouldStartWithoutEndTime() {
+        assertNull(inProgress().getEndedAt());
+    }
+
+    @Test
+    void shouldFinishWithTheEndInstant() {
+        // Arrange
+        TrainingSession session = inProgress();
+
+        // Act
+        session.finish(ENDED_AT);
+
+        // Assert
+        assertEquals(SessionStatus.FINISHED, session.getStatus());
+        assertEquals(ENDED_AT, session.getEndedAt());
+        assertFalse(session.isInProgress());
+    }
+
+    @Test
+    void shouldTruncateTheEndInstantToMicrosecondsLikeTheDatabase() {
+        // Arrange
+        TrainingSession session = inProgress();
+
+        // Act
+        session.finish(ENDED_AT.plusNanos(123_456_789));
+
+        // Assert
+        assertEquals(ENDED_AT.plusNanos(123_456_000), session.getEndedAt());
+    }
+
+    @Test
+    void shouldCancelWithTheEndInstant() {
+        // Arrange
+        TrainingSession session = inProgress();
+
+        // Act
+        session.cancel(ENDED_AT);
+
+        // Assert
+        assertEquals(SessionStatus.CANCELLED, session.getStatus());
+        assertEquals(ENDED_AT, session.getEndedAt());
+        assertFalse(session.isInProgress());
+    }
+
+    @Test
+    void shouldNotFinishAFinishedSessionAgain() {
+        // Arrange
+        TrainingSession session = inProgress();
+        session.finish(ENDED_AT);
+
+        // Act + Assert: ni finalizar ni cancelar; el estado y la hora de fin no cambian
+        assertThrows(TrainingSessionAlreadyEndedException.class, () -> session.finish(ENDED_AT.plusSeconds(60)));
+        assertThrows(TrainingSessionAlreadyEndedException.class, () -> session.cancel(ENDED_AT.plusSeconds(60)));
+        assertEquals(SessionStatus.FINISHED, session.getStatus());
+        assertEquals(ENDED_AT, session.getEndedAt());
+    }
+
+    @Test
+    void shouldNotCloseACancelledSessionAgain() {
+        // Arrange
+        TrainingSession session = inProgress();
+        session.cancel(ENDED_AT);
+
+        // Act + Assert
+        assertThrows(TrainingSessionAlreadyEndedException.class, () -> session.finish(ENDED_AT.plusSeconds(60)));
+        assertThrows(TrainingSessionAlreadyEndedException.class, () -> session.cancel(ENDED_AT.plusSeconds(60)));
+        assertEquals(SessionStatus.CANCELLED, session.getStatus());
+        assertEquals(ENDED_AT, session.getEndedAt());
+    }
+
+    @Test
+    void shouldRejectAMissingEndInstantAndStayInProgress() {
+        // Arrange
+        TrainingSession session = inProgress();
+
+        // Act + Assert
+        assertThrows(NullPointerException.class, () -> session.finish(null));
+        assertThrows(NullPointerException.class, () -> session.cancel(null));
+        assertTrue(session.isInProgress());
+        assertNull(session.getEndedAt());
     }
 }

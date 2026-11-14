@@ -70,4 +70,32 @@ public class TrainingSessionController {
                                             @PathVariable UUID sessionId) {
         return trainingSessionService.findById(AuthenticatedUser.from(jwt), athleteId, sessionId);
     }
+
+    // US-20 · Finaliza la sesión en progreso (contrato 14.6): 200 con la sesión cerrada (FINISHED, endedAt y summary).
+    // Sin body: la hora de fin la pone el backend. 409 si ya estaba finalizada o cancelada
+    @PostMapping("/{sessionId}/finish")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Sesión finalizada con su resumen"),
+            @ApiResponse(responseCode = "403", description = "Solo el atleta dueño puede finalizar la sesión"),
+            @ApiResponse(responseCode = "404", description = "La sesión no existe o es de otro atleta"),
+            @ApiResponse(responseCode = "409", description = "La sesión ya está finalizada o cancelada")
+    })
+    public TrainingSessionResponse finish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
+                                          @PathVariable UUID sessionId) {
+        return trainingSessionService.finish(AuthenticatedUser.from(jwt), athleteId, sessionId);
+    }
+
+    // US-20 · Cancela la sesión en progreso (contrato 14.6): 200 con la sesión CANCELLED. Las series registradas se
+    // conservan. 409 si ya estaba finalizada o cancelada
+    @PostMapping("/{sessionId}/cancel")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Sesión cancelada con su resumen"),
+            @ApiResponse(responseCode = "403", description = "Solo el atleta dueño puede cancelar la sesión"),
+            @ApiResponse(responseCode = "404", description = "La sesión no existe o es de otro atleta"),
+            @ApiResponse(responseCode = "409", description = "La sesión ya está finalizada o cancelada")
+    })
+    public TrainingSessionResponse cancel(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
+                                          @PathVariable UUID sessionId) {
+        return trainingSessionService.cancel(AuthenticatedUser.from(jwt), athleteId, sessionId);
+    }
 }

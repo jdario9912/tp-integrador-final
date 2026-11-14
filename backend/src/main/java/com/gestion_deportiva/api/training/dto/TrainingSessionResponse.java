@@ -18,13 +18,17 @@ public record TrainingSessionResponse(
         // Fecha de startedAt en la zona de la app
         LocalDate sessionDate,
         Instant startedAt,
+        // US-20 (contrato 14.2): hora de fin, null mientras la sesión está en progreso
+        Instant endedAt,
         UUID assignmentId,
         UUID routineId,
         String routineName,
         // El día entrenado con sus ejercicios planificados: el mismo objeto de US-14/US-17
         RoutineDayResponse day,
         // Series registradas en vivo (US-19, contrato 11.7): solo las registradas, sin las pendientes
-        List<PerformedSetResponse> performedSets
+        List<PerformedSetResponse> performedSets,
+        // US-20 (contrato 14.2): resumen de lo prescrito y lo registrado. Siempre presente
+        TrainingSessionSummary summary
 ) {
 
     // La sesión tiene que traer cargados la asignación con su rutina y el día con sus ejercicios
@@ -36,10 +40,12 @@ public record TrainingSessionResponse(
                 session.getStatus(),
                 session.getSessionDate(),
                 session.getStartedAt(),
+                session.getEndedAt(),
                 session.getAssignment().getId(),
                 session.getAssignment().getRoutine().getId(),
                 session.getAssignment().getRoutine().getName(),
                 RoutineDayResponse.from(session.getRoutineDay()),
-                performedSets.stream().map(PerformedSetResponse::from).toList());
+                performedSets.stream().map(PerformedSetResponse::from).toList(),
+                TrainingSessionSummary.from(session, performedSets));
     }
 }

@@ -25,6 +25,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +41,7 @@ import static com.gestion_deportiva.api.support.TrainingSessionFixtures.middayIn
 import static com.gestion_deportiva.api.support.TrainingSessionFixtures.session;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -134,9 +136,9 @@ class TrainingSessionRepositoryTest extends AbstractIntegrationTest {
 
     @Test
     void shouldAllowANewSessionInProgressOnceThePreviousOneIsNoLongerInProgress() {
-        // Arrange: US-18 no finaliza sesiones (US-20); se simula cambiando el estado en la base
+        // Arrange: se finaliza en la base (el cierre real es US-20; V14 exige la hora de fin)
         TrainingSession finished = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
-        jdbcTemplate.update("update training_sessions set status_id = ? where id = ?",
+        jdbcTemplate.update("update training_sessions set status_id = ?, ended_at = started_at where id = ?",
                 SessionStatus.FINISHED.getId(), finished.getId());
 
         // Act
@@ -255,7 +257,7 @@ class TrainingSessionRepositoryTest extends AbstractIntegrationTest {
     void shouldFindOnlyTheSessionInProgressOfTheAthlete() {
         // Arrange: Leo tiene una que ya no está en progreso y otra en progreso; Mía, ninguna
         TrainingSession finished = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
-        jdbcTemplate.update("update training_sessions set status_id = ? where id = ?",
+        jdbcTemplate.update("update training_sessions set status_id = ?, ended_at = started_at where id = ?",
                 SessionStatus.FINISHED.getId(), finished.getId());
         TrainingSession inProgress = trainingSessionRepository.saveAndFlush(session(leoAssignment, lower, NOV_11));
         entityManager.clear();
@@ -272,6 +274,55 @@ class TrainingSessionRepositoryTest extends AbstractIntegrationTest {
         assertTrue(trainingSessionRepository
                 .findDetailByAthleteIdAndStatus(miaAssignment.getAthlete().getId(), SessionStatus.IN_PROGRESS)
                 .isEmpty());
+    }
+
+    // ---------- US-20 · hora de fin (V14) ----------
+
+    @Test
+    void shouldPersistTheEndInstantOfAFinishedSession() {
+        // Arrange
+        TrainingSession session = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
+        Instant endedAt = middayInArgentina(NOV_11).plusSeconds(2700);
+        session.finish(endedAt);
+        trainingSessionRepository.saveAndFlush(session);
+        entityManager.clear();
+
+        // Act
+        TrainingSession found = trainingSessionRepository.findById(session.getId()).orElseThrow();
+
+        // Assert
+        assertEquals(SessionStatus.FINISHED, found.getStatus());
+        assertEquals(endedAt, found.getEndedAt());
+    }
+
+    @Test
+    void shouldKeepNoEndInstantWhileInProgress() {
+        TrainingSession session = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
+        entityManager.clear();
+
+        assertNull(trainingSessionRepository.findById(session.getId()).orElseThrow().getEndedAt());
+    }
+
+    @Test
+    void shouldRejectAnInProgressSessionWithAnEndTime() {
+        // Arrange
+        TrainingSession session = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
+
+        // Act + Assert: ck_training_sessions_ended_at (status_id = 1 exige ended_at nulo)
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("update training_sessions set ended_at = started_at where id = ?",
+                        session.getId()));
+    }
+
+    @Test
+    void shouldRejectACancelledSessionWithoutEndTime() {
+        // Arrange
+        TrainingSession session = trainingSessionRepository.saveAndFlush(session(leoAssignment, upper, NOV_11));
+
+        // Act + Assert: una sesión cancelada siempre tiene hora de fin
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("update training_sessions set status_id = ? where id = ?",
+                        SessionStatus.CANCELLED.getId(), session.getId()));
     }
 
     private static List<String> exerciseNames(RoutineDay day) {

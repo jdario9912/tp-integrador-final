@@ -140,6 +140,21 @@ class OpenApiE2ETest {
         assertTrue(put.get("responses").has("400"));
     }
 
+    // US-20 · finalizar y cancelar: los dos POST sin body documentan su 200 y su 409 (@ApiResponses del controller)
+    @Test
+    void shouldDocumentTheFinishAndCancelEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        for (String action : new String[] {"finish", "cancel"}) {
+            JsonNode responses = paths.get("/api/athletes/{athleteId}/sessions/{sessionId}/" + action)
+                    .get("post").get("responses");
+            assertTrue(responses.has("200"), action);
+            assertTrue(responses.has("409"), action);
+        }
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)
