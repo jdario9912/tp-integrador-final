@@ -17,6 +17,9 @@ import { TrainingSessionSkeleton } from './components/TrainingSessionSkeleton'
 import { TrainingSessionSummary } from './components/TrainingSessionSummary'
 import { TrainingSessionUnavailable } from './components/TrainingSessionUnavailable'
 import { ExerciseSets } from './components/ExerciseSets'
+// US-20: finalizar y cancelar, y el resumen de la sesión finalizada
+import { TrainingSessionActions } from './components/TrainingSessionActions'
+import { TrainingSessionResult } from './components/TrainingSessionResult'
 import { sessionTitle } from './training-session-format'
 
 // pantalla del entrenamiento (US-18), solo del atleta: el día que inició o retomó desde Mi rutina,
@@ -75,10 +78,18 @@ export function TrainingSessionPage() {
             curso.
           </Callout>
         )}
+        {session.status === 'FINISHED' && (
+          <TrainingSessionResult session={session} />
+        )}
         <DayWorkout
           day={session.day}
           isNext={false}
           muscleGroups={muscleGroups}
+          action={
+            editable ? (
+              <TrainingSessionActions athleteId={athleteId} session={session} />
+            ) : undefined
+          }
           renderExerciseFooter={(exercise) => (
             <ExerciseSets
               athleteId={athleteId}

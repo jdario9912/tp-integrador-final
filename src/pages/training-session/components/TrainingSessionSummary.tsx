@@ -1,6 +1,6 @@
 import type { TrainingSession } from '../../../lib/training-sessions'
 import { Clock } from '../../../ui/icons'
-import { formatStartedAt } from '../training-session-format'
+import { formatEndedAt, formatStartedAt } from '../training-session-format'
 
 type TrainingSessionSummaryProps = {
   session: TrainingSession
@@ -8,11 +8,13 @@ type TrainingSessionSummaryProps = {
   today: string
 }
 
-// debajo del título, como el resumen de Mi rutina: qué rutina es y cuándo empezó
+// debajo del título, como el resumen de Mi rutina: qué rutina es, cuándo empezó y, si ya cerró,
+// cuándo terminó o se canceló (US-20)
 export function TrainingSessionSummary({
   session,
   today,
 }: TrainingSessionSummaryProps) {
+  const endedText = formatEndedAt(session)
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-foreground text-lg font-semibold break-words">
@@ -22,6 +24,7 @@ export function TrainingSessionSummary({
         <Clock aria-hidden="true" />
         {formatStartedAt(session, today)}
       </p>
+      {endedText && <p className="text-sm">{endedText}</p>}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { formatIsoDate } from '../../lib/iso-date'
 import {
+  appDateOf,
   formatStartTime,
   type SessionStatus,
   type TrainingSession,
@@ -28,4 +29,20 @@ export const formatStartedAt = (
   return sessionDate === today
     ? `Empezaste hoy a las ${time}`
     : `Empezaste el ${formatIsoDate(sessionDate)} a las ${time}`
+}
+
+// "Terminaste a las 20:05" o "Cancelaste a las 20:05". Con la fecha si terminó otro día que el de
+// inicio. Sin hora de fin (en curso), no hay nada que decir
+export const formatEndedAt = ({
+  status,
+  sessionDate,
+  endedAt,
+}: Pick<TrainingSession, 'status' | 'sessionDate' | 'endedAt'>) => {
+  if (!endedAt) return null
+  const verb = status === 'CANCELLED' ? 'Cancelaste' : 'Terminaste'
+  const time = formatStartTime(endedAt)
+  const day = appDateOf(endedAt)
+  return day === sessionDate
+    ? `${verb} a las ${time}`
+    : `${verb} el ${formatIsoDate(day)} a las ${time}`
 }

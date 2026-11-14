@@ -82,6 +82,18 @@ const sessionJson = (status: Status, performedSets: RecordedSet[]) => ({
   routineName: 'Fuerza 2 días',
   day: torso,
   performedSets,
+  // US-20: sin hora de fin mientras está en curso; el resumen cuenta las series del día (7 en total)
+  endedAt: status === 'FINISHED' ? '2026-11-11T23:20:00Z' : null,
+  summary: {
+    prescribedSets: 7,
+    doneSets: performedSets.filter((set) => set.status === 'DONE').length,
+    skippedSets: performedSets.filter((set) => set.status === 'SKIPPED').length,
+    pendingSets: 7 - performedSets.length,
+    volumeKg: performedSets.reduce(
+      (total, set) => total + (set.weight ?? 0) * (set.reps ?? 0),
+      0,
+    ),
+  },
 })
 
 // backend de las series en memoria: cada PUT reemplaza la serie (contrato 11.2) y devuelve la

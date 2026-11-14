@@ -1,7 +1,7 @@
 import type { RoutineDay } from '../routines'
 
-// catálogo session_statuses (contrato de API, 10.6). En US-18 toda sesión está IN_PROGRESS;
-// FINISHED y CANCELLED los usa US-20 (finalizar o cancelar)
+// catálogo session_statuses (contrato de API, 10.6). Finalizar pasa a FINISHED y cancelar a
+// CANCELLED (US-20); los dos estados finales no cambian más
 export type SessionStatus = 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED'
 
 // TrainingSessionResponse: la misma forma en el POST, en la sesión en progreso y en el detalle (10.2)
@@ -21,6 +21,21 @@ export type TrainingSession = {
   day: RoutineDay
   // series ya registradas (US-19). Lo que no está acá sigue pendiente: no hay estado PENDING
   performedSets: PerformedSet[]
+  // hora de fin, ISO-8601 en UTC (US-20). null mientras la sesión está en curso
+  endedAt: string | null
+  // resumen de las series del día (US-20). Va también en curso: la confirmación de finalizar lo usa
+  summary: TrainingSessionSummary
+}
+
+// resumen de la sesión (US-20). Pendientes = prescritas sin registrar; el volumen suma peso ×
+// repeticiones de las series hechas
+export type TrainingSessionSummary = {
+  prescribedSets: number
+  doneSets: number
+  skippedSets: number
+  pendingSets: number
+  // kg, con hasta 2 decimales
+  volumeKg: number
 }
 
 // body de POST /athletes/{athleteId}/sessions: la fecha y la hora las pone el backend

@@ -113,6 +113,15 @@ const startedSession = (overrides: Record<string, unknown> = {}) => ({
   day: torso,
   // sin series registradas (contrato 11.4)
   performedSets: [],
+  // en curso: sin hora de fin; el día tiene 4 + 3 series prescritas (US-20)
+  endedAt: null,
+  summary: {
+    prescribedSets: 7,
+    doneSets: 0,
+    skippedSets: 0,
+    pendingSets: 7,
+    volumeKg: 0,
+  },
   ...overrides,
 })
 
