@@ -9,12 +9,19 @@ import { createWeight } from '../../lib/weights/create-weight'
 import { getWeights } from '../../lib/weights/get-weights'
 import { updateWeight } from '../../lib/weights/update-weight'
 import { session } from '../../test/auth-fixtures'
+import { progressPhotosPage } from '../../test/progress-photo-fixtures'
 import { weightRecord, weightsPage } from '../../test/weight-fixtures'
+import { getProgressPhotos } from '../../lib/progress-photos/get-progress-photos'
 import { ProgressPage } from './ProgressPage'
 
 vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
 vi.mock('../../lib/weights/create-weight', () => ({ createWeight: vi.fn() }))
 vi.mock('../../lib/weights/update-weight', () => ({ updateWeight: vi.fn() }))
+// US-28: la sección de fotos pide sus datos aparte; en estas pruebas arranca sin fotos
+vi.mock('../../lib/progress-photos/get-progress-photos', () => ({
+  getProgressPhotos: vi.fn(),
+  getProgressPhoto: vi.fn(),
+}))
 
 const ATHLETE_ID = session('ATHLETE').user.id
 
@@ -62,6 +69,8 @@ const entryHeading = (name: string) =>
   screen.getByRole('heading', { name, level: 2 })
 
 beforeEach(() => {
+  vi.mocked(getProgressPhotos).mockReset()
+  vi.mocked(getProgressPhotos).mockResolvedValue(progressPhotosPage([]))
   vi.mocked(getWeights).mockReset()
   vi.mocked(createWeight).mockReset()
   vi.mocked(updateWeight).mockReset()

@@ -10,6 +10,7 @@ import {
 } from '../../lib/weights'
 import { Pencil, Scale } from '../../ui/icons'
 import { LatestWeightsCard } from './components/LatestWeightsCard'
+import { ProgressPhotosCard } from './components/ProgressPhotosCard'
 import { WeightConflictNotice } from './components/WeightConflictNotice'
 import { WeightEntryCard } from './components/WeightEntryCard'
 import { WeightForm } from './components/WeightForm'
@@ -99,7 +100,7 @@ export function ProgressPage() {
     <div className="flex flex-col gap-6 [&_*]:scroll-mt-24">
       <PageHeader
         title="Progreso"
-        description="Registrá tu peso corporal y revisá tus últimos registros."
+        description="Registrá tu peso y tus fotos, y revisá tu evolución."
       />
       {/* mobile-first: primero el formulario; desde xl, formulario a la izquierda y lista a la derecha */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
@@ -149,6 +150,9 @@ export function ProgressPage() {
           onEdit={startEdit}
         />
       </div>
+
+      {/* US-28: fotos de progreso debajo de los pesos (sección propia, con su tarjeta) */}
+      <ProgressPhotosCard athleteId={athleteId} today={today} />
     </div>
   )
 }

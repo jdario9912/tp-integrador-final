@@ -6,7 +6,16 @@ import {
 } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api-error'
-import { del, get, getOptional, httpClient, patch, post, put } from './client'
+import {
+  del,
+  get,
+  getOptional,
+  httpClient,
+  patch,
+  post,
+  postForm,
+  put,
+} from './client'
 
 const adapter = vi.fn<AxiosAdapter>()
 
@@ -144,6 +153,49 @@ describe('rest client', () => {
     await expect(get('/coaches')).rejects.toMatchObject({
       name: 'ApiError',
       status: 0,
+    })
+  })
+})
+
+// US-28: envío de archivos
+describe('postForm', () => {
+  it('envía el FormData sin el Content-Type JSON y devuelve el body', async () => {
+    respondWith(201, { id: 'foto-1' })
+    const form = new FormData()
+    form.append('type', 'FRONT')
+
+    await expect(postForm('/athletes/1/photos', form)).resolves.toEqual({
+      id: 'foto-1',
+    })
+
+    const request = lastRequest()
+    expect(request).toMatchObject({ method: 'post', url: '/athletes/1/photos' })
+    expect(request.data).toBe(form)
+    // el navegador pone multipart/form-data con su boundary: no se fija a mano
+    expect(request.headers.get('Content-Type')).toBeFalsy()
+  })
+
+  it('no cambia el Content-Type de los POST JSON', async () => {
+    respondWith(201, { id: '1' })
+    await post('/coaches', { name: 'Ana' })
+    expect(lastRequest().headers.get('Content-Type')).toBe('application/json')
+  })
+
+  it('convierte el error de un archivo rechazado en ApiError', async () => {
+    respondWith(415, {
+      timestamp: '2026-11-13T20:00:00Z',
+      status: 415,
+      error: 'Unsupported Media Type',
+      message: 'Formato no permitido. Subí una foto en JPG, PNG o WebP',
+      path: '/api/athletes/1/photos',
+    })
+
+    await expect(
+      postForm('/athletes/1/photos', new FormData()),
+    ).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 415,
+      message: 'Formato no permitido. Subí una foto en JPG, PNG o WebP',
     })
   })
 })
