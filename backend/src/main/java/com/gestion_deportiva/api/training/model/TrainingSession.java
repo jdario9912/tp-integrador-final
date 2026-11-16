@@ -4,6 +4,7 @@ import com.gestion_deportiva.api.assignment.model.RoutineAssignment;
 import com.gestion_deportiva.api.athlete.model.Athlete;
 import com.gestion_deportiva.api.routine.model.RoutineDay;
 import com.gestion_deportiva.api.training.exception.TrainingSessionAlreadyEndedException;
+import com.gestion_deportiva.api.training.exception.TrainingSessionNotReviewableException;
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -68,6 +69,14 @@ public class TrainingSession {
     @Column(name = "ended_at")
     private Instant endedAt;
 
+    // US-21: última revisión del entrenador. null si nunca revisó la sesión; solo se revisan las FINISHED (V15)
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    // US-21: observación del entrenador (opcional, hasta 1000 caracteres). Revisar de nuevo la reemplaza (V15)
+    @Column(name = "coach_observation", length = 1000)
+    private String coachObservation;
+
     private TrainingSession(RoutineAssignment assignment, RoutineDay routineDay, Instant startedAt,
                             LocalDate sessionDate) {
         this.athlete = assignment.getAthlete();
@@ -116,6 +125,23 @@ public class TrainingSession {
 
     public boolean isInProgress() {
         return status == SessionStatus.IN_PROGRESS;
+    }
+
+    // US-21 · El entrenador revisa la sesión finalizada (contrato 15.4). Solo FINISHED: en progreso o cancelada es
+    // una regla de negocio (422) y no cambia nada. Revisar de nuevo reemplaza la observación y el instante, sin
+    // duplicar nada. La observación llega ya recortada por el request (null si estaba vacía)
+    public void review(Instant reviewedAt, String observation) {
+        Objects.requireNonNull(reviewedAt, "reviewedAt");
+        if (status != SessionStatus.FINISHED) {
+            throw new TrainingSessionNotReviewableException();
+        }
+        // A microsegundos, igual que endedAt: la respuesta y una lectura posterior coinciden
+        this.reviewedAt = reviewedAt.truncatedTo(ChronoUnit.MICROS);
+        this.coachObservation = observation;
+    }
+
+    public boolean isReviewed() {
+        return reviewedAt != null;
     }
 
     // equals/hashCode por id: patrón seguro para entidades JPA (no usar @Data)

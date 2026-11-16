@@ -160,7 +160,15 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/sessions/{sessionId}/finish", UNAUTHORIZED, FORBIDDEN,
                     ALLOWED),
             new Row(HttpMethod.POST, "/api/athletes/{athleteId}/sessions/{sessionId}/cancel", UNAUTHORIZED, FORBIDDEN,
-                    ALLOWED));
+                    ALLOWED),
+            // US-21 · historial de sesiones cerradas: lo leen los dos roles ({athleteId} es el del entrenador, así que
+            // pasa la autorización). La pertenencia y el filtro se prueban en TrainingSessionHistoryE2ETest
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/sessions", UNAUTHORIZED, ALLOWED, ALLOWED),
+            // US-21 · revisión de la sesión: solo el entrenador (el atleta recibe 403 aunque la sesión sea suya; con
+            // "{}" el body es válido y {sessionId} no existe: 404). La pertenencia se prueba en
+            // TrainingSessionReviewE2ETest
+            new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/sessions/{sessionId}/review", UNAUTHORIZED, ALLOWED,
+                    FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";

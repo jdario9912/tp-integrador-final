@@ -28,7 +28,9 @@ public record TrainingSessionResponse(
         // Series registradas en vivo (US-19, contrato 11.7): solo las registradas, sin las pendientes
         List<PerformedSetResponse> performedSets,
         // US-20 (contrato 14.2): resumen de lo prescrito y lo registrado. Siempre presente
-        TrainingSessionSummary summary
+        TrainingSessionSummary summary,
+        // US-21 (contrato 15.5): revisión del entrenador; null si la sesión no está revisada
+        TrainingSessionReviewResponse review
 ) {
 
     // La sesión tiene que traer cargados la asignación con su rutina y el día con sus ejercicios
@@ -46,6 +48,7 @@ public record TrainingSessionResponse(
                 session.getAssignment().getRoutine().getName(),
                 RoutineDayResponse.from(session.getRoutineDay()),
                 performedSets.stream().map(PerformedSetResponse::from).toList(),
-                TrainingSessionSummary.from(session, performedSets));
+                TrainingSessionSummary.from(session, performedSets),
+                TrainingSessionReviewResponse.of(session));
     }
 }

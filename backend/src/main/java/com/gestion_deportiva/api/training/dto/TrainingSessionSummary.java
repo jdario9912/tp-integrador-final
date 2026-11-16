@@ -32,8 +32,16 @@ public record TrainingSessionSummary(
                 .sum();
         int done = countWithStatus(performedSets, SetStatus.DONE);
         int skipped = countWithStatus(performedSets, SetStatus.SKIPPED);
+        return of(prescribed, done, skipped, volumeOf(performedSets));
+    }
+
+    // US-21 · El resumen a partir de los números ya contados (la página del historial los trae de una consulta
+    // agregada, contrato 15.3). Las reglas son las mismas que en from: pendientes nunca negativos y volumen con dos
+    // decimales
+    public static TrainingSessionSummary of(int prescribed, int done, int skipped, BigDecimal volumeKg) {
         int pending = Math.max(0, prescribed - done - skipped);
-        return new TrainingSessionSummary(prescribed, done, skipped, pending, volumeOf(performedSets));
+        return new TrainingSessionSummary(prescribed, done, skipped, pending,
+                volumeKg.setScale(VOLUME_SCALE, RoundingMode.HALF_UP));
     }
 
     private static int countWithStatus(List<PerformedSet> performedSets, SetStatus status) {
