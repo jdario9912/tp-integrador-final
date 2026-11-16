@@ -155,6 +155,27 @@ class OpenApiE2ETest {
         }
     }
 
+    // US-21 · el historial documenta sus filtros y su paginación como query params; la revisión documenta sus errores
+    // y el 422 (@ApiResponses del controller)
+    @Test
+    void shouldDocumentTheTrainingSessionHistoryAndReviewEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert: el listado con sus query params y el 200
+        JsonNode history = paths.get("/api/athletes/{athleteId}/sessions").get("get");
+        assertTrue(history.get("parameters").toString().contains("\"from\""));
+        assertTrue(history.get("parameters").toString().contains("\"to\""));
+        assertTrue(history.get("parameters").toString().contains("\"page\""));
+        assertTrue(history.get("responses").has("200"));
+
+        // Assert: la revisión documenta su 200, el 400 del body, el 403 y el 404, y el 422 de estado
+        JsonNode review = paths.get("/api/athletes/{athleteId}/sessions/{sessionId}/review").get("put").get("responses");
+        for (String status : new String[] {"200", "400", "403", "404", "422"}) {
+            assertTrue(review.has(status), status);
+        }
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)

@@ -76,6 +76,8 @@ public class SecurityConfig {
     // US-20 · finalizar y cancelar la sesión en progreso (contrato 14)
     static final String ATHLETE_SESSION_FINISH_PATH = ATHLETE_SESSION_PATH + "/finish";
     static final String ATHLETE_SESSION_CANCEL_PATH = ATHLETE_SESSION_PATH + "/cancel";
+    // US-21 · historial (ATHLETE_SESSIONS_PATH, de US-18) y revisión de la sesión (contrato 15)
+    static final String ATHLETE_SESSION_REVIEW_PATH = ATHLETE_SESSION_PATH + "/review";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -166,6 +168,13 @@ public class SecurityConfig {
                         // aunque el atleta sea suyo). Qué atleta puede usar cada uno lo decide TrainingSessionService
                         .requestMatchers(HttpMethod.POST, ATHLETE_SESSION_FINISH_PATH, ATHLETE_SESSION_CANCEL_PATH)
                                 .hasRole("ATHLETE")
+                        // US-21 · Historial de sesiones cerradas: lo leen los dos roles (el atleta, las suyas; el
+                        // entrenador, las de sus atletas). Qué atleta puede usar cada uno lo decide
+                        // TrainingSessionHistoryService
+                        .requestMatchers(HttpMethod.GET, ATHLETE_SESSIONS_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // US-21 · Revisión de una sesión finalizada: solo el entrenador (el atleta recibe 403 aunque la
+                        // sesión sea suya). Qué atleta puede usar cada uno lo decide TrainingSessionReviewService
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_SESSION_REVIEW_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )
