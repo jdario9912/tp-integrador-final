@@ -22,6 +22,7 @@ import { RegisterCoachPage } from '../pages/register-coach'
 import { RoutineDetailPage } from '../pages/routine-detail'
 import { RoutineStructurePage } from '../pages/routine-structure'
 import { RoutinesPage } from '../pages/routines'
+import { TrainingHistoryPage } from '../pages/training-history' // US-21
 import { TrainingSessionPage } from '../pages/training-session'
 import { paths } from './paths'
 import { RequireAuth } from './RequireAuth'
@@ -149,6 +150,12 @@ const router = createBrowserRouter([
                 path: paths.meals,
                 element: <MealsPage />,
                 handle: { title: 'Comidas' },
+              },
+              // US-21: historial de entrenamientos cerrados y la observación del entrenador
+              {
+                path: paths.trainingHistory,
+                element: <TrainingHistoryPage />,
+                handle: { title: 'Entrenamientos' },
               },
             ],
           },

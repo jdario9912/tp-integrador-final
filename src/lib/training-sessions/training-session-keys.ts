@@ -16,3 +16,16 @@ export const trainingSessionKey = (
   athleteId: string,
   sessionId: string,
 ) => [...athleteTrainingSessionsKey(userId, athleteId), 'detail', sessionId]
+
+// historial (US-21): todas las páginas y filtros cuelgan de este prefijo, así una revisión lo
+// invalida entero sin tocar el detalle ni la sesión en curso
+export const trainingHistoryKey = (
+  userId: string | undefined,
+  athleteId: string,
+) => [...athleteTrainingSessionsKey(userId, athleteId), 'history']
+
+export const trainingHistoryQueryKey = (
+  userId: string | undefined,
+  athleteId: string,
+  query: object,
+) => [...trainingHistoryKey(userId, athleteId), query]

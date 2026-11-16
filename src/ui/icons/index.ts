@@ -61,3 +61,5 @@ export {
 export { Check, SkipForward } from 'lucide-react'
 // US-23: registro de comidas
 export { Utensils } from 'lucide-react'
+// US-21: historial de entrenamientos (menú del atleta)
+export { ClipboardCheck } from 'lucide-react'

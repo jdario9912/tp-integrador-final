@@ -17,8 +17,8 @@ import { HealthTrainingSection } from './components/HealthTrainingSection'
 import { LatestWeightSection } from './components/LatestWeightSection'
 import { PersonalDataSection } from './components/PersonalDataSection'
 import { ProfileColumns } from './components/ProfileColumns'
-import { RecentSessionsSection } from './components/RecentSessionsSection'
 import { RoutineHistorySection } from './components/RoutineHistorySection'
+import { TrainingHistorySection } from './components/TrainingHistorySection' // US-21
 import { usePrefetchAssignments } from './hooks/use-active-assignment'
 import { usePrefetchLatestWeight } from './hooks/use-latest-weight'
 
@@ -107,6 +107,8 @@ export function AthleteProfilePage() {
             <HealthTrainingSection athlete={athlete} />
             {/* con key: al cambiar de atleta el historial vuelve a la primera página */}
             <RoutineHistorySection key={athlete.id} athleteId={athlete.id} />
+            {/* US-21: historial de entrenamientos y revisión; con key, cambiar de atleta lo reinicia */}
+            <TrainingHistorySection key={athlete.id} athleteId={athlete.id} />
           </>
         }
         aside={
@@ -120,7 +122,6 @@ export function AthleteProfilePage() {
               athleteId={athlete.id}
               athleteActive={athlete.active}
             />
-            <RecentSessionsSection />
           </>
         }
       />

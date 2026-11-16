@@ -3,6 +3,7 @@ import { paths } from '../router/paths'
 import {
   Apple,
   ChartLine,
+  ClipboardCheck, // US-21
   ClipboardList,
   Dumbbell,
   LayoutDashboard,
@@ -26,6 +27,12 @@ export const navItems: Record<Role, NavItem[]> = {
     { to: paths.dashboard, label: 'Panel', icon: LayoutDashboard },
     // mismo icono que Rutinas del entrenador: es la misma entidad vista por el atleta
     { to: paths.myRoutine, label: 'Mi rutina', icon: ClipboardList },
+    // US-21: historial de entrenamientos y revisiones del entrenador
+    {
+      to: paths.trainingHistory,
+      label: 'Entrenamientos',
+      icon: ClipboardCheck,
+    },
     { to: paths.progress, label: 'Progreso', icon: ChartLine },
     { to: paths.foods, label: 'Alimentos', icon: Apple },
     // US-23: registro de comidas del día
