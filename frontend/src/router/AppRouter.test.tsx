@@ -6,10 +6,15 @@ import { authResponse, session } from '../test/auth-fixtures'
 import { createdFood, foodsPage } from '../test/food-fixtures'
 import { SESSION_ID, trainingSession } from '../test/training-session-fixtures'
 import { weightsPage } from '../test/weight-fixtures'
+import { getTrainingHistory } from '../lib/training-sessions/get-training-history'
 import { foodEditPath, paths, trainingPath } from './paths'
 
 vi.mock('../lib/auth/get-current-user', () => ({ getCurrentUser: vi.fn() }))
 vi.mock('../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
+// historial de entrenamientos (US-21)
+vi.mock('../lib/training-sessions/get-training-history', () => ({
+  getTrainingHistory: vi.fn(),
+}))
 vi.mock('../lib/athlete-routine/get-athlete-routine', () => ({
   getAthleteRoutine: vi.fn(),
 }))
@@ -123,7 +128,8 @@ describe('AppRouter · Entrenamiento (US-18)', () => {
 
     const menu = await screen.findByRole('navigation', { name: 'Principal' })
     expect(
-      within(menu).queryByRole('link', { name: /Entrenamiento/ }),
+      // exacto: «Entrenamientos» (US-21) es otra entrada, la del historial
+      within(menu).queryByRole('link', { name: 'Entrenamiento' }),
     ).not.toBeInTheDocument()
     expect(
       within(menu).getByRole('link', { name: 'Mi rutina' }),
@@ -218,4 +224,26 @@ describe('AppRouter · Alimentos (US-39)', () => {
       expect(window.location.pathname).toBe(paths.dashboard)
     },
   )
+})
+
+describe('AppRouter · Entrenamientos (US-21)', () => {
+  it('el atleta entra a /training-history y la barra muestra "Entrenamientos"', async () => {
+    vi.mocked(getTrainingHistory).mockResolvedValue({
+      content: [],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+    })
+
+    await renderAppAt(paths.trainingHistory, 'ATHLETE')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Entrenamientos', level: 1 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'Ubicación' }),
+    ).toHaveTextContent('Entrenamientos')
+    expect(window.location.pathname).toBe(paths.trainingHistory)
+  })
 })

@@ -1,0 +1,1 @@
+export { TrainingHistoryPage } from './TrainingHistoryPage'

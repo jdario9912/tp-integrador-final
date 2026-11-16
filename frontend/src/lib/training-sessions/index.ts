@@ -18,9 +18,13 @@ export {
 export type {
   PerformedSet,
   PerformedSetInput,
+  SessionReview,
+  SessionReviewInput,
   SessionStatus,
   SetStatus,
   StartTrainingSessionInput,
+  TrainingHistoryItem,
+  TrainingHistoryQuery,
   TrainingSession,
   TrainingSessionSummary,
 } from './types'
@@ -35,3 +39,23 @@ export {
 } from './use-end-training-session'
 export { useStartTrainingSession } from './use-start-training-session'
 export { useTrainingSession } from './use-training-session'
+export {
+  formatCompletion,
+  formatDayLabel,
+  formatReviewedDate,
+  historyStatusLabels,
+} from './training-history-format'
+export {
+  REVIEW_OBSERVATION_MAX_LENGTH,
+  toObservationInput,
+  validateHistoryRange,
+  validateReviewObservation,
+} from './training-history-validation'
+export { getTrainingHistory } from './get-training-history'
+export { putSessionReview } from './put-session-review'
+export {
+  trainingHistoryKey,
+  trainingHistoryQueryKey,
+} from './training-session-keys'
+export { useSessionReview } from './use-session-review'
+export { useTrainingHistory } from './use-training-history'

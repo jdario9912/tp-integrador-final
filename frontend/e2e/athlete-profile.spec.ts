@@ -18,6 +18,8 @@ const ATHLETE_URL = /\/api\/athletes\/[^/?]+$/
 const WEIGHTS_URL = /\/api\/athletes\/[^/]+\/weights(\?.*)?$/
 // rutina activa e historial (US-16): se cubren en routine-assignment.spec; acá, sin asignaciones
 const ASSIGNMENTS_URL = /\/api\/athletes\/[^/]+\/assignments(\?.*)?$/
+// historial de entrenamientos (US-21): sin sesiones cerradas en esta ficha
+const SESSIONS_URL = /\/api\/athletes\/[^/]+\/sessions(\?.*)?$/
 
 // ejemplo de AthleteResponse del contrato de API, de la cartera del entrenador
 const leoJson = () => ({
@@ -108,6 +110,12 @@ const routeBackend = async (
       json: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
     }),
   )
+  await page.route(SESSIONS_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
+    }),
+  )
   await page.route(ATHLETES_URL, (route) => {
     const content = 'id' in detail ? [detail] : []
     return route.fulfill({
@@ -180,8 +188,8 @@ test.describe('como entrenador', () => {
     await expect(section(page, 'Rutina activa')).toContainText(
       'Sin rutina asignada',
     )
-    await expect(section(page, 'Últimas sesiones')).toContainText(
-      'Todavía no registró entrenamientos',
+    await expect(section(page, 'Entrenamientos')).toContainText(
+      'Todavía no hay entrenamientos cerrados',
     )
 
     expect(requests[0].headers().authorization).toBe('Bearer access-1')

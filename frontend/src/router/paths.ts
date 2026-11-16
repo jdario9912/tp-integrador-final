@@ -35,6 +35,8 @@ export const paths = {
   training: '/training/:sessionId',
   // US-23: solo atleta, registro de comidas del día
   meals: '/meals',
+  // US-21: solo atleta, historial de entrenamientos cerrados y la observación del entrenador
+  trainingHistory: '/training-history',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano

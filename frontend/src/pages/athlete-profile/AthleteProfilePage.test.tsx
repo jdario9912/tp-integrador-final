@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
 import type { Athlete } from '../../lib/athletes'
 import { getAssignments } from '../../lib/assignments/get-assignments'
+import { getTrainingHistory } from '../../lib/training-sessions/get-training-history'
 import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
@@ -23,6 +24,10 @@ vi.mock('../../lib/athletes/get-athlete', () => ({ getAthlete: vi.fn() }))
 vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
 vi.mock('../../lib/assignments/get-assignments', () => ({
   getAssignments: vi.fn(),
+}))
+// historial de entrenamientos (US-21): sin sesiones cerradas por defecto
+vi.mock('../../lib/training-sessions/get-training-history', () => ({
+  getTrainingHistory: vi.fn(),
 }))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
@@ -85,6 +90,14 @@ beforeEach(() => {
   vi.mocked(getAssignments).mockReset()
   // por defecto no tiene rutinas asignadas (US-16)
   vi.mocked(getAssignments).mockResolvedValue(assignmentsPage([]))
+  vi.mocked(getTrainingHistory).mockReset()
+  vi.mocked(getTrainingHistory).mockResolvedValue({
+    content: [],
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0,
+  })
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -273,8 +286,8 @@ describe('AthleteProfilePage', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      within(section('Últimas sesiones')).getByRole('heading', {
-        name: 'Todavía no registró entrenamientos',
+      within(section('Entrenamientos')).getByRole('heading', {
+        name: 'Todavía no hay entrenamientos cerrados',
       }),
     ).toBeInTheDocument()
   })

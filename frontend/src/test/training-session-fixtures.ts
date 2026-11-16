@@ -1,4 +1,7 @@
-import type { TrainingSession } from '../lib/training-sessions'
+import type {
+  TrainingHistoryItem,
+  TrainingSession,
+} from '../lib/training-sessions'
 import { torsoDay } from './athlete-routine-fixtures'
 
 export const SESSION_ID = '4f5a6b7c-8d9e-4f0a-8b1c-2d3e4f5a6b7c'
@@ -26,5 +29,31 @@ export const trainingSession = (
     pendingSets: 7,
     volumeKg: 0,
   },
+  // sin revisar (US-21): el entrenador revisa solo las sesiones finalizadas
+  review: null,
+  ...overrides,
+})
+
+// ítem del historial (US-21, contrato 25): una sesión finalizada de la rutina de prueba, con
+// 6 de 7 series hechas y 1 omitida. Sin revisar por defecto
+export const trainingHistoryItem = (
+  overrides: Partial<TrainingHistoryItem> = {},
+): TrainingHistoryItem => ({
+  id: SESSION_ID,
+  sessionDate: '2026-11-11',
+  status: 'FINISHED',
+  startedAt: '2026-11-11T22:15:03.512345Z',
+  routineName: 'Fuerza 2 días',
+  dayNumber: 1,
+  dayName: 'Torso',
+  endedAt: '2026-11-11T23:02:47.104812Z',
+  summary: {
+    prescribedSets: 7,
+    doneSets: 6,
+    skippedSets: 1,
+    pendingSets: 0,
+    volumeKg: 1000,
+  },
+  review: null,
   ...overrides,
 })

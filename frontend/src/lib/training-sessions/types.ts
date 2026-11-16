@@ -25,7 +25,46 @@ export type TrainingSession = {
   endedAt: string | null
   // resumen de las series del día (US-20). Va también en curso: la confirmación de finalizar lo usa
   summary: TrainingSessionSummary
+  // devolución del entrenador (US-21). null mientras no la revisó
+  review: SessionReview | null
 }
+
+// revisión del entrenador sobre una sesión finalizada (US-21, contrato 25). Revisar otra vez
+// reemplaza la observación y actualiza la fecha
+export type SessionReview = {
+  // instante de la revisión, ISO-8601 en UTC
+  reviewedAt: string
+  // observación para el atleta: null si se revisó sin texto
+  observation: string | null
+}
+
+// ítem del historial (US-21, contrato 25): liviano, sin series ni ejercicios. El detalle sale de
+// GET .../sessions/{sessionId}. Solo sesiones cerradas
+export type TrainingHistoryItem = {
+  id: string
+  sessionDate: string
+  status: Exclude<SessionStatus, 'IN_PROGRESS'>
+  startedAt: string
+  routineName: string
+  dayNumber: number
+  dayName: string
+  // hora de fin: en una sesión cerrada siempre viene
+  endedAt: string | null
+  summary: TrainingSessionSummary
+  review: SessionReview | null
+}
+
+// filtros y paginación del historial. from y to son YYYY-MM-DD, inclusivos sobre sessionDate
+export type TrainingHistoryQuery = {
+  from?: string
+  to?: string
+  // desde 0
+  page?: number
+  size?: number
+}
+
+// body de PUT .../sessions/{sessionId}/review (US-21): sin observación se marca igual
+export type SessionReviewInput = { observation?: string }
 
 // resumen de la sesión (US-20). Pendientes = prescritas sin registrar; el volumen suma peso ×
 // repeticiones de las series hechas
