@@ -14,6 +14,8 @@ export type {
   MealInput,
   MealItem,
   MealItemInput,
+  MealReview,
+  MealReviewInput,
   MealType,
 } from './types'
 export { MEAL_TYPES } from './types'
@@ -22,3 +24,11 @@ export { useCreateMeal } from './use-create-meal'
 export { useDeleteMeal } from './use-delete-meal'
 export { useMealsOfDay } from './use-meals-of-day'
 export { useUpdateMeal, type UpdateMealVariables } from './use-update-meal'
+// US-25: revisión del entrenador
+export {
+  MEAL_REVIEW_OBSERVATION_MAX_LENGTH,
+  toMealReviewInput,
+  validateMealReviewObservation,
+} from './meal-review-validation'
+export { putMealReview } from './put-meal-review'
+export { useMealReview, type MealReviewVariables } from './use-meal-review'

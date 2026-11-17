@@ -36,9 +36,22 @@ export type Meal = {
   totalCaloriesKcal: number | null
   // en el orden en que se cargaron; cambian sus id en cada edición
   items: MealItem[]
+  // revisión del entrenador (US-25). null mientras no la revisó; editar la comida la vuelve a null
+  review: MealReview | null
   createdAt: string
   updatedAt: string
 }
+
+// revisión del entrenador sobre una comida (US-25). Revisar otra vez reemplaza el comentario y la fecha
+export type MealReview = {
+  // instante de la revisión, ISO-8601 en UTC
+  reviewedAt: string
+  // comentario para el atleta: null si se revisó sin texto
+  observation: string | null
+}
+
+// body de PUT .../meals/{mealId}/review (US-25): sin comentario se marca revisada igual
+export type MealReviewInput = { observation?: string }
 
 // ítem del body (11.3): las calorías las calcula el backend, no se envían
 export type MealItemInput = {

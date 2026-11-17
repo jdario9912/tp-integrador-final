@@ -9,15 +9,18 @@ import { meal } from '../../test/meal-fixtures'
 import { athleteMealsKey } from './meal-keys'
 import { createMeal } from './create-meal'
 import { deleteMeal } from './delete-meal'
+import { putMealReview } from './put-meal-review'
 import { updateMeal } from './update-meal'
 import type { MealInput } from './types'
 import { useCreateMeal } from './use-create-meal'
 import { useDeleteMeal } from './use-delete-meal'
+import { useMealReview } from './use-meal-review'
 import { useUpdateMeal } from './use-update-meal'
 
 vi.mock('./create-meal', () => ({ createMeal: vi.fn() }))
 vi.mock('./update-meal', () => ({ updateMeal: vi.fn() }))
 vi.mock('./delete-meal', () => ({ deleteMeal: vi.fn() }))
+vi.mock('./put-meal-review', () => ({ putMealReview: vi.fn() }))
 
 const athlete = session('ATHLETE')
 const ATHLETE_ID = athlete.user.id
@@ -47,6 +50,7 @@ beforeEach(() => {
   vi.mocked(createMeal).mockReset()
   vi.mocked(updateMeal).mockReset()
   vi.mocked(deleteMeal).mockReset()
+  vi.mocked(putMealReview).mockReset()
   saveSession(athlete)
 })
 
@@ -150,6 +154,39 @@ describe('useDeleteMeal', () => {
 
     await act(async () => {
       await expect(result.current.mutateAsync(MEAL_ID)).rejects.toBe(error)
+    })
+
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+})
+
+describe('useMealReview (US-25)', () => {
+  it('revisa la comida e invalida las comidas del atleta (día, resumen y rango)', async () => {
+    vi.mocked(putMealReview).mockResolvedValue(meal())
+    const { result, invalidate } = setup(() => useMealReview(ATHLETE_ID))
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        mealId: MEAL_ID,
+        input: { observation: 'Bien' },
+      })
+    })
+
+    expect(putMealReview).toHaveBeenCalledWith(ATHLETE_ID, MEAL_ID, {
+      observation: 'Bien',
+    })
+    expect(invalidate).toHaveBeenCalledWith(expectedKey)
+  })
+
+  it('si falla no invalida y propaga el error', async () => {
+    const error = new ApiError('No podés acceder a este atleta', 403)
+    vi.mocked(putMealReview).mockRejectedValue(error)
+    const { result, invalidate } = setup(() => useMealReview(ATHLETE_ID))
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ mealId: MEAL_ID, input: {} }),
+      ).rejects.toBe(error)
     })
 
     expect(invalidate).not.toHaveBeenCalled()

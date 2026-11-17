@@ -10,6 +10,7 @@ import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
 import { getWeights } from '../../lib/weights/get-weights'
+import { getNutritionOverview } from './actions/get-nutrition-overview'
 import { athleteProfilePath, paths } from '../../router/paths'
 import {
   assignmentsPage,
@@ -28,6 +29,10 @@ vi.mock('../../lib/assignments/get-assignments', () => ({
 // historial de entrenamientos (US-21): sin sesiones cerradas por defecto
 vi.mock('../../lib/training-sessions/get-training-history', () => ({
   getTrainingHistory: vi.fn(),
+}))
+// alimentación (US-25): la sección se prueba en NutritionSection.test; acá, una semana sin comidas
+vi.mock('./actions/get-nutrition-overview', () => ({
+  getNutritionOverview: vi.fn(),
 }))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
@@ -97,6 +102,14 @@ beforeEach(() => {
     size: 10,
     totalElements: 0,
     totalPages: 0,
+  })
+  vi.mocked(getNutritionOverview).mockReset()
+  vi.mocked(getNutritionOverview).mockResolvedValue({
+    from: '2026-10-25',
+    to: '2026-10-31',
+    totalDays: 7,
+    daysWithMeals: 0,
+    days: [],
   })
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
@@ -288,6 +301,12 @@ describe('AthleteProfilePage', () => {
     expect(
       within(section('Entrenamientos')).getByRole('heading', {
         name: 'Todavía no hay entrenamientos cerrados',
+      }),
+    ).toBeInTheDocument()
+    // US-25: la alimentación de la semana, con su estado vacío
+    expect(
+      await within(section('Alimentación')).findByRole('heading', {
+        name: 'Sin comidas registradas en estos días',
       }),
     ).toBeInTheDocument()
   })

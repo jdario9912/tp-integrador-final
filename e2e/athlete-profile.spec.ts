@@ -20,6 +20,8 @@ const WEIGHTS_URL = /\/api\/athletes\/[^/]+\/weights(\?.*)?$/
 const ASSIGNMENTS_URL = /\/api\/athletes\/[^/]+\/assignments(\?.*)?$/
 // historial de entrenamientos (US-21): sin sesiones cerradas en esta ficha
 const SESSIONS_URL = /\/api\/athletes\/[^/]+\/sessions(\?.*)?$/
+// alimentación (US-25): se cubre en meal-review.spec; acá, una semana sin comidas
+const MEALS_OVERVIEW_URL = /\/api\/athletes\/[^/]+\/meals\/overview(\?.*)?$/
 
 // ejemplo de AthleteResponse del contrato de API, de la cartera del entrenador
 const leoJson = () => ({
@@ -116,6 +118,19 @@ const routeBackend = async (
       json: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
     }),
   )
+  await page.route(MEALS_OVERVIEW_URL, (route) => {
+    const url = new URL(route.request().url())
+    return route.fulfill({
+      status: 200,
+      json: {
+        from: url.searchParams.get('from'),
+        to: url.searchParams.get('to'),
+        totalDays: 7,
+        daysWithMeals: 0,
+        days: [],
+      },
+    })
+  })
   await page.route(ATHLETES_URL, (route) => {
     const content = 'id' in detail ? [detail] : []
     return route.fulfill({

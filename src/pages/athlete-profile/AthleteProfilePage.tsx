@@ -15,6 +15,7 @@ import {
 } from './components/AthleteUnavailable'
 import { HealthTrainingSection } from './components/HealthTrainingSection'
 import { LatestWeightSection } from './components/LatestWeightSection'
+import { NutritionSection } from './components/NutritionSection' // US-25
 import { PersonalDataSection } from './components/PersonalDataSection'
 import { ProfileColumns } from './components/ProfileColumns'
 import { RoutineHistorySection } from './components/RoutineHistorySection'
@@ -109,6 +110,8 @@ export function AthleteProfilePage() {
             <RoutineHistorySection key={athlete.id} athleteId={athlete.id} />
             {/* US-21: historial de entrenamientos y revisión; con key, cambiar de atleta lo reinicia */}
             <TrainingHistorySection key={athlete.id} athleteId={athlete.id} />
+            {/* US-25: alimentación por semana o día y revisión de comidas; con key, cambiar de atleta la reinicia */}
+            <NutritionSection key={athlete.id} athleteId={athlete.id} />
           </>
         }
         aside={
