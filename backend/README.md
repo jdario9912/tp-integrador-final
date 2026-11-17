@@ -213,6 +213,11 @@ Registro de comidas (US-23): el atleta registra, edita y borra sus comidas; él 
 - Solo el atleta registra, edita y borra las suyas: el entrenador recibe 403 aunque el atleta sea suyo, y otro atleta también 403. Una comida de otro atleta o inexistente → 404. Un atleta desvinculado sigue registrando sus comidas; su ex entrenador recibe 403.
 - Los tipos de comida son fijos (catálogo de la V13, sin endpoint). La foto de la comida llega con US-28 (ola 2): la columna `photo_path` ya existe y no se usa todavía.
 
+Resumen nutricional del día (US-24): totales de calorías y macros de un día, con cuántas comidas tiene y cuántas no tienen datos nutricionales. Sin migración: se calcula de `meals` y `meal_items`.
+- `GET /api/athletes/{athleteId}/meals/summary?date=YYYY-MM-DD` responde `DailyNutritionSummary`: `date`, `caloriesKcal`, `proteinG`, `carbsG`, `fatG`, `mealCount` y `mealsWithoutNutrition`. Sin `date`, es hoy en la zona de la app. Lo leen el atleta (el suyo) y su entrenador (los de sus atletas vinculados); otro rol → 403.
+- Los totales suman los valores ya redondeados de cada ítem (el mismo criterio que `totalCaloriesKcal`), así que la suma coincide con lo que se ve en cada comida. Las comidas sin ítems no entran en los totales: cuentan en `mealCount` y en `mealsWithoutNutrition`.
+- Un día sin comidas responde 200 con todo en cero. Una fecha futura también responde en cero. Fecha con otro formato → 400 con el error en `date`.
+
 Para agregar un endpoint:
 
 1. Si no es para los dos roles, su regla en `SecurityConfig` (`hasRole("COACH")` o `hasRole("ATHLETE")`). La regla corre antes de leer el body: un rol equivocado recibe 403 aunque el body sea inválido.

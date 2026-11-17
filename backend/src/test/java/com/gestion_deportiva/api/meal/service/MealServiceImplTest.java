@@ -11,12 +11,14 @@ import com.gestion_deportiva.api.config.TimeZoneProperties;
 import com.gestion_deportiva.api.food.exception.FoodNotFoundException;
 import com.gestion_deportiva.api.food.model.Food;
 import com.gestion_deportiva.api.food.repository.FoodRepository;
+import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
 import com.gestion_deportiva.api.meal.exception.FutureMealDateException;
 import com.gestion_deportiva.api.meal.exception.MealNotFoundException;
 import com.gestion_deportiva.api.meal.model.Meal;
 import com.gestion_deportiva.api.meal.model.enums.MealType;
+import com.gestion_deportiva.api.meal.repository.MealDayTotals;
 import com.gestion_deportiva.api.meal.repository.MealRepository;
 import com.gestion_deportiva.api.user.model.enums.Role;
 import org.junit.jupiter.api.BeforeEach;
@@ -312,5 +314,105 @@ class MealServiceImplTest {
         assertThrows(AthleteAccessDeniedException.class, () -> service.findByDay(LEO, ATHLETE_ID, TODAY));
 
         verifyNoInteractions(mealRepository);
+    }
+
+    // ---------- US-24 · resumen nutricional del día ----------
+
+    // Sin fecha, el resumen es el de hoy en la zona de la app (el 13/11 en Argentina)
+    @Test
+    void shouldSummarizeTodayInTheAppTimeZoneWhenNoDateIsGiven() {
+        when(mealRepository.sumDay(ATHLETE_ID, TODAY)).thenReturn(totals("0", "0", "0", "0", 0L, 0L));
+
+        DailyNutritionSummary summary = service.summaryOfDay(LEO, ATHLETE_ID, null);
+
+        assertEquals(TODAY, summary.date());
+        verify(mealRepository).sumDay(ATHLETE_ID, TODAY);
+    }
+
+    // Contrato 16.2: cada total y cada contador de la consulta llega al resumen tal cual
+    @Test
+    void shouldMapTheTotalsAndTheCountersOfTheDay() {
+        when(mealRepository.sumDay(ATHLETE_ID, DATE))
+                .thenReturn(totals("507.50", "51.90", "56.00", "6.00", 2L, 1L));
+
+        DailyNutritionSummary summary = service.summaryOfDay(LEO, ATHLETE_ID, DATE);
+
+        verify(athleteAccessGuard).verifyAccess(LEO, ATHLETE_ID);
+        assertEquals(DATE, summary.date());
+        assertEquals(new BigDecimal("507.50"), summary.caloriesKcal());
+        assertEquals(new BigDecimal("51.90"), summary.proteinG());
+        assertEquals(new BigDecimal("56.00"), summary.carbsG());
+        assertEquals(new BigDecimal("6.00"), summary.fatG());
+        assertEquals(2, summary.mealCount());
+        assertEquals(1, summary.mealsWithoutNutrition());
+    }
+
+    // Contrato 16.3: un día sin comidas responde todo en cero (la consulta siempre devuelve una fila)
+    @Test
+    void shouldAnswerZerosForADayWithoutMeals() {
+        when(mealRepository.sumDay(ATHLETE_ID, DATE)).thenReturn(totals("0", "0", "0", "0", 0L, 0L));
+
+        DailyNutritionSummary summary = service.summaryOfDay(LEO, ATHLETE_ID, DATE);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(summary.caloriesKcal()));
+        assertEquals(0, summary.mealCount());
+        assertEquals(0, summary.mealsWithoutNutrition());
+    }
+
+    // Contrato 16.3: leer un día futuro no es error; sin comidas, todo en cero
+    @Test
+    void shouldAnswerZerosForAFutureDate() {
+        when(mealRepository.sumDay(ATHLETE_ID, TOMORROW)).thenReturn(totals("0", "0", "0", "0", 0L, 0L));
+
+        DailyNutritionSummary summary = service.summaryOfDay(LEO, ATHLETE_ID, TOMORROW);
+
+        assertEquals(TOMORROW, summary.date());
+        assertEquals(0, summary.mealCount());
+    }
+
+    // Contrato 16.4: la pertenencia va antes de sumar; si falla, la base no se consulta
+    @Test
+    void shouldCheckThePertenenciaBeforeSummarizing() {
+        doThrow(new AthleteAccessDeniedException()).when(athleteAccessGuard).verifyAccess(LEO, ATHLETE_ID);
+
+        assertThrows(AthleteAccessDeniedException.class, () -> service.summaryOfDay(LEO, ATHLETE_ID, TODAY));
+
+        verifyNoInteractions(mealRepository);
+    }
+
+    // Fila de la consulta agregada con valores fijos (la interfaz es una proyección: no hace falta un mock)
+    private static MealDayTotals totals(String caloriesKcal, String proteinG, String carbsG, String fatG,
+                                        long mealCount, long mealsWithoutNutrition) {
+        return new MealDayTotals() {
+            @Override
+            public Long getMealCount() {
+                return mealCount;
+            }
+
+            @Override
+            public Long getMealsWithoutNutrition() {
+                return mealsWithoutNutrition;
+            }
+
+            @Override
+            public BigDecimal getCaloriesKcal() {
+                return new BigDecimal(caloriesKcal);
+            }
+
+            @Override
+            public BigDecimal getProteinG() {
+                return new BigDecimal(proteinG);
+            }
+
+            @Override
+            public BigDecimal getCarbsG() {
+                return new BigDecimal(carbsG);
+            }
+
+            @Override
+            public BigDecimal getFatG() {
+                return new BigDecimal(fatG);
+            }
+        };
     }
 }

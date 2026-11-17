@@ -240,6 +240,92 @@ class MealRepositoryTest extends AbstractIntegrationTest {
                 codes);
     }
 
+    // ---------- US-24 · resumen del día (consulta agregada, contrato 16.6) ----------
+
+    // Cada ítem se redondea a 2 decimales (HALF_UP) antes de sumar: dos de 2.5 g de un alimento de 1 kcal por 100 g
+    // valen 0.03 cada uno (0.025 redondeado), así que el total es 0.06 y no 0.05 (el valor exacto del día)
+    @Test
+    void sumsTheRoundedValuesOfEachItemAndNotTheExactTotal() {
+        Food seed = savedFood("Semilla resumen", "1", "0", "0", "0");
+        Meal snack = mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.SNACK, null,
+                item(seed, "2.5"), item(seed, "2.5")));
+
+        MealDayTotals totals = mealRepository.sumDay(leo.getId(), NOV_13);
+
+        assertDecimal("0.06", totals.getCaloriesKcal());
+        // Lo mismo que muestra la comida: la suma de sus ítems ya redondeados
+        assertEquals(0, snack.getTotalCaloriesKcal().compareTo(totals.getCaloriesKcal()));
+    }
+
+    // Contrato 13.8 y 16.2: almuerzo de 150 g de pollo y 200 g de arroz, con los macros de cada uno sumados
+    @Test
+    void sumsTheCaloriesAndTheMacrosOfTheDay() {
+        Food chickenValues = savedFood("Pollo nutricional", "165", "31", "0", "3.6");
+        Food riceValues = savedFood("Arroz nutricional", "130", "2.7", "28", "0.3");
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.LUNCH, null,
+                item(chickenValues, "150"), item(riceValues, "200")));
+
+        MealDayTotals totals = mealRepository.sumDay(leo.getId(), NOV_13);
+
+        assertDecimal("507.50", totals.getCaloriesKcal());
+        assertDecimal("51.90", totals.getProteinG());
+        assertDecimal("56.00", totals.getCarbsG());
+        assertDecimal("6.00", totals.getFatG());
+    }
+
+    // Las comidas sin ítems cuentan en mealCount y en mealsWithoutNutrition, pero no suman nada
+    @Test
+    void countsTheMealsWithoutItemsButKeepsThemOutOfTheTotals() {
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.BREAKFAST, "Café"));
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.LUNCH, null, item(chicken, "150")));
+
+        MealDayTotals totals = mealRepository.sumDay(leo.getId(), NOV_13);
+
+        assertEquals(2L, totals.getMealCount());
+        assertEquals(1L, totals.getMealsWithoutNutrition());
+        assertDecimal("247.50", totals.getCaloriesKcal());
+    }
+
+    // Solo cuentan las comidas de ese atleta y de ese día
+    @Test
+    void summarizesOnlyTheMealsOfThatAthleteAndThatDay() {
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.LUNCH, null, item(chicken, "150")));
+        mealRepository.saveAndFlush(meal(leo, NOV_12, MealType.LUNCH, null, item(chicken, "150")));
+        mealRepository.saveAndFlush(meal(mia, NOV_13, MealType.LUNCH, null, item(chicken, "150")));
+
+        MealDayTotals totals = mealRepository.sumDay(leo.getId(), NOV_13);
+
+        assertEquals(1L, totals.getMealCount());
+        assertDecimal("247.50", totals.getCaloriesKcal());
+    }
+
+    // Sin comidas, la consulta responde una fila en cero (nunca nula): el service no trata null
+    @Test
+    void answersOneRowOfZerosForADayWithoutMeals() {
+        MealDayTotals totals = mealRepository.sumDay(leo.getId(), NOV_13);
+
+        assertEquals(0L, totals.getMealCount());
+        assertEquals(0L, totals.getMealsWithoutNutrition());
+        assertDecimal("0", totals.getCaloriesKcal());
+        assertDecimal("0", totals.getFatG());
+    }
+
+    private Food savedFood(String name, String caloriesKcal, String proteinG, String carbsG, String fatG) {
+        return foodRepository.saveAndFlush(Food.builder()
+                .name(name)
+                .referencePortionG(new BigDecimal("100"))
+                .caloriesKcal(new BigDecimal(caloriesKcal))
+                .proteinG(new BigDecimal(proteinG))
+                .carbsG(new BigDecimal(carbsG))
+                .fatG(new BigDecimal(fatG))
+                .build());
+    }
+
+    // Compara el número por valor (0.06 y 0.060 son iguales)
+    private static void assertDecimal(String expected, BigDecimal actual) {
+        assertEquals(0, new BigDecimal(expected).compareTo(actual), "esperado " + expected + " pero fue " + actual);
+    }
+
     // Comida con un instante de alta fijo, para probar el orden por alta
     private static Meal mealCreatedAt(Athlete athlete, LocalDate date, MealType type, String description,
                                       String createdAt) {

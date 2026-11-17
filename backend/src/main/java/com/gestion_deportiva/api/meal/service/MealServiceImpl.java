@@ -7,6 +7,7 @@ import com.gestion_deportiva.api.common.time.AppClock;
 import com.gestion_deportiva.api.food.exception.FoodNotFoundException;
 import com.gestion_deportiva.api.food.model.Food;
 import com.gestion_deportiva.api.food.repository.FoodRepository;
+import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealItemRequest;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
@@ -14,6 +15,7 @@ import com.gestion_deportiva.api.meal.exception.FutureMealDateException;
 import com.gestion_deportiva.api.meal.exception.MealNotFoundException;
 import com.gestion_deportiva.api.meal.model.Meal;
 import com.gestion_deportiva.api.meal.model.MealItem;
+import com.gestion_deportiva.api.meal.repository.MealDayTotals;
 import com.gestion_deportiva.api.meal.repository.MealRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -85,6 +87,28 @@ public class MealServiceImpl implements MealService {
         return mealRepository.findDay(athleteId, day).stream()
                 .map(MealResponse::from)
                 .toList();
+    }
+
+    // US-24 · Mismo orden que el listado (contrato 16.4): pertenencia y después una sola consulta agregada. Una fecha
+    // futura no es error: sin comidas, todo en cero
+    @Override
+    @Transactional(readOnly = true)
+    public DailyNutritionSummary summaryOfDay(AuthenticatedUser user, UUID athleteId, LocalDate date) {
+        athleteAccessGuard.verifyAccess(user, athleteId);
+        LocalDate day = date != null ? date : appClock.today();
+        return toSummary(day, mealRepository.sumDay(athleteId, day));
+    }
+
+    // US-24 · Pasa el resultado de la consulta al DTO del resumen (el DTO no depende del repositorio)
+    private static DailyNutritionSummary toSummary(LocalDate day, MealDayTotals totals) {
+        return new DailyNutritionSummary(
+                day,
+                totals.getCaloriesKcal(),
+                totals.getProteinG(),
+                totals.getCarbsG(),
+                totals.getFatG(),
+                totals.getMealCount(),
+                totals.getMealsWithoutNutrition());
     }
 
     // Se valida antes que el atleta (paso 3 del contrato): es un 400 de validación y no revela nada del atleta
