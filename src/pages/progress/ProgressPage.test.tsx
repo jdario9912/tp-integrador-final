@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api'
+import { MemoryRouter } from '../../lib/navigation'
 import { saveSession } from '../../lib/auth'
 import type { WeightRecord, WeightsQuery } from '../../lib/weights'
 import { createWeight } from '../../lib/weights/create-weight'
@@ -55,7 +56,10 @@ const renderPage = () =>
         })
       }
     >
-      <ProgressPage />
+      {/* US-29: el rango del gráfico vive en la URL, así que la página necesita un router */}
+      <MemoryRouter>
+        <ProgressPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 

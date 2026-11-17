@@ -5,3 +5,7 @@ export const NOTICE_ID = 'weight-notice'
 export const CONFLICT_ID = 'weight-conflict'
 
 export const editButtonId = (recordId: string) => `weight-${recordId}-edit`
+
+// US-29: tarjeta del gráfico de evolución. El campo de peso lo arma WeightForm como `${idPrefix}-weightKg` (idPrefix "weight")
+export const EVOLUTION_HEADING_ID = 'weight-evolution-heading'
+export const WEIGHT_KG_FIELD_ID = 'weight-weightKg'

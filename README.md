@@ -258,3 +258,15 @@ Desvíos y decisiones:
 - Las consultas de peso y de comidas usan las mismas claves de caché que sus páginas, así que una alta o una edición en esas páginas refresca también el panel.
 
 Pruebas: unitarias en `src/pages/dashboard/**/*.test.*` (helpers de día y observaciones, cada tarjeta con sus vacíos, errores y reintentos, iniciar, retomar y el 409, el panel con una tarjeta caída, y la página: el entrenador no ve el panel del atleta). El E2E `e2e/athlete-dashboard.spec.ts` intercepta la API y cubre: las cuatro tarjetas con datos, iniciar y abrir el entrenamiento (con el cuerpo del `POST`), retomar, los estados vacíos, una tarjeta caída sin tapar las demás, el escritorio con dos columnas, y en un celular de 360 px una sola columna sin scroll horizontal y el botón de iniciar visible y con más de 44 px de alto. Además, `e2e/login.spec.ts`, `e2e/logout.spec.ts` y `e2e/register-athlete.spec.ts` comprueban ahora la tarjeta «Entrenamiento de hoy» en lugar del texto provisorio «Panel del atleta».
+
+## Progreso: evolución del peso y galería (US-29)
+
+En `/progress`, arriba de «Últimos registros», el atleta ve la **evolución de su peso** en un gráfico propio en SVG (sin librerías). La línea une los registros de la más antigua a la más nueva; cada punto muestra su fecha y su valor al pasar el cursor, el último lleva su valor junto al punto y, debajo, «Ver los datos del gráfico» despliega la misma información en una tabla (para teclado y lectores de pantalla). El gráfico se describe con un texto que resume el rango.
+
+- **Rango:** atajos de 30 días, 3 meses, 6 meses, 1 año y «Todo» (por defecto), más «Personalizado» con las fechas «Desde» y «Hasta». El rango viaja en la URL (`?from=AAAA-MM-DD&to=AAAA-MM-DD`): se puede volver atrás y compartir el enlace. Un rango con «desde» posterior a «hasta», o una fecha que no existe, se valida antes de pedir datos; si el backend responde 400, se muestra su mensaje.
+- **Datos:** se piden todas las páginas del rango (`GET /athletes/{id}/weights` con `from`, `to` y `size=100`, siguiendo `totalPages`) y se ordenan de la más antigua a la más nueva. Alta y edición de un peso refrescan el gráfico. El hook está en `src/pages/progress/hooks/use-weight-evolution.ts`.
+- **Un solo registro:** se dibuja solo el punto y un aviso explica que hace falta otro día para ver la línea.
+- **Estados vacíos:** sin ningún registro, «Cargar mi peso» lleva el foco al campo de peso. Si hay registros fuera del rango, «No hay registros en este rango». Un error se muestra con «Reintentar», salvo el 400.
+- **Galería:** las fotos ya llegan en orden cronológico (la más antigua primero). Sin fotos, «Subir mi primera foto» lleva el foco al selector de archivo. Una URL firmada vencida se renueva una sola vez (ver «Fotos de progreso»).
+
+Los helpers puros (escala, rangos y validación) están en `src/pages/progress/weight-range.ts` y `weight-chart-scale.ts`, y se prueban en `*.test.ts`. El E2E `e2e/progress-charts.spec.ts` cubre el rango en la URL y su validación, el 400 del backend, los estados vacíos, un solo punto, el refresco tras un alta, la galería con la URL renovada y un celular de 360 px sin scroll horizontal.

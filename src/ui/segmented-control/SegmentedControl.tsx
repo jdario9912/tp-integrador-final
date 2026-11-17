@@ -27,7 +27,7 @@ const optionClasses = {
   track:
     'rounded-lg px-4 py-1.5 text-muted-foreground has-checked:bg-surface has-checked:text-primary has-checked:shadow-sm',
   chips:
-    'flex-1 rounded-control border border-border bg-surface px-4 py-2.5 text-center text-muted-foreground hover:border-primary has-checked:border-primary-soft-strong has-checked:bg-primary-soft-strong has-checked:text-primary',
+    'flex-1 rounded-control whitespace-nowrap border border-border bg-surface px-4 py-2.5 text-center text-muted-foreground hover:border-primary has-checked:border-primary-soft-strong has-checked:bg-primary-soft-strong has-checked:text-primary',
 }
 
 // radios nativos visualmente ocultos: teclado (flechas) y lectores de pantalla funcionan solos
