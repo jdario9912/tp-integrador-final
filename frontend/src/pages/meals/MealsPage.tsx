@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PageHeader } from '../../layout'
 import { isApiError } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
@@ -11,12 +11,17 @@ import {
   useUpdateMeal,
   type Meal,
 } from '../../lib/meals'
+import { useSearchParams } from '../../lib/navigation'
 import { Callout } from '../../ui/callout'
 import { Card } from '../../ui/card'
 import { ConfirmDialog } from '../../ui/confirm-dialog'
 import { Pencil, Utensils } from '../../ui/icons'
+import { DailySummaryCard } from './components/DailySummaryCard'
+import { DayNavigator } from './components/DayNavigator'
 import { MealForm } from './components/MealForm'
 import { MealsList } from './components/MealsList'
+import { dayParams, dayTitle, resolveDay } from './day-navigation'
+import { useDailyNutritionSummary } from './hooks/use-daily-nutrition-summary'
 import { useMealEditor } from './hooks/use-meal-editor'
 import {
   emptyMealFormValues,
@@ -28,16 +33,30 @@ import type { MealFormValues } from './types'
 
 const UNEXPECTED_ERROR = 'Ocurrió un error inesperado. Intentá nuevamente.'
 
-// registro de comidas del día (US-23): el atleta carga, corrige y borra lo que comió hoy.
-// Las calorías las calcula el backend; el resumen por día y la navegación entre días son de US-24
+// registro de comidas (US-23) por día (US-24): el atleta mira un día (hoy o uno anterior), ve su
+// resumen nutricional, y carga, corrige y borra sus comidas. Las calorías las calcula el backend
 export function MealsPage() {
   const { user } = useAuth()
   // el atleta es el usuario de la sesión: el mismo id que devuelve GET /auth/me
   const athleteId = user?.id ?? ''
-  // "hoy" en la zona de la app: el alta y el listado usan esta fecha
+  // "hoy" en la zona de la app: el día por defecto y el último al que se puede navegar
   const today = todayInAppTimeZone()
 
-  const list = useMealsOfDay(athleteId, today)
+  // el día que se mira va en la URL (?date=) para volver a él y compartirlo
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawDate = searchParams.get('date')
+  // fecha inválida o futura en la URL: se muestra hoy y la URL se corrige
+  const day = resolveDay(rawDate, today)
+  const isToday = day === today
+
+  useEffect(() => {
+    if (rawDate !== null && rawDate !== day) {
+      setSearchParams(dayParams(day, today), { replace: true })
+    }
+  }, [rawDate, day, today, setSearchParams])
+
+  const list = useMealsOfDay(athleteId, day)
+  const summary = useDailyNutritionSummary(athleteId, day)
   const createMeal = useCreateMeal(athleteId)
   const updateMeal = useUpdateMeal(athleteId)
   const deleteMeal = useDeleteMeal(athleteId)
@@ -49,6 +68,14 @@ export function MealsPage() {
 
   const isEditing = editing !== null
   const focusForm = () => formHeadingRef.current?.focus()
+  // cómo se nombra el día en los avisos: "de hoy" o "del 12 de noviembre de 2026"
+  const dayPhrase = isToday ? 'de hoy' : `del ${formatIsoDate(day)}`
+
+  const goToDay = (next: string) => {
+    // cambiar de día deja el alta: una edición no sigue a la vista de otro día, y el aviso era de este
+    dispatch({ type: 'cancel' })
+    setSearchParams(dayParams(next, today))
+  }
 
   const startEdit = (meal: Meal) => {
     dispatch({ type: 'edit', meal })
@@ -76,10 +103,11 @@ export function MealsPage() {
           notice: `Guardaste los cambios de ${label}.`,
         })
       } else {
-        await createMeal.mutateAsync(toMealInput(values, today))
+        // el alta es para el día que se mira (nunca futuro)
+        await createMeal.mutateAsync(toMealInput(values, day))
         dispatch({
           type: 'saved',
-          notice: `Registraste ${label} de hoy.`,
+          notice: `Registraste ${label} ${dayPhrase}.`,
         })
       }
     } catch (error) {
@@ -107,7 +135,7 @@ export function MealsPage() {
       dispatch({
         type: 'removed',
         mealId: target.id,
-        notice: `Borraste ${label} de hoy.`,
+        notice: `Borraste ${label} ${dayPhrase}.`,
       })
     } catch (error) {
       if (isApiError(error) && error.status === 404) {
@@ -123,18 +151,30 @@ export function MealsPage() {
     setToDelete(null)
   }
 
+  const title = dayTitle(day, today)
+
   return (
     // scroll-mt: lo que recibe el foco no queda tapado por la barra superior fija
     <div className="flex flex-col gap-6 [&_*]:scroll-mt-24">
       <PageHeader
         title="Comidas"
-        description="Registrá lo que comiste hoy: el tipo de comida, una descripción o los alimentos con su cantidad."
+        description="Registrá lo que comiste: el de hoy o el de un día anterior, con el resumen nutricional de cada día."
       />
       {notice && (
         <Callout tone="success" role="status">
           {notice}
         </Callout>
       )}
+
+      <DayNavigator day={day} today={today} onChangeDay={goToDay} />
+
+      <DailySummaryCard
+        summary={summary.data}
+        isPending={summary.isPending}
+        isRefreshing={summary.isFetching && !summary.isPending}
+        error={summary.error}
+        onRetry={() => void summary.refetch()}
+      />
 
       {/* mobile-first: primero el formulario; desde xl, formulario a la izquierda y la lista a la derecha */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
@@ -156,7 +196,7 @@ export function MealsPage() {
             <p className="text-muted-foreground text-sm">
               {isEditing
                 ? `Del ${formatIsoDate(editing.date)}. Podés cambiar el tipo, la descripción y los alimentos.`
-                : 'Elegí el tipo de comida. Escribí qué comiste o buscá los alimentos con su cantidad.'}
+                : `Elegí el tipo de comida. Escribí qué comiste o buscá los alimentos con su cantidad. Se registra ${isToday ? 'hoy' : `el ${formatIsoDate(day)}`}.`}
             </p>
           </div>
           <MealForm
@@ -174,12 +214,6 @@ export function MealsPage() {
         </Card>
 
         <Card className="flex flex-col gap-5">
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-lg font-semibold sm:text-xl">Comidas de hoy</h2>
-            <p className="text-muted-foreground text-sm">
-              {formatIsoDate(today)}
-            </p>
-          </div>
           <MealsList
             meals={list.data}
             isPending={list.isPending}
@@ -189,6 +223,12 @@ export function MealsPage() {
             editingId={editing?.id ?? null}
             onEdit={startEdit}
             onDelete={setToDelete}
+            label={title}
+            emptyTitle={
+              isToday
+                ? 'Todavía no registraste comidas hoy'
+                : 'No registraste comidas ese día'
+            }
           />
           {deleteError && <Callout tone="danger">{deleteError}</Callout>}
         </Card>

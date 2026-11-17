@@ -86,32 +86,32 @@ Iconos y navegación se importan desde `src/ui/icons` y `src/lib/navigation`, nu
 
 Definidas en `src/router/AppRouter.tsx`; los paths salen de `src/router/paths.ts` (las rutas con parámetros se arman con helpers como `athleteProfilePath(id)`). El `handle.title` de cada ruta es el texto de la barra de ubicación.
 
-| Ruta                      | Página                    | Acceso       |
-| ------------------------- | ------------------------- | ------------ |
-| `/`                       | Inicio                    | público      |
-| `/register-coach`         | Registro de entrenador    | público      |
-| `/login`                  | Inicio de sesión          | público      |
-| `/dashboard`              | Panel (según el rol)      | con sesión   |
-| `/athletes`               | Mis atletas               | solo COACH   |
-| `/athletes/new`           | Agregar atleta            | solo COACH   |
-| `/athletes/:id`           | Perfil del atleta (ficha) | solo COACH   |
-| `/athletes/:id/edit`      | Editar atleta             | solo COACH   |
-| `/exercises`              | Catálogo de ejercicios    | solo COACH   |
-| `/exercises/new`          | Nuevo ejercicio           | solo COACH   |
-| `/exercises/:id/edit`     | Editar ejercicio          | solo COACH   |
-| `/routines`               | Mis rutinas               | solo COACH   |
-| `/routines/new`           | Nueva rutina              | solo COACH   |
-| `/routines/:id`           | Detalle de la rutina      | solo COACH   |
-| `/routines/:id/edit`      | Editar rutina             | solo COACH   |
-| `/routines/:id/structure` | Estructura de la rutina   | solo COACH   |
-| `/foods`                  | Catálogo de alimentos     | con sesión   |
-| `/foods/new`              | Nuevo alimento            | solo COACH   |
-| `/foods/:id/edit`         | Editar alimento           | solo COACH   |
-| `/my-routine`             | Mi rutina                 | solo ATHLETE |
-| `/progress`               | Progreso (peso y fotos)   | solo ATHLETE |
-| `/training/:sessionId`    | Entrenamiento en curso    | solo ATHLETE |
-| `/meals`                  | Comidas de hoy (US-23)    | solo ATHLETE |
-| `/training-history`       | Entrenamientos (US-21)    | solo ATHLETE |
+| Ruta                      | Página                         | Acceso       |
+| ------------------------- | ------------------------------ | ------------ |
+| `/`                       | Inicio                         | público      |
+| `/register-coach`         | Registro de entrenador         | público      |
+| `/login`                  | Inicio de sesión               | público      |
+| `/dashboard`              | Panel (según el rol)           | con sesión   |
+| `/athletes`               | Mis atletas                    | solo COACH   |
+| `/athletes/new`           | Agregar atleta                 | solo COACH   |
+| `/athletes/:id`           | Perfil del atleta (ficha)      | solo COACH   |
+| `/athletes/:id/edit`      | Editar atleta                  | solo COACH   |
+| `/exercises`              | Catálogo de ejercicios         | solo COACH   |
+| `/exercises/new`          | Nuevo ejercicio                | solo COACH   |
+| `/exercises/:id/edit`     | Editar ejercicio               | solo COACH   |
+| `/routines`               | Mis rutinas                    | solo COACH   |
+| `/routines/new`           | Nueva rutina                   | solo COACH   |
+| `/routines/:id`           | Detalle de la rutina           | solo COACH   |
+| `/routines/:id/edit`      | Editar rutina                  | solo COACH   |
+| `/routines/:id/structure` | Estructura de la rutina        | solo COACH   |
+| `/foods`                  | Catálogo de alimentos          | con sesión   |
+| `/foods/new`              | Nuevo alimento                 | solo COACH   |
+| `/foods/:id/edit`         | Editar alimento                | solo COACH   |
+| `/my-routine`             | Mi rutina                      | solo ATHLETE |
+| `/progress`               | Progreso (peso y fotos)        | solo ATHLETE |
+| `/training/:sessionId`    | Entrenamiento en curso         | solo ATHLETE |
+| `/meals`                  | Comidas del día (US-23, US-24) | solo ATHLETE |
+| `/training-history`       | Entrenamientos (US-21)         | solo ATHLETE |
 
 `/athletes/new` y `/athletes/:id` conviven: React Router prioriza el segmento estático. La ficha (`/athletes/:id`) muestra datos personales, salud y entrenamiento, historial de rutinas, último peso, rutina activa y el historial de entrenamientos (US-21: sesiones cerradas, detalle de series y revisión del entrenador, ver más abajo). Ante un 403 (atleta desvinculado o de otro entrenador) o un 404 muestra un aviso con la salida al listado. El último peso es el registro más reciente del atleta (`GET /athletes/{id}/weights?size=1`, pedido en paralelo con el atleta) con su fecha y comentario; sin registros, el peso inicial rotulado "Peso inicial". Si falla solo esa llamada, la sección muestra su error con "Reintentar" y el resto de la ficha se ve. La rutina activa y el historial salen de la primera página del historial (`GET /athletes/{id}/assignments?page=0&size=10`, también en paralelo con el atleta), que comparten las dos secciones; si falla, cada una muestra su error con "Reintentar".
 
@@ -151,9 +151,21 @@ Pruebas: unitarias en `src/lib/progress-photos/*.test.*` y `src/pages/progress/*
 
 Comidas (`/meals`, solo el atleta, entrada «Comidas» en su menú, US-23) registra lo que comió hoy, con la fecha de hoy en la zona de la app. El tipo de comida (desayuno, almuerzo, merienda, cena, colación, pre y post-entrenamiento) se preselecciona según la hora (antes de las 11, desayuno; hasta las 15, almuerzo; hasta las 19, merienda; después, cena) y un toque lo cambia. La comida se arma con una descripción, con alimentos del catálogo y su cantidad en gramos (el buscador usa `GET /foods?name=&size=20`; cada alimento arranca con su porción de referencia), o con las dos cosas: hace falta al menos una. Las validaciones y los mensajes son los del backend: hasta 50 alimentos, cantidad mayor a 0 con hasta 5 enteros y 2 decimales, descripción de hasta 500 caracteres. Enter en el buscador agrega el primer resultado y no envía la comida.
 
-La lista muestra las comidas del día (`GET /athletes/{id}/meals?date=`, sin paginación) con sus alimentos, cantidades y calorías. Una comida sin alimentos no tiene calorías calculables y muestra un guion, nunca 0. Editar abre la comida en el mismo formulario y la guarda completa (`PUT`, conserva el día de la comida); borrar pide confirmación (`DELETE`). Si la comida ya no existe (404), el formulario vuelve al alta y la lista se actualiza. Los errores 400 se muestran en el campo que corresponde (la cantidad de cada alimento o la descripción) y el resto en el aviso del formulario. El resumen por día y la navegación entre días son de US-24; la foto de comida, de la ola 2 (US-28).
+La lista muestra las comidas del día (`GET /athletes/{id}/meals?date=`, sin paginación) con sus alimentos, cantidades y calorías. Una comida sin alimentos no tiene calorías calculables y muestra un guion, nunca 0. Editar abre la comida en el mismo formulario y la guarda completa (`PUT`, conserva el día de la comida); borrar pide confirmación (`DELETE`). Si la comida ya no existe (404), el formulario vuelve al alta y la lista se actualiza. Los errores 400 se muestran en el campo que corresponde (la cantidad de cada alimento o la descripción) y el resto en el aviso del formulario. La foto de comida es de la ola 2 (US-28).
 
 Las calorías y los macros los calcula el backend. json-server no simula esta página (ruta anidada y buscador paginado): se prueba con el backend real o con `e2e/meals.spec.ts`, que intercepta la API y cubre también un celular.
+
+### Resumen del día y navegación por días (US-24)
+
+En `/meals` se puede mirar cualquier día hasta hoy, no más allá. Arriba de todo hay un selector de día: «Día anterior», «Día siguiente» (deshabilitado en hoy) y, si no es hoy, «Volver a hoy». El día va en la URL (`?date=AAAA-MM-DD`; hoy no lleva parámetro), así se vuelve a él con el historial del navegador y se puede compartir. Una fecha inválida (`2026-02-31`) o futura en la URL muestra hoy y corrige la URL. Al cambiar de día, una edición en curso se cancela y el aviso anterior desaparece. Tras navegar, el foco va al título del día, que el lector de pantalla anuncia.
+
+Debajo, la tarjeta «Resumen del día» muestra las calorías y los gramos de proteínas, carbohidratos y grasas del día (`GET /athletes/{id}/meals/summary?date=`). Un día sin comidas da 0 en todo y «Sin comidas registradas este día». Con gramos, una barra muestra el reparto de los tres macros, con su lectura en texto (el reparto es por gramos: el front no calcula kcal). Si hay comidas sin datos nutricionales (solo descripción, sin alimentos), la tarjeta avisa que no entran en el total. Si el resumen falla, muestra el mensaje con «Reintentar» sin tocar la lista.
+
+El alta, la edición y el borrado funcionan en el día que se mira: el alta se registra en ese día, y la edición conserva el suyo. Cada mutación invalida las consultas de comidas del atleta (el listado del día y su resumen) por prefijo.
+
+El código vive en `src/pages/meals/`: tipos y acción del resumen (`types.ts`, `actions/get-daily-summary.ts`), el hook `hooks/use-daily-nutrition-summary.ts`, la clave de caché (`summary-key.ts`, bajo la clave de las comidas del atleta), las reglas de fecha (`day-navigation.ts`), el reparto de macros (`macro-share.ts`) y los componentes `components/DayNavigator.tsx` y `components/DailySummaryCard.tsx`.
+
+Pruebas: unitarias en `src/pages/meals/**/*.test.*` (fechas de la URL, límites de la navegación, foco, resumen con datos, vacío y avisos, reparto, clave de caché, acción y la página con la URL y el alta en otro día) y el E2E `e2e/daily-nutrition.spec.ts`, que intercepta la API con un backend en memoria: navegación, URL inválida, día vacío, alta en un día anterior, error del resumen con «Reintentar» y un celular sin scroll horizontal. `e2e/meals.spec.ts` también intercepta el resumen.
 
 ### Estructura
 

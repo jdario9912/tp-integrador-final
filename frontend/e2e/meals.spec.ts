@@ -11,6 +11,8 @@ import {
 // GET (del día) y POST del alta; PUT de la edición; DELETE del borrado
 const MEALS_URL = /\/api\/athletes\/[^/]+\/meals(\?.*)?$/
 const MEAL_URL = /\/api\/athletes\/[^/]+\/meals\/[^/?]+$/
+// resumen del día (US-24): otra ruta, no pasa por MEALS_URL ni por MEAL_URL
+const SUMMARY_URL = /\/api\/athletes\/[^/]+\/meals\/summary(\?.*)?$/
 // buscador de alimentos del catálogo
 const FOODS_URL = /\/api\/foods(\?.*)?$/
 
@@ -203,6 +205,37 @@ const routeBackend = async (
     return route.fulfill({
       status: 200,
       json: meals.filter((meal) => meal.date === date),
+    })
+  })
+
+  // US-24: resumen del día, sumado de los ítems ya redondeados; las comidas sin ítems no suman
+  // y se cuentan aparte. No se registra en `requests`: el orden de los pedidos no debe cambiar
+  await page.route(SUMMARY_URL, (route) => {
+    const request = route.request()
+    const path = pathOf(request)
+    if (!path.startsWith(`/athletes/${athlete.id}/`)) {
+      return route.fulfill(notAllowed(path))
+    }
+    const date = new URL(request.url()).searchParams.get('date')
+    const ofDay = meals.filter((meal) => meal.date === date)
+    const withItems = ofDay.filter((meal) => meal.items.length > 0)
+    const sum = (pick: (item: MealItemJson) => number) =>
+      round2(
+        withItems
+          .flatMap((meal) => meal.items)
+          .reduce((total, item) => total + pick(item), 0),
+      )
+    return route.fulfill({
+      status: 200,
+      json: {
+        date,
+        caloriesKcal: sum((item) => item.caloriesKcal),
+        proteinG: sum((item) => item.proteinG),
+        carbsG: sum((item) => item.carbsG),
+        fatG: sum((item) => item.fatG),
+        mealCount: ofDay.length,
+        mealsWithoutNutrition: ofDay.length - withItems.length,
+      },
     })
   })
 
