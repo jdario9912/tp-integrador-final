@@ -11,17 +11,22 @@ import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealItemRequest;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
+import com.gestion_deportiva.api.meal.dto.NutritionOverview;
 import com.gestion_deportiva.api.meal.exception.FutureMealDateException;
 import com.gestion_deportiva.api.meal.exception.MealNotFoundException;
+import com.gestion_deportiva.api.meal.exception.MealRangeTooLongException;
 import com.gestion_deportiva.api.meal.model.Meal;
 import com.gestion_deportiva.api.meal.model.MealItem;
+import com.gestion_deportiva.api.meal.repository.MealDateTotals;
 import com.gestion_deportiva.api.meal.repository.MealDayTotals;
 import com.gestion_deportiva.api.meal.repository.MealRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +41,11 @@ import static java.util.stream.Collectors.toMap;
 @Service
 @RequiredArgsConstructor
 public class MealServiceImpl implements MealService {
+
+    // US-25 · Con una sola fecha del rango (o ninguna), se completa una semana
+    private static final int DEFAULT_RANGE_DAYS = 7;
+    // Los totales de un día sin comidas, con la misma escala que devuelve la consulta
+    private static final BigDecimal ZERO_TOTAL = new BigDecimal("0.00");
 
     private final MealRepository mealRepository;
     private final AthleteRepository athleteRepository;
@@ -109,6 +119,33 @@ public class MealServiceImpl implements MealService {
                 totals.getFatG(),
                 totals.getMealCount(),
                 totals.getMealsWithoutNutrition());
+    }
+
+    // US-25 · El rango se valida antes que el atleta (igual que la fecha futura: es un 400 y no revela nada del
+    // atleta), después la pertenencia y una sola consulta agregada. Los días sin comidas no vienen de la base: se
+    // completan en cero para que el front no tenga que rellenar huecos
+    @Override
+    @Transactional(readOnly = true)
+    public NutritionOverview overview(AuthenticatedUser user, UUID athleteId, LocalDate from, LocalDate to) {
+        LocalDate end = to != null ? to : from != null ? from.plusDays(DEFAULT_RANGE_DAYS - 1) : appClock.today();
+        LocalDate start = from != null ? from : end.minusDays(DEFAULT_RANGE_DAYS - 1);
+        // long: un rango de años no debe desbordar antes de compararlo
+        long totalDays = ChronoUnit.DAYS.between(start, end) + 1;
+        if (totalDays > MealRangeTooLongException.MAX_DAYS) {
+            throw new MealRangeTooLongException();
+        }
+        athleteAccessGuard.verifyAccess(user, athleteId);
+
+        Map<LocalDate, MealDateTotals> totalsByDate = mealRepository.sumRange(athleteId, start, end).stream()
+                .collect(toMap(MealDateTotals::getDate, identity()));
+        List<DailyNutritionSummary> days = start.datesUntil(end.plusDays(1))
+                .map(day -> totalsByDate.containsKey(day) ? toSummary(day, totalsByDate.get(day)) : emptyDay(day))
+                .toList();
+        return new NutritionOverview(start, end, (int) totalDays, totalsByDate.size(), days);
+    }
+
+    private static DailyNutritionSummary emptyDay(LocalDate day) {
+        return new DailyNutritionSummary(day, ZERO_TOTAL, ZERO_TOTAL, ZERO_TOTAL, ZERO_TOTAL, 0, 0);
     }
 
     // Se valida antes que el atleta (paso 3 del contrato): es un 400 de validación y no revela nada del atleta

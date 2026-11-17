@@ -229,8 +229,8 @@ erDiagram
         varchar description
         varchar photo_url
         varchar athlete_comment
-        varchar coach_feedback
-        timestamptz reviewed_at
+        varchar coach_observation "comentario del entrenador (US-25); requiere reviewed_at"
+        timestamptz reviewed_at "ultima revision del entrenador; null si no revisada o editada despues"
     }
     MEAL_TYPES {
         smallint id PK

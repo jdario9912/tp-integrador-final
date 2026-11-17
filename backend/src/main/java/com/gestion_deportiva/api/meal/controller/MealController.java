@@ -4,7 +4,9 @@ import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
+import com.gestion_deportiva.api.meal.dto.MealOverviewFilter;
 import com.gestion_deportiva.api.meal.dto.MealSearchFilter;
+import com.gestion_deportiva.api.meal.dto.NutritionOverview;
 import com.gestion_deportiva.api.meal.service.MealService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,5 +72,14 @@ public class MealController {
     public DailyNutritionSummary summaryOfDay(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
                                               @ParameterObject @Valid MealSearchFilter filter) {
         return mealService.summaryOfDay(AuthenticatedUser.from(jwt), athleteId, filter.date());
+    }
+
+    // US-25 · Alimentación en un rango de días (?from y ?to, hasta 31 días; sin ellos, la última semana): un resumen
+    // por día y la constancia de registro. Los dos roles; la pertenencia la decide el service. Regla explícita en
+    // SecurityConfig: /overview no cae en la de /{mealId}
+    @GetMapping("/overview")
+    public NutritionOverview overview(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
+                                      @ParameterObject @Valid MealOverviewFilter filter) {
+        return mealService.overview(AuthenticatedUser.from(jwt), athleteId, filter.from(), filter.to());
     }
 }

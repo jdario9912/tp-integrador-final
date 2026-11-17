@@ -179,4 +179,62 @@ class MealTest {
         assertEquals(first, first);
         assertFalse(first.equals(null));
     }
+
+    // ---------- US-25 · revisión del entrenador ----------
+
+    @Test
+    void shouldStartUnreviewed() {
+        Meal lunch = meal(leo, DATE, MealType.LUNCH, "Milanesa");
+
+        assertFalse(lunch.isReviewed());
+        assertNull(lunch.getReviewedAt());
+        assertNull(lunch.getCoachObservation());
+    }
+
+    // El instante se guarda a microsegundos, igual que el alta y la edición
+    @Test
+    void shouldReviewWithTheInstantAtDatabasePrecisionAndTheObservation() {
+        Meal lunch = meal(leo, DATE, MealType.LUNCH, "Milanesa");
+
+        lunch.review(Instant.parse("2026-11-03T10:00:00.123456789Z"), "Bien la proteína");
+
+        assertTrue(lunch.isReviewed());
+        assertEquals(Instant.parse("2026-11-03T10:00:00.123456Z"), lunch.getReviewedAt());
+        assertEquals("Bien la proteína", lunch.getCoachObservation());
+    }
+
+    @Test
+    void shouldReplaceTheObservationWhenReviewedAgain() {
+        Meal lunch = meal(leo, DATE, MealType.LUNCH, "Milanesa");
+        lunch.review(Instant.parse("2026-11-03T10:00:00Z"), "Primera");
+
+        lunch.review(Instant.parse("2026-11-04T10:00:00Z"), null);
+
+        assertEquals(Instant.parse("2026-11-04T10:00:00Z"), lunch.getReviewedAt());
+        assertNull(lunch.getCoachObservation());
+    }
+
+    @Test
+    void shouldRejectAnObservationLongerThanTheLimitAndKeepThePreviousReview() {
+        Meal lunch = meal(leo, DATE, MealType.LUNCH, "Milanesa");
+        lunch.review(Instant.parse("2026-11-03T10:00:00Z"), "Primera");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> lunch.review(Instant.parse("2026-11-04T10:00:00Z"), "a".repeat(Meal.MAX_OBSERVATION_LENGTH + 1)));
+
+        assertEquals("Primera", lunch.getCoachObservation());
+        assertEquals(Instant.parse("2026-11-03T10:00:00Z"), lunch.getReviewedAt());
+    }
+
+    // La revisión era sobre los datos anteriores: al editar, la comida vuelve a quedar pendiente
+    @Test
+    void shouldDiscardTheReviewWhenTheAthleteCorrectsTheMeal() {
+        Meal lunch = meal(leo, DATE, MealType.LUNCH, "Milanesa");
+        lunch.review(Instant.parse("2026-11-03T10:00:00Z"), "Sumá verduras");
+
+        lunch.correct(DATE, MealType.LUNCH, "Milanesa con ensalada", List.of(), CORRECTED_AT);
+
+        assertFalse(lunch.isReviewed());
+        assertNull(lunch.getCoachObservation());
+    }
 }
