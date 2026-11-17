@@ -12,6 +12,7 @@ import { Pencil, Scale } from '../../ui/icons'
 import { LatestWeightsCard } from './components/LatestWeightsCard'
 import { ProgressPhotosCard } from './components/ProgressPhotosCard'
 import { WeightConflictNotice } from './components/WeightConflictNotice'
+import { WeightEvolutionCard } from './components/WeightEvolutionCard'
 import { WeightEntryCard } from './components/WeightEntryCard'
 import { WeightForm } from './components/WeightForm'
 import {
@@ -31,7 +32,7 @@ import {
 } from './weight-form-values'
 
 // página del atleta (US-26): registra su peso, ve sus últimos registros y los corrige.
-// US-29 le suma el gráfico de evolución (useWeights con from/to) y la galería de fotos
+// US-29: gráfico de evolución con rango en la URL (WeightEvolutionCard) y galería de fotos
 export function ProgressPage() {
   const { user } = useAuth()
   // el atleta es el usuario de la sesión: el mismo id que devuelve GET /auth/me
@@ -138,17 +139,22 @@ export function ProgressPage() {
           </WeightForm>
         </WeightEntryCard>
 
-        <LatestWeightsCard
-          records={latest.data?.content}
-          totalElements={latest.data?.totalElements ?? 0}
-          isPending={latest.isPending}
-          isRefreshing={latest.isFetching && !latest.isPending}
-          error={latest.error}
-          onRetry={() => void latest.refetch()}
-          today={today}
-          editingId={editing?.id ?? null}
-          onEdit={startEdit}
-        />
+        {/* US-29: el gráfico de evolución va arriba de los últimos registros */}
+        <div className="flex min-w-0 flex-col gap-6">
+          <WeightEvolutionCard athleteId={athleteId} today={today} />
+
+          <LatestWeightsCard
+            records={latest.data?.content}
+            totalElements={latest.data?.totalElements ?? 0}
+            isPending={latest.isPending}
+            isRefreshing={latest.isFetching && !latest.isPending}
+            error={latest.error}
+            onRetry={() => void latest.refetch()}
+            today={today}
+            editingId={editing?.id ?? null}
+            onEdit={startEdit}
+          />
+        </div>
       </div>
 
       {/* US-28: fotos de progreso debajo de los pesos (sección propia, con su tarjeta) */}

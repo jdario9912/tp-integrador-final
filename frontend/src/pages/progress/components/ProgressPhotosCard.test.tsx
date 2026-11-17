@@ -112,6 +112,18 @@ describe('ProgressPhotosCard · listado', () => {
     ).toBeInTheDocument()
   })
 
+  it('sin fotos ofrece subir la primera y enfoca el selector de archivo (CE-1)', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getProgressPhotos).mockResolvedValue(progressPhotosPage([]))
+    renderCard()
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Subir mi primera foto' }),
+    )
+
+    expect(photoInput()).toHaveFocus()
+  })
+
   it('si el servicio de almacenamiento no responde, lo dice y permite reintentar', async () => {
     vi.mocked(getProgressPhotos)
       .mockRejectedValueOnce(

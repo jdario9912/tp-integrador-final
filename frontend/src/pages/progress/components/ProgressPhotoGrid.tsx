@@ -13,7 +13,7 @@ import {
   PHOTO_UNEXPECTED_ERROR,
   photoErrorMessage,
 } from '../photo-messages'
-import { PHOTOS_HEADING_ID } from '../photo-element-ids'
+import { PHOTOS_FILE_FIELD_ID, PHOTOS_HEADING_ID } from '../photo-element-ids'
 import { ProgressPhotoImage } from './ProgressPhotoImage'
 
 type ProgressPhotoGridProps = {
@@ -30,6 +30,9 @@ type ProgressPhotoGridProps = {
 }
 
 const SKELETON_TILES = 3
+
+const focusUploadField = () =>
+  document.getElementById(PHOTOS_FILE_FIELD_ID)?.focus()
 
 // miniaturas en orden cronológico (la más antigua primero), como una línea de tiempo
 export function ProgressPhotoGrid({
@@ -84,6 +87,12 @@ export function ProgressPhotoGrid({
         icon={<ImagePlus />}
         title="Todavía no subiste fotos de progreso"
         description="Subí una foto frontal, lateral o de espalda: con el tiempo vas a ver tu evolución acá."
+        // US-29: acceso directo al formulario de subida (enfoca el selector de archivo)
+        action={
+          <OutlineButton size="sm" onClick={focusUploadField}>
+            Subir mi primera foto
+          </OutlineButton>
+        }
       />
     )
   }
