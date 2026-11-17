@@ -120,4 +120,26 @@ public interface TrainingSessionRepository extends JpaRepository<TrainingSession
     List<Object[]> findSummaryRows(@Param("sessionIds") Collection<UUID> sessionIds,
                                    @Param("doneStatusId") short doneStatusId,
                                    @Param("skippedStatusId") short skippedStatusId);
+
+    // ---------- US-12 · día que toca (contrato 9.6) ----------
+
+    // Entrenamientos de una asignación con el día que trabajaron, el más reciente primero por fin del cierre. El
+    // Pageable pide el primero: una sola consulta con limit 1. Se pasa el estado para que solo cuenten los finalizados
+    @Query("""
+            select d.id as dayId, d.dayNumber as dayNumber
+              from TrainingSession s
+              join s.routineDay d
+             where s.assignment.id = :assignmentId and s.status = :status
+             order by s.endedAt desc, s.startedAt desc""")
+    List<RoutineDayPosition> findRoutineDayPositions(@Param("assignmentId") UUID assignmentId,
+                                                     @Param("status") SessionStatus status,
+                                                     Pageable pageable);
+
+    // Día del último entrenamiento finalizado de la asignación (la base de la rotación). Vacío si nunca finalizó
+    // ninguno. Cancelados y en progreso no cuentan. Método default: Spring Data no lo interpreta como consulta derivada
+    default Optional<RoutineDayPosition> findLastFinishedRoutineDay(UUID assignmentId) {
+        return findRoutineDayPositions(assignmentId, SessionStatus.FINISHED, PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
+    }
 }

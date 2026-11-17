@@ -155,7 +155,7 @@ Asignación de rutinas (US-16), solo para entrenadores. Cada atleta tiene a lo s
 Rutina del atleta (US-17): el atleta y su entrenador consultan la rutina activa con su estructura, su vigencia y el día que toca:
 - `GET /api/athletes/{athleteId}/routine` responde 200 con `{ assignmentId, assignmentDate, endDate, expired, nextDayId, routine }`. `routine` trae `id`, `name`, `description`, `goal`, `daysPerWeek`, `durationWeeks` y `days`, con los mismos días y ejercicios que `GET /api/routines/{id}`. Si el atleta no tiene una rutina activa → 204 sin body (no es un error).
 - Vigencia: la rutina rige desde `assignmentDate` durante `durationWeeks` semanas; `endDate` (último día vigente) = `assignmentDate` + 7 × `durationWeeks` − 1, y `expired` es `true` si "hoy" (zona de la app) es posterior. Sin `durationWeeks` no vence (`endDate: null`). Vencida igual responde 200 con la rutina. Se calcula en cada consulta: no hay fechas guardadas.
-- `nextDayId` es el día que toca (uno de `routine.days`): por ahora siempre el primero; cuando existan los entrenamientos (US-18/US-20) será el que sigue al último finalizado. `null` solo si la rutina no tiene días.
+- `nextDayId` es el día que toca (uno de `routine.days`): el que sigue al último entrenamiento finalizado de la asignación (US-12, ver abajo). `null` solo si la rutina no tiene días.
 - El atleta solo ve la suya (también si está desvinculado); el entrenador, la de sus atletas vinculados (de otro entrenador o desvinculado → 403). Atleta inexistente → 404.
 
 Sesiones de entrenamiento (US-18): el atleta inicia el entrenamiento de un día de su rutina activa y lo retoma; él y su entrenador consultan la sesión:
@@ -217,6 +217,10 @@ Resumen nutricional del día (US-24): totales de calorías y macros de un día, 
 - `GET /api/athletes/{athleteId}/meals/summary?date=YYYY-MM-DD` responde `DailyNutritionSummary`: `date`, `caloriesKcal`, `proteinG`, `carbsG`, `fatG`, `mealCount` y `mealsWithoutNutrition`. Sin `date`, es hoy en la zona de la app. Lo leen el atleta (el suyo) y su entrenador (los de sus atletas vinculados); otro rol → 403.
 - Los totales suman los valores ya redondeados de cada ítem (el mismo criterio que `totalCaloriesKcal`), así que la suma coincide con lo que se ve en cada comida. Las comidas sin ítems no entran en los totales: cuentan en `mealCount` y en `mealsWithoutNutrition`.
 - Un día sin comidas responde 200 con todo en cero. Una fecha futura también responde en cero. Fecha con otro formato → 400 con el error en `date`.
+
+Dashboard del atleta (US-12): el panel de `/dashboard` del atleta junta la rutina de hoy, las comidas del día, el último peso y las observaciones del entrenador. No tiene endpoint propio: usa los de cada módulo. Lo único que cambia en el backend es el día que toca.
+- `nextDayId` de `GET /api/athletes/{athleteId}/routine` ya no es siempre el primer día: es el que sigue (por `dayNumber`) al del último entrenamiento **finalizado** de la asignación activa. Después del último día vuelve al primero; sin finalizados, el primero. Los `CANCELLED` y los `IN_PROGRESS` no cuentan, y una reasignación empieza otra rotación.
+- La consulta es una sola (`TrainingSessionRepository.findLastFinishedRoutineDay`, orden `ended_at` descendente, una fila) y la resuelve `LastFinishedSessionDayResolver`, que reemplaza al provisorio de US-17. Sin migración y sin cambios en la forma de la respuesta.
 
 Para agregar un endpoint:
 

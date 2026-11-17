@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,10 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +64,9 @@ class AthleteRoutineE2ETest {
     private static final String OTHER_ATHLETE_EMAIL = "mia@test.com";
 
     private static final String UNAUTHORIZED_MESSAGE = "Debe iniciar sesión para acceder a este recurso";
+
+    // Base de las horas de fin que fija el test de la rotación (US-12): cada sesión termina una hora después de la anterior
+    private static final Instant FINISH_BASE = Instant.parse("2026-11-01T12:00:00Z");
 
     @LocalServerPort
     private int port;
@@ -381,6 +388,101 @@ class AthleteRoutineE2ETest {
 
     // Fuerza: Torso (press con todos los parámetros y remo solo con los obligatorios) y Pierna (sentadilla).
     // Sin guardar, para poder agregarle días
+    // ---------- US-12: el día que toca según los entrenamientos (contrato 9.6) ----------
+
+    @Test
+    void shouldMoveTheNextDayAfterEachFinishedSessionAndBackToTheFirstOne() {
+        // Arrange
+        Routine strength = saveStrengthRoutine((short) 8);
+        assign(strength, today());
+        assertEquals(day(strength, 0).getId().toString(), nextDayId());
+
+        // Act + Assert: finalizar el primer día lleva al segundo
+        finishSession(startSession(day(strength, 0)), 1);
+        assertEquals(day(strength, 1).getId().toString(), nextDayId());
+
+        // Act + Assert: finalizar el último día vuelve al primero
+        finishSession(startSession(day(strength, 1)), 2);
+        assertEquals(day(strength, 0).getId().toString(), nextDayId());
+    }
+
+    @Test
+    void shouldNotMoveTheNextDayWhileASessionIsInProgressOrCancelled() {
+        // Arrange: el día 1 terminado; toca el 2
+        Routine strength = saveStrengthRoutine((short) 8);
+        assign(strength, today());
+        finishSession(startSession(day(strength, 0)), 1);
+
+        // Act + Assert: el día 2 en progreso no cuenta (si contara, tocaría el 1)
+        String sessionId = startSession(day(strength, 1));
+        assertEquals(day(strength, 1).getId().toString(), nextDayId());
+
+        // Act + Assert: cancelado tampoco cuenta
+        cancelSession(sessionId);
+        assertEquals(day(strength, 1).getId().toString(), nextDayId());
+    }
+
+    @Test
+    void shouldStartTheRotationAgainWhenTheRoutineIsReassigned() {
+        // Arrange: un entrenamiento finalizado con la asignación anterior
+        Routine strength = saveStrengthRoutine((short) 8);
+        RoutineAssignment previous = assign(strength, today());
+        finishSession(startSession(day(strength, 0)), 1);
+        assertEquals(day(strength, 1).getId().toString(), nextDayId());
+
+        // Act: le asignan la rutina de nuevo y la anterior queda en el historial
+        jdbcTemplate.update("update routine_assignments set active = false where id = ?", previous.getId());
+        assign(strength, today());
+
+        // Assert: la rotación de la asignación nueva arranca en el primer día
+        assertEquals(day(strength, 0).getId().toString(), nextDayId());
+    }
+
+    // Inicia el día de la rutina de Leo (201) y devuelve el id de la sesión
+    private String startSession(RoutineDay day) {
+        ResponseEntity<String> response = send(HttpMethod.POST, "/api/athletes/" + leo.getId() + "/sessions",
+                Map.of("routineDayId", day.getId().toString()));
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        return json(response).get("id").asString();
+    }
+
+    // Finaliza la sesión (200) y fija su hora de fin a una hora conocida: el orden por ended_at no depende del reloj
+    private void finishSession(String sessionId, int hour) {
+        assertEquals(HttpStatus.OK, send(HttpMethod.POST, sessionPath(sessionId) + "/finish", null).getStatusCode());
+        jdbcTemplate.update("update training_sessions set ended_at = ? where id = ?",
+                Timestamp.from(FINISH_BASE.plus(hour, ChronoUnit.HOURS)), UUID.fromString(sessionId));
+    }
+
+    private void cancelSession(String sessionId) {
+        assertEquals(HttpStatus.OK, send(HttpMethod.POST, sessionPath(sessionId) + "/cancel", null).getStatusCode());
+    }
+
+    private String sessionPath(String sessionId) {
+        return "/api/athletes/" + leo.getId() + "/sessions/" + sessionId;
+    }
+
+    // Día que toca según la rutina activa de Leo (200)
+    private String nextDayId() {
+        ResponseEntity<String> response = get(leo.getId(), ATHLETE_EMAIL);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        return json(response).get("nextDayId").asString();
+    }
+
+    // Request de Leo (POST con body opcional). Los 4xx se validan en cada test
+    private ResponseEntity<String> send(HttpMethod method, String uri, Object body) {
+        RestClient.RequestBodySpec request = client.method(method)
+                .uri(uri)
+                .headers(headers -> AuthHeaders.authenticate(headers, client, ATHLETE_EMAIL, RAW_PASSWORD));
+        if (body != null) {
+            request = request.contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonMapper.writeValueAsString(body));
+        }
+        return request.retrieve()
+                .onStatus(status -> true, (req, res) -> {
+                })
+                .toEntity(String.class);
+    }
+
     private Routine strengthRoutine(Short durationWeeks) {
         Routine strength = routine("Fuerza", coach);
         strength.setDescription("Bloque de fuerza");
