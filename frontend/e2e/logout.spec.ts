@@ -44,7 +44,9 @@ test('el atleta también puede cerrar sesión', async ({ page }) => {
   await page.route(LOGOUT_URL, (route) => route.fulfill({ status: 204 }))
 
   await page.goto(paths.dashboard)
-  await expect(page.getByText('Panel del atleta')).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Entrenamiento de hoy' }),
+  ).toBeVisible()
 
   const requestPromise = page.waitForRequest(LOGOUT_URL)
   await page.getByRole('button', { name: 'Cerrar sesión' }).click()

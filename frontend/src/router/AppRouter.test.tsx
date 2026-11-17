@@ -229,7 +229,9 @@ describe('AppRouter · Alimentos (US-39)', () => {
     async (path) => {
       await renderAppAt(path, 'ATHLETE')
 
-      expect(await screen.findByText('Panel del atleta')).toBeInTheDocument()
+      expect(
+        await screen.findByRole('region', { name: 'Entrenamiento de hoy' }),
+      ).toBeInTheDocument()
       expect(window.location.pathname).toBe(paths.dashboard)
     },
   )

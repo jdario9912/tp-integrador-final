@@ -48,7 +48,9 @@ test('el atleta inicia sesión y ve su panel', async ({ page }) => {
   await loginWith(page, 'leo@example.com', '12345678')
 
   await expect(page).toHaveURL(paths.dashboard)
-  await expect(page.getByText('Panel del atleta')).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Entrenamiento de hoy' }),
+  ).toBeVisible()
   await expect(page.getByText(/Bienvenido de nuevo/)).toHaveCount(0)
 })
 

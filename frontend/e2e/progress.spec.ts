@@ -195,7 +195,8 @@ test.describe('como atleta', () => {
     await expect(latestItems(page).first()).toContainText('Hoy')
     await expect(latestItems(page).last()).toContainText('73,1 kg')
 
-    const list = requests.find((r) => r.method() === 'GET')!
+    // el último GET: el panel del atleta también pide su último peso (US-12) antes de ir a Progreso
+    const list = requests.filter((r) => r.method() === 'GET').pop()!
     expect(new URL(list.url()).pathname).toBe(
       `/api/athletes/${athlete.id}/weights`,
     )
