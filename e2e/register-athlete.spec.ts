@@ -185,7 +185,9 @@ test('un atleta no puede entrar al alta de atletas', async ({ page }) => {
   await routeCurrentUser(page, athlete)
 
   await page.goto(paths.dashboard)
-  await expect(page.getByText('Panel del atleta')).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Entrenamiento de hoy' }),
+  ).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'Agregar atleta' }),
   ).toHaveCount(0)

@@ -1,0 +1,36 @@
+import type { AthleteRoutine } from '../../lib/athlete-routine'
+import type { RoutineDay } from '../../lib/routines'
+import type { TrainingHistoryItem } from '../../lib/training-sessions'
+
+// observaciones que muestra la tarjeta del entrenador (plan US-12: como máximo 3)
+export const OBSERVATIONS_SHOWN = 3
+
+// sesiones cerradas que se piden para buscar observaciones. La API no filtra por revisión: una
+// observación más vieja que estas sesiones no aparece en el panel (ver el README, US-12)
+export const HISTORY_PAGE_SIZE = 20
+
+// ejercicios que se listan del día antes de "y N más"
+export const EXERCISES_SHOWN = 4
+
+// el día que le toca al atleta (nextDayId, contrato 9.6). null si no está en los días de la rutina
+export const nextDayOf = ({
+  nextDayId,
+  routine,
+}: Pick<AthleteRoutine, 'nextDayId' | 'routine'>): RoutineDay | null =>
+  routine.days.find((day) => day.id === nextDayId) ?? null
+
+// "Día 1: Torso", como en Mi rutina
+export const dayTitle = ({
+  dayNumber,
+  name,
+}: Pick<RoutineDay, 'dayNumber' | 'name'>) => `Día ${dayNumber}: ${name}`
+
+// observaciones con texto, en el orden que da la API (la más reciente primero). Una sesión revisada
+// sin texto no cuenta: el panel muestra solo lo que dejó el entrenador
+export const latestObservations = (
+  items: TrainingHistoryItem[],
+  max: number = OBSERVATIONS_SHOWN,
+) =>
+  items
+    .filter((item) => (item.review?.observation ?? '').trim() !== '')
+    .slice(0, max)
