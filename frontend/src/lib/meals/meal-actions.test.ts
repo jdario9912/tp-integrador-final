@@ -4,6 +4,7 @@ import { meal } from '../../test/meal-fixtures'
 import { createMeal } from './create-meal'
 import { deleteMeal } from './delete-meal'
 import { getMealsOfDay } from './get-meals'
+import { putMealReview } from './put-meal-review'
 import type { MealInput } from './types'
 import { updateMeal } from './update-meal'
 
@@ -67,5 +68,16 @@ describe('acciones de las comidas', () => {
     await deleteMeal(ATHLETE_ID, MEAL_ID)
 
     expect(del).toHaveBeenCalledWith(`/athletes/${ATHLETE_ID}/meals/${MEAL_ID}`)
+  })
+
+  it('putMealReview envía el comentario a PUT /athletes/{athleteId}/meals/{mealId}/review (US-25)', async () => {
+    vi.mocked(put).mockResolvedValue(meal())
+
+    await putMealReview(ATHLETE_ID, MEAL_ID, { observation: 'Bien' })
+
+    expect(put).toHaveBeenCalledWith(
+      `/athletes/${ATHLETE_ID}/meals/${MEAL_ID}/review`,
+      { observation: 'Bien' },
+    )
   })
 })

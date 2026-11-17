@@ -21,6 +21,8 @@ export const meal = (overrides: Partial<Meal> = {}): Meal => ({
   description: null,
   totalCaloriesKcal: 247.5,
   items: [mealItem()],
+  // US-25: sin revisar
+  review: null,
   createdAt: '2026-11-13T16:40:12.345678Z',
   updatedAt: '2026-11-13T16:40:12.345678Z',
   ...overrides,

@@ -9,6 +9,7 @@ import {
 import { IconButton } from '../../../ui/icon-button'
 import { Pencil, Trash2, Utensils } from '../../../ui/icons'
 import { IconChip } from '../../../ui/icon-chip'
+import { MealReviewNote } from './MealReviewNote'
 
 type MealListItemProps = {
   meal: Meal
@@ -79,6 +80,9 @@ export function MealListItem({
             ))}
           </ul>
         )}
+
+        {/* US-25: si el entrenador la revisó, la marca y su comentario */}
+        <MealReviewNote review={meal.review} />
 
         {isEditing && (
           <span className="text-primary mt-1 text-sm font-semibold">

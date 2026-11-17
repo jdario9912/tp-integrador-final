@@ -105,4 +105,26 @@ describe('MealsList', () => {
 
     expect(screen.getByText('Editando')).toBeInTheDocument()
   })
+
+  it('muestra si el entrenador revisó la comida y su comentario, solo lectura (US-25)', () => {
+    const reviewed = meal({
+      review: {
+        reviewedAt: '2026-11-14T15:00:00Z',
+        observation: 'Sumá verduras a la cena',
+      },
+    })
+    const withoutComment = meal({
+      id: 'sin-comentario',
+      type: 'DINNER',
+      review: { reviewedAt: '2026-11-14T15:00:00Z', observation: null },
+    })
+    const pending = meal({ id: 'pendiente', type: 'SNACK' })
+    render(
+      <MealsList {...baseProps} meals={[reviewed, withoutComment, pending]} />,
+    )
+
+    expect(screen.getAllByText(/Revisada por tu entrenador el/)).toHaveLength(2)
+    expect(screen.getByText('Sumá verduras a la cena')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
 })
