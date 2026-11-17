@@ -168,7 +168,11 @@ class RoleEndpointMatrixE2ETest {
             // "{}" el body es válido y {sessionId} no existe: 404). La pertenencia se prueba en
             // TrainingSessionReviewE2ETest
             new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/sessions/{sessionId}/review", UNAUTHORIZED, ALLOWED,
-                    FORBIDDEN));
+                    FORBIDDEN),
+            // US-24: resumen nutricional del día. Lo leen los dos roles ({athleteId} es el del entrenador, así que pasa
+            // la autorización; sin ?date es hoy y responde todo en cero). La pertenencia y los totales se prueban en
+            // MealSummaryE2ETest
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/meals/summary", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";

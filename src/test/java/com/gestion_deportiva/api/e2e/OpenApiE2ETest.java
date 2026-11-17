@@ -176,6 +176,18 @@ class OpenApiE2ETest {
         }
     }
 
+    // US-24: el resumen documenta su 200 y el ?date como query param (el mismo filtro que el listado de comidas)
+    @Test
+    void shouldDocumentTheMealSummaryEndpoint() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode summary = paths.get("/api/athletes/{athleteId}/meals/summary").get("get");
+        assertTrue(summary.get("parameters").toString().contains("\"date\""));
+        assertTrue(summary.get("responses").has("200"));
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)

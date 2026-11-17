@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.meal.service;
 
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
+import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
 
@@ -23,4 +24,8 @@ public interface MealService {
 
     // Comidas del día (null = hoy en la zona de la app), por tipo y por alta. Sin comidas, lista vacía
     List<MealResponse> findByDay(AuthenticatedUser user, UUID athleteId, LocalDate date);
+
+    // US-24 · Resumen nutricional del día (null = hoy en la zona de la app): totales de ítems y contadores de comidas.
+    // Mismo acceso que el listado. Sin comidas, todo en cero
+    DailyNutritionSummary summaryOfDay(AuthenticatedUser user, UUID athleteId, LocalDate date);
 }

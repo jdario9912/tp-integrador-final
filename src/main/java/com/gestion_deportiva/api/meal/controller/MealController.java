@@ -1,6 +1,7 @@
 package com.gestion_deportiva.api.meal.controller;
 
 import com.gestion_deportiva.api.common.security.AuthenticatedUser;
+import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
 import com.gestion_deportiva.api.meal.dto.MealSearchFilter;
@@ -61,5 +62,13 @@ public class MealController {
     public List<MealResponse> findByDay(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
                                         @ParameterObject @Valid MealSearchFilter filter) {
         return mealService.findByDay(AuthenticatedUser.from(jwt), athleteId, filter.date());
+    }
+
+    // US-24 · Resumen nutricional del día (contrato 16): mismo ?date y mismo acceso que el listado (los dos roles; la
+    // pertenencia la decide el service). La regla de SecurityConfig va explícita: /summary no cae en la de /{mealId}
+    @GetMapping("/summary")
+    public DailyNutritionSummary summaryOfDay(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID athleteId,
+                                              @ParameterObject @Valid MealSearchFilter filter) {
+        return mealService.summaryOfDay(AuthenticatedUser.from(jwt), athleteId, filter.date());
     }
 }
