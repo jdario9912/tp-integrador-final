@@ -80,6 +80,9 @@ public class SecurityConfig {
     static final String ATHLETE_SESSION_REVIEW_PATH = ATHLETE_SESSION_PATH + "/review";
     // US-24 · resumen nutricional del día (contrato 16): una subruta de /meals, distinta de /meals/{mealId}
     static final String ATHLETE_MEALS_SUMMARY_PATH = ATHLETE_MEALS_PATH + "/summary";
+    // US-25 · alimentación por rango y revisión de una comida
+    static final String ATHLETE_MEALS_OVERVIEW_PATH = ATHLETE_MEALS_PATH + "/overview";
+    static final String ATHLETE_MEAL_REVIEW_PATH = ATHLETE_MEAL_PATH + "/review";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -181,6 +184,11 @@ public class SecurityConfig {
                         // atletas). Va explícita para que el GET de /summary no dependa de la red de seguridad. Qué atleta
                         // puede usar cada uno lo decide AthleteAccessGuard en MealServiceImpl
                         .requestMatchers(HttpMethod.GET, ATHLETE_MEALS_SUMMARY_PATH).hasAnyRole("COACH", "ATHLETE")
+                        // US-25 · Alimentación por rango: los dos roles (explícita, igual que /summary). Revisión de una
+                        // comida: solo el entrenador (el atleta recibe 403 aunque la comida sea suya). Qué atleta puede
+                        // usar cada uno lo decide AthleteAccessGuard en MealServiceImpl y MealReviewService
+                        .requestMatchers(HttpMethod.GET, ATHLETE_MEALS_OVERVIEW_PATH).hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.PUT, ATHLETE_MEAL_REVIEW_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

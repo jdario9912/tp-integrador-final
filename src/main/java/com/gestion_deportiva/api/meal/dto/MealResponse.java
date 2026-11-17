@@ -11,6 +11,7 @@ import java.util.UUID;
 
 // Una comida (contrato 11.2). Sin athleteId: las rutas cuelgan de /athletes/{athleteId}. No expone la foto (ola 2)
 // totalCaloriesKcal es null si la comida no tiene ítems (una descripción sola no tiene calorías)
+// review (US-25) es la revisión del entrenador; null si la comida no está revisada
 public record MealResponse(
         UUID id,
         LocalDate date,
@@ -19,7 +20,8 @@ public record MealResponse(
         BigDecimal totalCaloriesKcal,
         List<MealItemResponse> items,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        MealReviewResponse review
 ) {
 
     public static MealResponse from(Meal meal) {
@@ -31,6 +33,7 @@ public record MealResponse(
                 meal.getTotalCaloriesKcal(),
                 meal.getItems().stream().map(MealItemResponse::from).toList(),
                 meal.getCreatedAt(),
-                meal.getUpdatedAt());
+                meal.getUpdatedAt(),
+                MealReviewResponse.of(meal));
     }
 }

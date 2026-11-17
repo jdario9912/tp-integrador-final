@@ -39,6 +39,7 @@ public class Meal {
 
     public static final int MAX_DESCRIPTION_LENGTH = 500;
     public static final int MAX_ITEMS = 50;
+    public static final int MAX_OBSERVATION_LENGTH = 1000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -67,6 +68,14 @@ public class Meal {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // US-25: última revisión del entrenador. null si nunca la revisó o si el atleta la editó después (V16)
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    // US-25: comentario del entrenador (opcional, hasta 1000 caracteres). Revisar de nuevo lo reemplaza (V16)
+    @Column(name = "coach_observation", length = MAX_OBSERVATION_LENGTH)
+    private String coachObservation;
+
     // Los ítems se reemplazan completos al editar y se borran con la comida (contrato 11.11)
     @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
@@ -81,11 +90,28 @@ public class Meal {
     }
 
     // Edición completa (PUT): reemplaza fecha, tipo, descripción y todos los ítems. Los ítems que se mantienen en el
-    // body también se cargan de nuevo, con la copia del catálogo del momento
+    // body también se cargan de nuevo, con la copia del catálogo del momento. US-25: la revisión del entrenador era
+    // sobre los datos anteriores, así que se descarta (la comida vuelve a quedar pendiente de revisión)
     public void correct(LocalDate eatenOn, MealType type, String description, List<MealItem> items,
                         Instant correctedAt) {
         changeData(eatenOn, type, description, items);
         this.updatedAt = toDatabasePrecision(correctedAt, "correctedAt");
+        this.reviewedAt = null;
+        this.coachObservation = null;
+    }
+
+    // US-25 · El entrenador revisa la comida. Revisar de nuevo reemplaza el comentario y el instante, sin duplicar
+    // nada. El comentario llega ya recortado por el request (null si estaba vacío)
+    public void review(Instant reviewedAt, String observation) {
+        if (observation != null && observation.length() > MAX_OBSERVATION_LENGTH) {
+            throw new IllegalArgumentException("observation admite hasta " + MAX_OBSERVATION_LENGTH + " caracteres");
+        }
+        this.reviewedAt = toDatabasePrecision(reviewedAt, "reviewedAt");
+        this.coachObservation = observation;
+    }
+
+    public boolean isReviewed() {
+        return reviewedAt != null;
     }
 
     // Suma de las calorías de los ítems (cada una ya redondeada, así el total coincide con el detalle).

@@ -188,6 +188,23 @@ class OpenApiE2ETest {
         assertTrue(summary.get("responses").has("200"));
     }
 
+    // US-25: la vista por rango documenta ?from y ?to como query params; la revisión documenta sus errores
+    @Test
+    void shouldDocumentTheMealOverviewAndReviewEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode overview = paths.get("/api/athletes/{athleteId}/meals/overview").get("get");
+        assertTrue(overview.get("parameters").toString().contains("\"from\""));
+        assertTrue(overview.get("parameters").toString().contains("\"to\""));
+        assertTrue(overview.get("responses").has("200"));
+        JsonNode review = paths.get("/api/athletes/{athleteId}/meals/{mealId}/review").get("put").get("responses");
+        for (String status : new String[] {"200", "400", "403", "404"}) {
+            assertTrue(review.has(status), status);
+        }
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)

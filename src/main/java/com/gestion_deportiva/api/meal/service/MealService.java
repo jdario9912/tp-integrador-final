@@ -4,6 +4,7 @@ import com.gestion_deportiva.api.common.security.AuthenticatedUser;
 import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
+import com.gestion_deportiva.api.meal.dto.NutritionOverview;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,4 +29,8 @@ public interface MealService {
     // US-24 · Resumen nutricional del día (null = hoy en la zona de la app): totales de ítems y contadores de comidas.
     // Mismo acceso que el listado. Sin comidas, todo en cero
     DailyNutritionSummary summaryOfDay(AuthenticatedUser user, UUID athleteId, LocalDate date);
+
+    // US-25 · Alimentación en un rango de días (from y to opcionales: ver MealOverviewFilter), con un resumen por día
+    // y la constancia de registro. Mismo acceso que el listado. Sin comidas, todos los días en cero
+    NutritionOverview overview(AuthenticatedUser user, UUID athleteId, LocalDate from, LocalDate to);
 }

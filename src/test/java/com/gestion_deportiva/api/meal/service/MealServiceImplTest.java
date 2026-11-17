@@ -14,10 +14,13 @@ import com.gestion_deportiva.api.food.repository.FoodRepository;
 import com.gestion_deportiva.api.meal.dto.DailyNutritionSummary;
 import com.gestion_deportiva.api.meal.dto.MealRequest;
 import com.gestion_deportiva.api.meal.dto.MealResponse;
+import com.gestion_deportiva.api.meal.dto.NutritionOverview;
 import com.gestion_deportiva.api.meal.exception.FutureMealDateException;
 import com.gestion_deportiva.api.meal.exception.MealNotFoundException;
+import com.gestion_deportiva.api.meal.exception.MealRangeTooLongException;
 import com.gestion_deportiva.api.meal.model.Meal;
 import com.gestion_deportiva.api.meal.model.enums.MealType;
+import com.gestion_deportiva.api.meal.repository.MealDateTotals;
 import com.gestion_deportiva.api.meal.repository.MealDayTotals;
 import com.gestion_deportiva.api.meal.repository.MealRepository;
 import com.gestion_deportiva.api.user.model.enums.Role;
@@ -378,6 +381,130 @@ class MealServiceImplTest {
         assertThrows(AthleteAccessDeniedException.class, () -> service.summaryOfDay(LEO, ATHLETE_ID, TODAY));
 
         verifyNoInteractions(mealRepository);
+    }
+
+    // ---------- US-25 · alimentación por rango ----------
+
+    // Sin fechas: los últimos 7 días hasta hoy en la zona de la app (del 07/11 al 13/11)
+    @Test
+    void shouldUseTheLastSevenDaysUntilTodayWhenNoDateIsGiven() {
+        when(mealRepository.sumRange(ATHLETE_ID, TODAY.minusDays(6), TODAY)).thenReturn(List.of());
+
+        NutritionOverview overview = service.overview(LEO, ATHLETE_ID, null, null);
+
+        assertEquals(TODAY.minusDays(6), overview.from());
+        assertEquals(TODAY, overview.to());
+        assertEquals(7, overview.totalDays());
+    }
+
+    // Con una sola fecha, la semana que empieza (from) o termina (to) en ella
+    @Test
+    void shouldCompleteAWeekFromTheOnlyDateGiven() {
+        when(mealRepository.sumRange(any(), any(), any())).thenReturn(List.of());
+
+        NutritionOverview fromOnly = service.overview(LEO, ATHLETE_ID, DATE, null);
+        NutritionOverview toOnly = service.overview(LEO, ATHLETE_ID, null, DATE);
+
+        assertEquals(DATE.plusDays(6), fromOnly.to());
+        assertEquals(DATE.minusDays(6), toOnly.from());
+    }
+
+    // Los días sin comidas no vienen de la base: se completan en cero, en orden. La constancia son los días con
+    // comidas
+    @Test
+    void shouldFillTheDaysWithoutMealsWithZerosAndCountTheConsistency() {
+        LocalDate from = LocalDate.of(2026, 11, 9);
+        LocalDate to = LocalDate.of(2026, 11, 11);
+        when(mealRepository.sumRange(ATHLETE_ID, from, to)).thenReturn(List.of(
+                dateTotals(from, "507.50", 2L, 1L),
+                dateTotals(to, "165", 1L, 0L)));
+
+        NutritionOverview overview = service.overview(LEO, ATHLETE_ID, from, to);
+
+        assertEquals(3, overview.totalDays());
+        assertEquals(2, overview.daysWithMeals());
+        assertEquals(List.of(from, from.plusDays(1), to),
+                overview.days().stream().map(DailyNutritionSummary::date).toList());
+        assertEquals(new BigDecimal("507.50"), overview.days().get(0).caloriesKcal());
+        assertEquals(1, overview.days().get(0).mealsWithoutNutrition());
+        assertEquals(0, BigDecimal.ZERO.compareTo(overview.days().get(1).caloriesKcal()));
+        assertEquals(0, overview.days().get(1).mealCount());
+    }
+
+    // Sin comidas: todos los días en cero y constancia 0 (estado vacío, no 404)
+    @Test
+    void shouldAnswerEveryDayInZeroWhenThereAreNoMeals() {
+        when(mealRepository.sumRange(ATHLETE_ID, DATE, DATE)).thenReturn(List.of());
+
+        NutritionOverview overview = service.overview(LEO, ATHLETE_ID, DATE, DATE);
+
+        assertEquals(1, overview.totalDays());
+        assertEquals(0, overview.daysWithMeals());
+        assertEquals(1, overview.days().size());
+    }
+
+    // 31 días es el máximo (un mes); 32 es un 400 que se valida antes que el atleta
+    @Test
+    void shouldAcceptThirtyOneDaysAndRejectMoreBeforeCheckingTheAthlete() {
+        when(mealRepository.sumRange(any(), any(), any())).thenReturn(List.of());
+
+        assertEquals(31, service.overview(LEO, ATHLETE_ID, DATE, DATE.plusDays(30)).totalDays());
+        assertThrows(MealRangeTooLongException.class,
+                () -> service.overview(LEO, ATHLETE_ID, DATE, DATE.plusDays(31)));
+
+        // Solo el rango válido llegó al guard
+        verify(athleteAccessGuard).verifyAccess(LEO, ATHLETE_ID);
+    }
+
+    @Test
+    void shouldCheckThePertenenciaBeforeTheOverview() {
+        doThrow(new AthleteAccessDeniedException()).when(athleteAccessGuard).verifyAccess(LEO, ATHLETE_ID);
+
+        assertThrows(AthleteAccessDeniedException.class, () -> service.overview(LEO, ATHLETE_ID, null, null));
+
+        verifyNoInteractions(mealRepository);
+    }
+
+    // Fila de un día del rango (los macros no importan acá: el mapeo lo prueba el resumen del día)
+    private static MealDateTotals dateTotals(LocalDate date, String caloriesKcal, long mealCount,
+                                             long mealsWithoutNutrition) {
+        MealDayTotals totals = totals(caloriesKcal, "0", "0", "0", mealCount, mealsWithoutNutrition);
+        return new MealDateTotals() {
+            @Override
+            public LocalDate getDate() {
+                return date;
+            }
+
+            @Override
+            public Long getMealCount() {
+                return totals.getMealCount();
+            }
+
+            @Override
+            public Long getMealsWithoutNutrition() {
+                return totals.getMealsWithoutNutrition();
+            }
+
+            @Override
+            public BigDecimal getCaloriesKcal() {
+                return totals.getCaloriesKcal();
+            }
+
+            @Override
+            public BigDecimal getProteinG() {
+                return totals.getProteinG();
+            }
+
+            @Override
+            public BigDecimal getCarbsG() {
+                return totals.getCarbsG();
+            }
+
+            @Override
+            public BigDecimal getFatG() {
+                return totals.getFatG();
+            }
+        };
     }
 
     // Fila de la consulta agregada con valores fijos (la interfaz es una proyección: no hace falta un mock)

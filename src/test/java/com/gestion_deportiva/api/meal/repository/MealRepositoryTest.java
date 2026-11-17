@@ -310,6 +310,50 @@ class MealRepositoryTest extends AbstractIntegrationTest {
         assertDecimal("0", totals.getFatG());
     }
 
+    // ---------- US-25 · rango de días y revisión ----------
+
+    // Un total por día con comidas, en orden de fecha: los días sin comidas y los de afuera del rango no vienen
+    @Test
+    void sumsEachDayOfTheRangeInDateOrderAndSkipsTheDaysWithoutMeals() {
+        LocalDate nov10 = LocalDate.of(2026, 11, 10);
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.LUNCH, null, item(chicken, "150")));
+        mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.DINNER, "Sopa"));
+        mealRepository.saveAndFlush(meal(leo, nov10, MealType.LUNCH, null, item(chicken, "100")));
+        // Fuera del rango y de otra atleta: no cuentan
+        mealRepository.saveAndFlush(meal(leo, LocalDate.of(2026, 11, 14), MealType.LUNCH, "Mañana"));
+        mealRepository.saveAndFlush(meal(mia, NOV_12, MealType.LUNCH, "De Mia"));
+
+        List<MealDateTotals> days = mealRepository.sumRange(leo.getId(), nov10, NOV_13);
+
+        assertEquals(List.of(nov10, NOV_13), days.stream().map(MealDateTotals::getDate).toList());
+        assertEquals(1L, days.get(0).getMealCount());
+        assertEquals(2L, days.get(1).getMealCount());
+        assertEquals(1L, days.get(1).getMealsWithoutNutrition());
+        assertEquals(0, days.get(1).getCaloriesKcal().compareTo(
+                mealRepository.sumDay(leo.getId(), NOV_13).getCaloriesKcal()));
+    }
+
+    @Test
+    void storesTheReviewOfTheMeal() {
+        Meal lunch = meal(leo, NOV_13, MealType.LUNCH, "Milanesa");
+        lunch.review(Instant.parse("2026-11-13T22:00:00.123456Z"), "Sumá verduras");
+        mealRepository.saveAndFlush(lunch);
+
+        Map<String, Object> row = jdbc.queryForMap(
+                "select reviewed_at, coach_observation from meals where id = ?", lunch.getId());
+        assertEquals(Instant.parse("2026-11-13T22:00:00.123456Z"), ((Timestamp) row.get("reviewed_at")).toInstant());
+        assertEquals("Sumá verduras", row.get("coach_observation"));
+    }
+
+    // ck_meals_coach_observation: un comentario siempre tiene una revisión
+    @Test
+    void rejectsAnObservationWithoutReviewAtTheDatabase() {
+        Meal lunch = mealRepository.saveAndFlush(meal(leo, NOV_13, MealType.LUNCH, "Milanesa"));
+
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+                "update meals set coach_observation = 'Sin revisión' where id = ?", lunch.getId()));
+    }
+
     private Food savedFood(String name, String caloriesKcal, String proteinG, String carbsG, String fatG) {
         return foodRepository.saveAndFlush(Food.builder()
                 .name(name)
