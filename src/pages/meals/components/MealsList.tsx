@@ -18,6 +18,9 @@ type MealsListProps = {
   editingId: string | null
   onEdit: (meal: Meal) => void
   onDelete: (meal: Meal) => void
+  // nombre de la lista para el lector de pantalla, y título de su estado vacío (US-24: otro día)
+  label?: string
+  emptyTitle?: string
 }
 
 const UNEXPECTED_ERROR = 'Ocurrió un error inesperado. Intentá nuevamente.'
@@ -32,6 +35,8 @@ export function MealsList({
   editingId,
   onEdit,
   onDelete,
+  label = 'Comidas de hoy',
+  emptyTitle = 'Todavía no registraste comidas hoy',
 }: MealsListProps) {
   if (error) {
     return (
@@ -64,18 +69,14 @@ export function MealsList({
       <EmptyState
         size="sm"
         icon={<Utensils />}
-        title="Todavía no registraste comidas hoy"
+        title={emptyTitle}
         description="Elegí el tipo de comida y cargá lo que comiste, con una descripción o con los alimentos y sus cantidades."
       />
     )
   }
 
   return (
-    <ul
-      aria-label="Comidas de hoy"
-      aria-busy={isRefreshing}
-      className="flex flex-col"
-    >
+    <ul aria-label={label} aria-busy={isRefreshing} className="flex flex-col">
       {meals.map((meal) => (
         <MealListItem
           key={meal.id}

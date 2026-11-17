@@ -11,27 +11,45 @@ import { updateMeal } from '../../lib/meals/update-meal'
 import { session } from '../../test/auth-fixtures'
 import { createdFood, foodsPage } from '../../test/food-fixtures'
 import { meal, mealItem } from '../../test/meal-fixtures'
+import {
+  emptyDailySummary,
+  dailySummary,
+} from '../../test/daily-summary-fixtures'
+import { MemoryRouter } from '../../lib/navigation'
+import { getDailyNutritionSummary } from './actions/get-daily-summary'
 import { searchFoods } from './actions/search-foods'
 import { MealsPage } from './MealsPage'
-import { todayInAppTimeZone } from '../../lib/iso-date'
+import { shiftDay } from './day-navigation'
+import { formatIsoDate, todayInAppTimeZone } from '../../lib/iso-date'
 
 vi.mock('../../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
 vi.mock('../../lib/meals/create-meal', () => ({ createMeal: vi.fn() }))
 vi.mock('../../lib/meals/update-meal', () => ({ updateMeal: vi.fn() }))
 vi.mock('../../lib/meals/delete-meal', () => ({ deleteMeal: vi.fn() }))
 vi.mock('./actions/search-foods', () => ({ searchFoods: vi.fn() }))
+// US-24: resumen del día
+vi.mock('./actions/get-daily-summary', () => ({
+  getDailyNutritionSummary: vi.fn(),
+}))
 
 const athlete = session('ATHLETE')
 const ATHLETE_ID = athlete.user.id
 const arroz = createdFood({ id: 'f-arroz', name: 'Arroz blanco cocido' })
 
-const renderPage = () => {
+// "hoy" de la zona de la app y el día anterior: los tests no dependen de la fecha real
+const TODAY = todayInAppTimeZone()
+const YESTERDAY = shiftDay(TODAY, -1)
+
+// path: la URL con la que se abre la página (?date= para un día anterior)
+const renderPage = (path = '/meals') => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={client}>
-      <MealsPage />
+      <MemoryRouter initialEntries={[path]}>
+        <MealsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -43,6 +61,11 @@ beforeEach(() => {
   vi.mocked(deleteMeal).mockReset()
   vi.mocked(searchFoods).mockReset()
   vi.mocked(searchFoods).mockResolvedValue(foodsPage([arroz]))
+  // por defecto, el resumen de cada día pedido (vacío): cada test ajusta el suyo
+  vi.mocked(getDailyNutritionSummary).mockReset()
+  vi.mocked(getDailyNutritionSummary).mockImplementation(async (_, date) =>
+    emptyDailySummary(date),
+  )
   saveSession(athlete)
 })
 
@@ -174,6 +197,119 @@ describe('MealsPage · edición', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Registrar comida' }),
+    ).toBeInTheDocument()
+  })
+})
+
+// US-24: navegación por días, resumen diario y alta en el día que se mira
+describe('MealsPage · día y resumen (US-24)', () => {
+  it('pide las comidas y el resumen del día que indica la URL', async () => {
+    vi.mocked(getMealsOfDay).mockResolvedValue([])
+
+    renderPage(`/meals?date=${YESTERDAY}`)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Comidas del día', level: 2 }),
+    ).toBeInTheDocument()
+    expect(getMealsOfDay).toHaveBeenCalledWith(ATHLETE_ID, YESTERDAY)
+    expect(getDailyNutritionSummary).toHaveBeenCalledWith(ATHLETE_ID, YESTERDAY)
+  })
+
+  it('una fecha inválida o futura en la URL muestra hoy', async () => {
+    vi.mocked(getMealsOfDay).mockResolvedValue([])
+
+    renderPage('/meals?date=2026-02-31')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Comidas de hoy', level: 2 }),
+    ).toBeInTheDocument()
+    expect(getMealsOfDay).toHaveBeenCalledWith(ATHLETE_ID, TODAY)
+    expect(getMealsOfDay).not.toHaveBeenCalledWith(ATHLETE_ID, '2026-02-31')
+  })
+
+  it('el día anterior cambia la lista y el resumen, y el alta va a ese día', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getMealsOfDay).mockResolvedValue([])
+    vi.mocked(createMeal).mockResolvedValue(meal({ date: YESTERDAY }))
+
+    renderPage()
+    await screen.findByText('Todavía no registraste comidas hoy')
+
+    await user.click(screen.getByRole('button', { name: 'Día anterior' }))
+
+    expect(
+      await screen.findByText('No registraste comidas ese día'),
+    ).toBeInTheDocument()
+    expect(getMealsOfDay).toHaveBeenLastCalledWith(ATHLETE_ID, YESTERDAY)
+    expect(getDailyNutritionSummary).toHaveBeenLastCalledWith(
+      ATHLETE_ID,
+      YESTERDAY,
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Comidas del día' }),
+    ).toHaveFocus()
+
+    await user.click(screen.getByRole('radio', { name: 'Cena' }))
+    await user.type(
+      screen.getByRole('textbox', { name: 'Descripción' }),
+      'Sopa',
+    )
+    await user.click(screen.getByRole('button', { name: 'Registrar comida' }))
+
+    expect(
+      await screen.findByText(
+        `Registraste cena del ${formatIsoDate(YESTERDAY)}.`,
+      ),
+    ).toBeInTheDocument()
+    expect(createMeal).toHaveBeenCalledWith(ATHLETE_ID, {
+      date: YESTERDAY,
+      type: 'DINNER',
+      description: 'Sopa',
+      items: [],
+    })
+  })
+
+  it('no permite ir al día siguiente de hoy', async () => {
+    renderPage()
+
+    expect(
+      await screen.findByRole('button', { name: 'Día siguiente' }),
+    ).toBeDisabled()
+  })
+
+  it('muestra el resumen del día y avisa de las comidas sin datos nutricionales', async () => {
+    vi.mocked(getMealsOfDay).mockResolvedValue([meal()])
+    vi.mocked(getDailyNutritionSummary).mockResolvedValue(
+      dailySummary({ date: TODAY, mealsWithoutNutrition: 1 }),
+    )
+
+    renderPage()
+
+    expect(await screen.findByText('507,5 kcal')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '1 comida sin datos nutricionales no se cuenta en el total.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('una edición se cancela al cambiar de día', async () => {
+    const user = userEvent.setup()
+    const original = meal()
+    vi.mocked(getMealsOfDay).mockResolvedValue([original])
+
+    renderPage()
+    await user.click(
+      await screen.findByRole('button', { name: /Editar Almuerzo/ }),
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Editar comida' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Día anterior' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Registrar comida' }),
     ).toBeInTheDocument()
   })
 })

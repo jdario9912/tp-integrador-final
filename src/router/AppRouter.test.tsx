@@ -6,6 +6,7 @@ import { authResponse, session } from '../test/auth-fixtures'
 import { createdFood, foodsPage } from '../test/food-fixtures'
 import { SESSION_ID, trainingSession } from '../test/training-session-fixtures'
 import { weightsPage } from '../test/weight-fixtures'
+import { emptyDailySummary } from '../test/daily-summary-fixtures' // US-24
 import { getTrainingHistory } from '../lib/training-sessions/get-training-history'
 import { foodEditPath, paths, trainingPath } from './paths'
 
@@ -24,6 +25,10 @@ vi.mock('../lib/exercises/get-muscle-groups', () => ({
 vi.mock('../pages/foods/actions/get-foods', () => ({ getFoods: vi.fn() }))
 // US-23: comidas del día
 vi.mock('../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
+// US-24: resumen nutricional del día (bloque propio)
+vi.mock('../pages/meals/actions/get-daily-summary', () => ({
+  getDailyNutritionSummary: vi.fn(),
+}))
 vi.mock('../lib/training-sessions/get-in-progress-session', () => ({
   getInProgressSession: vi.fn(),
 }))
@@ -51,6 +56,10 @@ const renderAppAt = async (path: string, role: Role) => {
   // US-23: comidas del día
   const { getMealsOfDay } = await import('../lib/meals/get-meals')
   vi.mocked(getMealsOfDay).mockResolvedValue([])
+  // US-24: resumen del día (bloque propio)
+  const { getDailyNutritionSummary } =
+    await import('../pages/meals/actions/get-daily-summary')
+  vi.mocked(getDailyNutritionSummary).mockResolvedValue(emptyDailySummary())
   const { getInProgressSession } =
     await import('../lib/training-sessions/get-in-progress-session')
   vi.mocked(getInProgressSession).mockResolvedValue(null)
