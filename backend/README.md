@@ -229,6 +229,18 @@ Dashboard del atleta (US-12): el panel de `/dashboard` del atleta junta la rutin
 - `nextDayId` de `GET /api/athletes/{athleteId}/routine` ya no es siempre el primer día: es el que sigue (por `dayNumber`) al del último entrenamiento **finalizado** de la asignación activa. Después del último día vuelve al primero; sin finalizados, el primero. Los `CANCELLED` y los `IN_PROGRESS` no cuentan, y una reasignación empieza otra rotación.
 - La consulta es una sola (`TrainingSessionRepository.findLastFinishedRoutineDay`, orden `ended_at` descendente, una fila) y la resuelve `LastFinishedSessionDayResolver`, que reemplaza al provisorio de US-17. Sin migración y sin cambios en la forma de la respuesta.
 
+Dashboard del entrenador (US-11): estado de la cartera para priorizar a quién atender. Sin migración: se calcula de `athletes`, `users`, `routine_assignments`, `training_sessions` y `weight_records`.
+- `GET /api/coaches/me/dashboard` lo usa solo el entrenador (el atleta recibe 403). La cartera es la del entrenador del token. Responde `CoachDashboardResponse` con cuatro métricas, cada una con `count` y `athletes` (`id`, `firstName`, `lastName`, ordenados por apellido y nombre) para enlazar a la ficha:
+  - `activeAthletes`: los atletas de la cartera con el usuario activo (`users.active`; los desactivados y los eliminados no cuentan). Las demás métricas solo miran a los activos.
+  - `withoutRoutine`: sin asignación activa, o con la activa vencida (el mismo criterio que `RoutineAssignment.isExpiredOn`; una rutina sin `durationWeeks` no vence).
+  - `pendingReviewSessions`: sesiones `FINISHED` sin revisar (US-21). Cada atleta trae `pendingCount` y `count` es el total de sesiones, no de atletas.
+  - `withoutRecentWeight`: sin registro de peso en los últimos 7 días, hoy incluido (zona de la app). Cada atleta trae `lastRecordedOn`, `null` si nunca registró.
+- Sin atletas responde 200 con todo en cero y listas vacías.
+- Si una métrica falla en la base, va en `null` y su nombre aparece en `warnings`; las demás se devuelven igual (200). Normalmente `warnings` es `[]`.
+- Son cuatro consultas nativas agregadas, una por métrica (`CoachDashboardRepository`), sin N+1. El service no es `@Transactional` a propósito: en PostgreSQL una consulta fallida aborta la transacción y arrastraría a las demás métricas.
+
+Progreso del atleta, vista del entrenador (US-30): no agrega endpoints. El entrenador ve el mismo gráfico de peso y la misma galería que el atleta con `GET /api/athletes/{athleteId}/weights` y `GET /api/athletes/{athleteId}/photos[/{photoId}]` (ver «Registros de peso» y «Fotos de progreso»). Un atleta de otro entrenador → 403; inexistente → 404; sin datos, página vacía. Las URLs firmadas vencidas se renuevan con el detalle de la foto.
+
 Para agregar un endpoint:
 
 1. Si no es para los dos roles, su regla en `SecurityConfig` (`hasRole("COACH")` o `hasRole("ATHLETE")`). La regla corre antes de leer el body: un rol equivocado recibe 403 aunque el body sea inválido.

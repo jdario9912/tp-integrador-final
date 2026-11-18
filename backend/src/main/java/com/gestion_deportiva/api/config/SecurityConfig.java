@@ -83,6 +83,8 @@ public class SecurityConfig {
     // US-25 · alimentación por rango y revisión de una comida
     static final String ATHLETE_MEALS_OVERVIEW_PATH = ATHLETE_MEALS_PATH + "/overview";
     static final String ATHLETE_MEAL_REVIEW_PATH = ATHLETE_MEAL_PATH + "/review";
+    // US-11 · Dashboard del entrenador: la cartera es la del token, por eso "me" y no un id
+    static final String COACH_DASHBOARD_PATH = WebConfig.API_PREFIX + "/coaches/me/dashboard";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -189,6 +191,9 @@ public class SecurityConfig {
                         // usar cada uno lo decide AthleteAccessGuard en MealServiceImpl y MealReviewService
                         .requestMatchers(HttpMethod.GET, ATHLETE_MEALS_OVERVIEW_PATH).hasAnyRole("COACH", "ATHLETE")
                         .requestMatchers(HttpMethod.PUT, ATHLETE_MEAL_REVIEW_PATH).hasRole("COACH")
+                        // US-11 · Dashboard del entrenador: solo COACH (el atleta recibe 403). Las métricas son de la
+                        // cartera del entrenador del token (CoachDashboardService)
+                        .requestMatchers(HttpMethod.GET, COACH_DASHBOARD_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

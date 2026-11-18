@@ -179,7 +179,10 @@ class RoleEndpointMatrixE2ETest {
             // US-25 · revisión de una comida: solo el entrenador (el atleta recibe 403 aunque la comida sea suya; con
             // "{}" el body es válido y {mealId} no existe: 404). La pertenencia se prueba en MealReviewE2ETest
             new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/meals/{mealId}/review", UNAUTHORIZED, ALLOWED,
-                    FORBIDDEN));
+                    FORBIDDEN),
+            // US-11 · dashboard del entrenador: solo COACH (el atleta recibe 403). Las métricas se prueban en
+            // CoachDashboardE2ETest
+            new Row(HttpMethod.GET, "/api/coaches/me/dashboard", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
