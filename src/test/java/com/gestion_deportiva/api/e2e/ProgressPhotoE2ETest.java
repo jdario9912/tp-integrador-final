@@ -382,6 +382,16 @@ class ProgressPhotoE2ETest {
         verify(objectStorage, never()).createSignedUrls(anyList());
     }
 
+    // US-30 · el entrenador ve la misma galería vacía del atleta: el front muestra el estado vacío
+    @Test
+    void shouldAnswer200WithAnEmptyContentToTheCoachWhenTheAthleteHasNoPhotos() {
+        ResponseEntity<String> response = get(photosPath(leo.getId()), COACH_EMAIL);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(json(response).get("content").isEmpty());
+        verify(objectStorage, never()).createSignedUrls(anyList());
+    }
+
     @Test
     void shouldAnswer403WhenTheCoachHasNoLinkWithTheAthleteOrTheAthleteIsAnotherOne() {
         ResponseEntity<String> ofOtherCoach = get(photosPath(athleteOf(ATHLETE_OF_OTHER_COACH_EMAIL)), COACH_EMAIL);
