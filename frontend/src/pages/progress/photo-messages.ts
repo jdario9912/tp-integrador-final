@@ -6,6 +6,9 @@ export const PHOTO_UPLOAD_UNAVAILABLE =
   'No pudimos guardar la foto. Intentá nuevamente más tarde.'
 export const PHOTO_LIST_UNAVAILABLE =
   'No pudimos cargar tus fotos. Intentá nuevamente más tarde.'
+// US-30: el mismo aviso en la vista del entrenador, donde las fotos no son "tuyas"
+export const ATHLETE_PHOTO_LIST_UNAVAILABLE =
+  'No pudimos cargar las fotos del atleta. Intentá nuevamente más tarde.'
 export const PHOTO_DELETE_UNAVAILABLE =
   'No pudimos borrar la foto. Intentá nuevamente más tarde.'
 export const PHOTO_UNEXPECTED_ERROR =

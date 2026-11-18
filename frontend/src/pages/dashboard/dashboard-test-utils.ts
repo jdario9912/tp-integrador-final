@@ -36,6 +36,15 @@ export function renderWithRouter(ui: ReactNode) {
         path: paths.trainingHistory,
         element: createElement('p', null, 'pantalla de historial'),
       },
+      // US-11: destinos del panel del entrenador
+      {
+        path: paths.athleteProfile,
+        element: createElement('p', null, 'ficha del atleta'),
+      },
+      {
+        path: paths.newAthlete,
+        element: createElement('p', null, 'alta de atleta'),
+      },
     ],
     { initialEntries: [paths.dashboard] },
   )

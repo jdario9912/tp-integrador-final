@@ -10,6 +10,7 @@ import { getAthlete } from '../../lib/athletes/get-athlete'
 import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
 import { getWeights } from '../../lib/weights/get-weights'
+import { getProgressPhotos } from '../../lib/progress-photos/get-progress-photos'
 import { getNutritionOverview } from './actions/get-nutrition-overview'
 import { athleteProfilePath, paths } from '../../router/paths'
 import {
@@ -18,6 +19,10 @@ import {
 } from '../../test/assignment-fixtures'
 import { createdAthlete } from '../../test/athlete-fixtures'
 import { session } from '../../test/auth-fixtures'
+import {
+  progressPhoto,
+  progressPhotosPage,
+} from '../../test/progress-photo-fixtures'
 import { weightRecord, weightsPage } from '../../test/weight-fixtures'
 import { AthleteProfilePage } from './AthleteProfilePage'
 
@@ -33,6 +38,11 @@ vi.mock('../../lib/training-sessions/get-training-history', () => ({
 // alimentación (US-25): la sección se prueba en NutritionSection.test; acá, una semana sin comidas
 vi.mock('./actions/get-nutrition-overview', () => ({
   getNutritionOverview: vi.fn(),
+}))
+// progreso (US-30): la galería se prueba en ProgressPhotosCard.test; por defecto, sin fotos
+vi.mock('../../lib/progress-photos/get-progress-photos', () => ({
+  getProgressPhotos: vi.fn(),
+  getProgressPhoto: vi.fn(),
 }))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
@@ -111,6 +121,8 @@ beforeEach(() => {
     daysWithMeals: 0,
     days: [],
   })
+  vi.mocked(getProgressPhotos).mockReset()
+  vi.mocked(getProgressPhotos).mockResolvedValue(progressPhotosPage([]))
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -450,6 +462,11 @@ describe('AthleteProfilePage', () => {
         'Puede que lo hayas desvinculado o que pertenezca a otro entrenador.',
       ),
     ).toBeInTheDocument()
+    // US-30: tampoco se muestra (ni se pide) su progreso
+    expect(
+      screen.queryByRole('region', { name: 'Progreso' }),
+    ).not.toBeInTheDocument()
+    expect(getProgressPhotos).not.toHaveBeenCalled()
     expect(
       screen.getByRole('link', { name: 'Volver a atletas' }),
     ).toHaveAttribute('href', paths.athletes)
@@ -489,5 +506,76 @@ describe('AthleteProfilePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Ocurrió un error inesperado. Intentá nuevamente.',
     )
+  })
+})
+
+describe('AthleteProfilePage · progreso (US-30)', () => {
+  it('muestra el gráfico y la galería del atleta de la URL, en solo lectura', async () => {
+    vi.mocked(getWeights).mockResolvedValue(
+      weightsPage([
+        weightRecord(),
+        weightRecord({
+          id: '0a9b8c7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d',
+          date: '2026-10-20',
+          weightKg: 74.2,
+        }),
+      ]),
+    )
+    vi.mocked(getProgressPhotos).mockResolvedValue(
+      progressPhotosPage([progressPhoto({ takenOn: '2026-10-01' })]),
+    )
+    const user = userEvent.setup()
+
+    await renderProfile(leo)
+
+    const progress = section('Progreso')
+    expect(
+      await within(progress).findByRole('img', { name: 'Evolución del peso' }),
+    ).toBeInTheDocument()
+    expect(
+      await within(progress).findByRole('list', { name: 'Fotos de progreso' }),
+    ).toBeInTheDocument()
+    expect(getProgressPhotos).toHaveBeenCalledWith(leo.id, {
+      page: 0,
+      size: 20,
+    })
+    // las escrituras son del atleta: ni cargar peso ni subir fotos
+    expect(
+      within(progress).queryByRole('button', { name: /Registrar peso/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(progress).queryByRole('button', { name: 'Subir foto' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(progress).getByRole('button', {
+        name: 'Ver la foto Frontal del 1 de octubre de 2026',
+      }),
+    )
+    const viewer = await screen.findByRole('dialog', {
+      name: 'Frontal, 1 de octubre de 2026',
+    })
+    expect(
+      within(viewer).queryByRole('button', { name: 'Borrar foto' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('sin pesos ni fotos muestra los estados vacíos del entrenador', async () => {
+    await renderProfile(leo)
+
+    const progress = section('Progreso')
+    expect(
+      await within(progress).findByText(
+        'El atleta todavía no registró su peso',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await within(progress).findByRole('heading', {
+        name: 'El atleta todavía no subió fotos de progreso',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(progress).queryByRole('button', { name: 'Cargar mi peso' }),
+    ).not.toBeInTheDocument()
   })
 })

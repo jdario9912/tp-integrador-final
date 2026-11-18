@@ -18,6 +18,8 @@ type WeightEvolutionCardProps = {
   athleteId: string
   // hoy en la zona de la app: base de los atajos del rango
   today: string
+  // US-30: vista del entrenador, sin el atajo a cargar el peso (eso lo hace el atleta)
+  readOnly?: boolean
 }
 
 // un 400 lo explica el backend (p. ej. "desde" posterior a "hasta"): se muestra su texto
@@ -33,6 +35,7 @@ const evolutionErrorMessage = (error: unknown) => {
 export function WeightEvolutionCard({
   athleteId,
   today,
+  readOnly = false,
 }: WeightEvolutionCardProps) {
   const { range, setRange } = useWeightRange()
   const rangeError = validateRange(range)
@@ -83,6 +86,16 @@ export function WeightEvolutionCard({
 
     const points = evolution.points
     if (points.length === 0) {
+      if (hasAnyRecord === false && readOnly) {
+        return (
+          <EmptyState
+            size="sm"
+            icon={<ChartLine />}
+            title="El atleta todavía no registró su peso"
+            description="Cuando cargue su peso vas a ver su evolución acá."
+          />
+        )
+      }
       return hasAnyRecord === false ? (
         <EmptyState
           size="sm"
@@ -125,8 +138,8 @@ export function WeightEvolutionCard({
             Evolución del peso
           </h2>
           <p className="text-muted-foreground text-sm">
-            Tu peso en el rango que elijas. Pasá el cursor sobre un punto para
-            ver su valor.
+            {readOnly ? 'El peso del atleta' : 'Tu peso'} en el rango que
+            elijas. Pasá el cursor sobre un punto para ver su valor.
           </p>
         </div>
       </div>

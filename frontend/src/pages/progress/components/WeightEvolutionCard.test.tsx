@@ -57,7 +57,8 @@ const LocationProbe = () => {
   return <output data-testid="location">{location.search}</output>
 }
 
-const renderCard = (entry = '/progress') => {
+// readOnly: la vista del entrenador en la ficha del atleta (US-30)
+const renderCard = (entry = '/progress', { readOnly = false } = {}) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -70,7 +71,11 @@ const renderCard = (entry = '/progress') => {
     <>
       {/* el campo de peso de la página: el estado vacío lo enfoca */}
       <input id="weight-weightKg" aria-label="Peso de prueba" />
-      <WeightEvolutionCard athleteId={ATHLETE_ID} today={TODAY} />
+      <WeightEvolutionCard
+        athleteId={ATHLETE_ID}
+        today={TODAY}
+        readOnly={readOnly}
+      />
       <LocationProbe />
     </>,
     { wrapper },
@@ -348,5 +353,43 @@ describe('WeightEvolutionCard · estados', () => {
       await screen.findByRole('img', { name: 'Evolución del peso' }),
     ).toBeInTheDocument()
     expect(getWeights).toHaveBeenCalled()
+  })
+})
+
+describe('WeightEvolutionCard · solo lectura (US-30)', () => {
+  beforeEach(() => {
+    saveSession(session('COACH'))
+  })
+
+  it('dibuja el mismo gráfico con los registros del atleta', async () => {
+    routeWeights()
+
+    renderCard('/athletes/x', { readOnly: true })
+
+    expect(
+      await screen.findByRole('img', { name: 'Evolución del peso' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/^El peso del atleta en el rango/),
+    ).toBeInTheDocument()
+    expect(getWeights).toHaveBeenCalledWith(ATHLETE_ID, {
+      from: undefined,
+      to: undefined,
+      page: 0,
+      size: 100,
+    })
+  })
+
+  it('sin registros muestra el estado vacío sin ofrecer cargar el peso', async () => {
+    routeWeights([], [])
+
+    renderCard('/athletes/x', { readOnly: true })
+
+    expect(
+      await screen.findByText('El atleta todavía no registró su peso'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Cargar mi peso' }),
+    ).not.toBeInTheDocument()
   })
 })

@@ -5,7 +5,13 @@ import {
   torsoDay,
 } from '../../test/athlete-routine-fixtures'
 import { trainingHistoryItem } from '../../test/training-session-fixtures'
-import { dayTitle, latestObservations, nextDayOf } from './dashboard-format'
+import {
+  dayTitle,
+  lastWeightLabel,
+  latestObservations,
+  nextDayOf,
+  pendingSessionsLabel,
+} from './dashboard-format'
 
 describe('nextDayOf', () => {
   it('devuelve el día que indica nextDayId', () => {
@@ -55,5 +61,21 @@ describe('latestObservations', () => {
 
   it('sin observaciones devuelve lista vacía', () => {
     expect(latestObservations([trainingHistoryItem()])).toEqual([])
+  })
+})
+
+describe('pendingSessionsLabel (US-11)', () => {
+  it('usa el singular para una sola sesión', () => {
+    expect(pendingSessionsLabel(1)).toBe('1 sesión por revisar')
+    expect(pendingSessionsLabel(3)).toBe('3 sesiones por revisar')
+  })
+})
+
+describe('lastWeightLabel (US-11)', () => {
+  it('muestra la fecha del último registro, o que nunca registró', () => {
+    expect(lastWeightLabel('2026-11-01')).toBe(
+      'Último registro: 1 de noviembre de 2026',
+    )
+    expect(lastWeightLabel(null)).toBe('Nunca registró su peso')
   })
 })

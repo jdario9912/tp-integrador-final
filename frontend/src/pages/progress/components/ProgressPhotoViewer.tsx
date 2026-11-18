@@ -19,7 +19,8 @@ type ProgressPhotoViewerProps = {
   hasNext: boolean
   onPrevious: () => void
   onNext: () => void
-  onDelete: () => void
+  // sin onDelete el visor es de solo lectura (vista del entrenador, US-30)
+  onDelete?: () => void
   // Escape, el botón Cerrar o un cierre del navegador: el padre actualiza su estado
   onClose: () => void
 }
@@ -96,9 +97,11 @@ export function ProgressPhotoViewer({
                 Siguiente
                 <ChevronRight aria-hidden="true" />
               </OutlineButton>
-              <DangerButton size="sm" onClick={onDelete}>
-                Borrar foto
-              </DangerButton>
+              {onDelete && (
+                <DangerButton size="sm" onClick={onDelete}>
+                  Borrar foto
+                </DangerButton>
+              )}
             </div>
           </div>
         </div>

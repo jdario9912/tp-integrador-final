@@ -30,12 +30,16 @@ type ProgressPhotosCardProps = {
   athleteId: string
   // hoy en la zona de la app
   today: string
+  // US-30: el entrenador solo mira la galería; subir y borrar son del atleta (el backend da 403)
+  readOnly?: boolean
 }
 
-// sección de fotos de progreso del atleta (US-28): subir, ver en grande y borrar
+// sección de fotos de progreso del atleta (US-28): subir, ver en grande y borrar.
+// En solo lectura queda la galería con su visor (vista del entrenador, US-30)
 export function ProgressPhotosCard({
   athleteId,
   today,
+  readOnly = false,
 }: ProgressPhotosCardProps) {
   const photos = useProgressPhotos(athleteId)
   const upload = useUploadProgressPhoto(athleteId)
@@ -117,8 +121,9 @@ export function ProgressPhotosCard({
             Fotos de progreso
           </h2>
           <p className="text-muted-foreground text-sm">
-            Frontal, lateral y espalda, en orden de fecha. Solo vos y tu
-            entrenador las pueden ver.
+            {readOnly
+              ? 'Frontal, lateral y espalda, en orden de fecha. Las sube el atleta desde su perfil.'
+              : 'Frontal, lateral y espalda, en orden de fecha. Solo vos y tu entrenador las pueden ver.'}
           </p>
         </div>
       </div>
@@ -132,15 +137,24 @@ export function ProgressPhotosCard({
       )}
       {actionError && <Callout tone="danger">{actionError}</Callout>}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <div className="border-border-subtle bg-background rounded-card border p-4 sm:p-5">
-          <h3 className="mb-4 text-base font-semibold">Subir una foto</h3>
-          <PhotoUploadForm
-            key={formVersion}
-            today={today}
-            onSubmit={handleUpload}
-          />
-        </div>
+      {/* sin el formulario, la galería ocupa todo el ancho */}
+      <div
+        className={
+          readOnly
+            ? 'flex flex-col'
+            : 'grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'
+        }
+      >
+        {!readOnly && (
+          <div className="border-border-subtle bg-background rounded-card border p-4 sm:p-5">
+            <h3 className="mb-4 text-base font-semibold">Subir una foto</h3>
+            <PhotoUploadForm
+              key={formVersion}
+              today={today}
+              onSubmit={handleUpload}
+            />
+          </div>
+        )}
 
         <ProgressPhotoGrid
           athleteId={athleteId}
@@ -152,6 +166,7 @@ export function ProgressPhotosCard({
           isFetchingNextPage={photos.isFetchingNextPage}
           onLoadMore={() => void photos.fetchNextPage()}
           onOpen={(photo) => setViewingId(photo.id)}
+          readOnly={readOnly}
         />
       </div>
 
@@ -164,7 +179,7 @@ export function ProgressPhotosCard({
         hasNext={viewingIndex >= 0 && viewingIndex < items.length - 1}
         onPrevious={() => setViewingId(items[viewingIndex - 1]?.id ?? null)}
         onNext={() => setViewingId(items[viewingIndex + 1]?.id ?? null)}
-        onDelete={askDelete}
+        onDelete={readOnly ? undefined : askDelete}
         onClose={() => setViewingId(null)}
       />
 
