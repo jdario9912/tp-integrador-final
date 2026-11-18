@@ -22,6 +22,8 @@ const ASSIGNMENTS_URL = /\/api\/athletes\/[^/]+\/assignments(\?.*)?$/
 const SESSIONS_URL = /\/api\/athletes\/[^/]+\/sessions(\?.*)?$/
 // alimentación (US-25): se cubre en meal-review.spec; acá, una semana sin comidas
 const MEALS_OVERVIEW_URL = /\/api\/athletes\/[^/]+\/meals\/overview(\?.*)?$/
+// progreso (US-30): se cubre en coach-progress.spec; acá, sin fotos
+const PHOTOS_URL = /\/api\/athletes\/[^/]+\/photos(\?.*)?$/
 
 // ejemplo de AthleteResponse del contrato de API, de la cartera del entrenador
 const leoJson = () => ({
@@ -116,6 +118,12 @@ const routeBackend = async (
     route.fulfill({
       status: 200,
       json: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0 },
+    }),
+  )
+  await page.route(PHOTOS_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 },
     }),
   )
   await page.route(MEALS_OVERVIEW_URL, (route) => {

@@ -7,11 +7,13 @@ import { MemoryRouter, Route, Routes } from '../../lib/navigation'
 import { paths } from '../../router/paths'
 import { getCurrentUser } from '../../lib/auth/get-current-user'
 import { getAthleteRoutine } from '../../lib/athlete-routine/get-athlete-routine'
+import { getCoachDashboard } from '../../lib/coach-dashboard/get-coach-dashboard'
 import { getMealsOfDay } from '../../lib/meals/get-meals'
 import { getInProgressSession } from '../../lib/training-sessions/get-in-progress-session'
 import { getTrainingHistory } from '../../lib/training-sessions/get-training-history'
 import { getWeights } from '../../lib/weights/get-weights'
 import { authResponse, session } from '../../test/auth-fixtures'
+import { coachDashboard } from '../../test/coach-dashboard-fixtures'
 import { dailySummary } from '../../test/daily-summary-fixtures'
 import { weightsPage } from '../../test/weight-fixtures'
 import { getDailyNutritionSummary } from '../meals/actions/get-daily-summary'
@@ -31,6 +33,10 @@ vi.mock('../../lib/training-sessions/get-training-history', () => ({
   getTrainingHistory: vi.fn(),
 }))
 vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
+// el panel del entrenador (US-11) se prueba en CoachDashboard.test; acá solo se elige por rol
+vi.mock('../../lib/coach-dashboard/get-coach-dashboard', () => ({
+  getCoachDashboard: vi.fn(),
+}))
 vi.mock('../../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
 vi.mock('../meals/actions/get-daily-summary', () => ({
   getDailyNutritionSummary: vi.fn(),
@@ -55,6 +61,8 @@ const renderPage = (state?: unknown) =>
 beforeEach(() => {
   vi.mocked(getCurrentUser).mockReset()
   vi.mocked(getAthleteRoutine).mockResolvedValue(null)
+  vi.mocked(getCoachDashboard).mockReset()
+  vi.mocked(getCoachDashboard).mockResolvedValue(coachDashboard())
   vi.mocked(getInProgressSession).mockResolvedValue(null)
   vi.mocked(getTrainingHistory).mockResolvedValue({
     content: [],
@@ -92,6 +100,9 @@ describe('DashboardPage', () => {
     expect(
       screen.queryByRole('region', { name: 'Entrenamiento de hoy' }),
     ).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('region', { name: 'Atletas activos' }),
+    ).toBeInTheDocument()
   })
 
   it('muestra el panel del atleta a un atleta', () => {
@@ -108,6 +119,8 @@ describe('DashboardPage', () => {
       screen.getByRole('region', { name: 'Entrenamiento de hoy' }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/Bienvenido de nuevo/)).not.toBeInTheDocument()
+    // un atleta no pide el panel del entrenador (el backend le daría 403)
+    expect(getCoachDashboard).not.toHaveBeenCalled()
   })
 
   it('saluda con el nombre de la sesión y lo actualiza con GET /auth/me', async () => {
@@ -152,22 +165,25 @@ describe('DashboardPage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('avisa que se creó el atleta solo si lo indica la navegación', () => {
+  it('avisa que se creó el atleta solo si lo indica la navegación', async () => {
     saveSession(session('COACH'))
     vi.mocked(getCurrentUser).mockResolvedValue(authResponse('COACH').user)
 
     renderPage({ createdAthlete: 'Juana Pérez' })
+    // los esqueletos del panel también son status: se espera a que cargue
+    await screen.findAllByRole('link', { name: 'Leo Gil' })
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'Creaste a Juana Pérez. Ya puede ingresar con su email y la contraseña que le asignaste.',
     )
   })
 
-  it('sin un alta reciente no muestra el aviso', () => {
+  it('sin un alta reciente no muestra el aviso', async () => {
     saveSession(session('COACH'))
     vi.mocked(getCurrentUser).mockResolvedValue(authResponse('COACH').user)
 
     renderPage()
+    await screen.findAllByRole('link', { name: 'Leo Gil' })
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })

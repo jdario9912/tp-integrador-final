@@ -9,6 +9,7 @@ import { EmptyState } from '../../../ui/empty-state'
 import { ImagePlus, RotateCw } from '../../../ui/icons'
 import { Skeleton } from '../../../ui/skeleton'
 import {
+  ATHLETE_PHOTO_LIST_UNAVAILABLE,
   PHOTO_LIST_UNAVAILABLE,
   PHOTO_UNEXPECTED_ERROR,
   photoErrorMessage,
@@ -27,6 +28,8 @@ type ProgressPhotoGridProps = {
   isFetchingNextPage: boolean
   onLoadMore: () => void
   onOpen: (photo: ProgressPhoto) => void
+  // vista del entrenador (US-30): los textos hablan del atleta y no se ofrece subir
+  readOnly?: boolean
 }
 
 const SKELETON_TILES = 3
@@ -45,13 +48,16 @@ export function ProgressPhotoGrid({
   isFetchingNextPage,
   onLoadMore,
   onOpen,
+  readOnly = false,
 }: ProgressPhotoGridProps) {
   if (error) {
     return (
       <div className="flex flex-col items-start gap-3">
         <Callout tone="danger" className="self-stretch">
           {photoErrorMessage(error, {
-            unavailable: PHOTO_LIST_UNAVAILABLE,
+            unavailable: readOnly
+              ? ATHLETE_PHOTO_LIST_UNAVAILABLE
+              : PHOTO_LIST_UNAVAILABLE,
             fallback: PHOTO_UNEXPECTED_ERROR,
           })}
         </Callout>
@@ -81,6 +87,16 @@ export function ProgressPhotoGrid({
   }
 
   if (photos.length === 0) {
+    if (readOnly) {
+      return (
+        <EmptyState
+          size="sm"
+          icon={<ImagePlus />}
+          title="El atleta todavía no subió fotos de progreso"
+          description="Cuando suba sus fotos frontal, lateral o de espalda, vas a verlas acá en orden de fecha."
+        />
+      )
+    }
     return (
       <EmptyState
         size="sm"

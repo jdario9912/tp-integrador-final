@@ -86,7 +86,9 @@ test.describe('como entrenador', () => {
       availableDays: 3,
     })
     await expect(page).toHaveURL(paths.dashboard)
-    await expect(page.getByRole('status')).toHaveText(
+    // US-11: el panel del entrenador también tiene status (sus esqueletos): se busca el aviso
+    const notice = page.getByRole('status').filter({ hasText: 'Creaste a' })
+    await expect(notice).toHaveText(
       'Creaste a Juana Pérez. Ya puede ingresar con su email y la contraseña que le asignaste.',
     )
 
@@ -95,7 +97,7 @@ test.describe('como entrenador', () => {
     await expect(
       page.getByRole('heading', { name: '¡Bienvenido de nuevo, Ana!' }),
     ).toBeVisible()
-    await expect(page.getByRole('status')).toHaveCount(0)
+    await expect(notice).toHaveCount(0)
   })
 
   test('no envía el formulario si faltan campos obligatorios', async ({

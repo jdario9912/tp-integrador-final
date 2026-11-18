@@ -18,6 +18,7 @@ import { LatestWeightSection } from './components/LatestWeightSection'
 import { NutritionSection } from './components/NutritionSection' // US-25
 import { PersonalDataSection } from './components/PersonalDataSection'
 import { ProfileColumns } from './components/ProfileColumns'
+import { ProgressSection } from './components/ProgressSection' // US-30
 import { RoutineHistorySection } from './components/RoutineHistorySection'
 import { TrainingHistorySection } from './components/TrainingHistorySection' // US-21
 import { usePrefetchAssignments } from './hooks/use-active-assignment'
@@ -128,6 +129,8 @@ export function AthleteProfilePage() {
           </>
         }
       />
+      {/* US-30: evolución del peso y fotos a todo el ancho, debajo de la ficha; con key, cambiar de atleta lo reinicia */}
+      <ProgressSection key={athlete.id} athleteId={athlete.id} />
     </div>
   )
 }

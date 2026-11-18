@@ -44,7 +44,8 @@ const side = progressPhoto({
   takenOn: '2026-10-15',
 })
 
-const renderCard = () =>
+// readOnly: la vista del entrenador en la ficha del atleta (US-30)
+const renderCard = ({ readOnly = false } = {}) =>
   render(
     <QueryClientProvider
       client={
@@ -56,7 +57,11 @@ const renderCard = () =>
         })
       }
     >
-      <ProgressPhotosCard athleteId={ATHLETE_ID} today={TODAY} />
+      <ProgressPhotosCard
+        athleteId={ATHLETE_ID}
+        today={TODAY}
+        readOnly={readOnly}
+      />
     </QueryClientProvider>,
   )
 
@@ -292,5 +297,75 @@ describe('ProgressPhotosCard · visor y borrado', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Cancelar' }))
 
     expect(deleteProgressPhoto).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProgressPhotosCard · solo lectura (US-30)', () => {
+  beforeEach(() => {
+    saveSession(session('COACH'))
+  })
+
+  it('muestra la galería sin el formulario de subida', async () => {
+    vi.mocked(getProgressPhotos).mockResolvedValue(
+      progressPhotosPage([front, side]),
+    )
+    renderCard({ readOnly: true })
+
+    expect((await photoList()).querySelectorAll('li')).toHaveLength(2)
+    expect(
+      screen.queryByRole('heading', { name: 'Subir una foto' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Subir foto' }),
+    ).not.toBeInTheDocument()
+    expect(getProgressPhotos).toHaveBeenCalledWith(ATHLETE_ID, {
+      page: 0,
+      size: 20,
+    })
+  })
+
+  it('el visor permite navegar entre las fotos pero no borrarlas', async () => {
+    vi.mocked(getProgressPhotos).mockResolvedValue(
+      progressPhotosPage([front, side]),
+    )
+    const user = userEvent.setup()
+    renderCard({ readOnly: true })
+
+    await user.click(
+      await thumbnail('Ver la foto Frontal del 1 de octubre de 2026'),
+    )
+    const viewer = await screen.findByRole('dialog', {
+      name: 'Frontal, 1 de octubre de 2026',
+    })
+    await user.click(within(viewer).getByRole('button', { name: 'Siguiente' }))
+
+    expect(within(viewer).getByText('Foto 2 de 2')).toBeInTheDocument()
+    expect(
+      within(viewer).queryByRole('button', { name: 'Borrar foto' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('sin fotos muestra el estado vacío sin ofrecer subir', async () => {
+    renderCard({ readOnly: true })
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'El atleta todavía no subió fotos de progreso',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Subir mi primera foto' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('si el almacenamiento no responde, el aviso habla de las fotos del atleta', async () => {
+    vi.mocked(getProgressPhotos).mockRejectedValue(
+      new ApiError('El servicio de almacenamiento no está disponible', 503),
+    )
+    renderCard({ readOnly: true })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos cargar las fotos del atleta. Intentá nuevamente más tarde.',
+    )
   })
 })

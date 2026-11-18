@@ -1,3 +1,4 @@
+import { formatIsoDate } from '../../lib/iso-date'
 import type { AthleteRoutine } from '../../lib/athlete-routine'
 import type { RoutineDay } from '../../lib/routines'
 import type { TrainingHistoryItem } from '../../lib/training-sessions'
@@ -34,3 +35,13 @@ export const latestObservations = (
   items
     .filter((item) => (item.review?.observation ?? '').trim() !== '')
     .slice(0, max)
+
+// US-11: lo que se muestra debajo del nombre en "Sesiones por revisar"
+export const pendingSessionsLabel = (count: number) =>
+  count === 1 ? '1 sesión por revisar' : `${count} sesiones por revisar`
+
+// US-11: debajo del nombre en "Sin peso reciente"; null es que nunca registró su peso
+export const lastWeightLabel = (lastRecordedOn: string | null) =>
+  lastRecordedOn
+    ? `Último registro: ${formatIsoDate(lastRecordedOn)}`
+    : 'Nunca registró su peso'
