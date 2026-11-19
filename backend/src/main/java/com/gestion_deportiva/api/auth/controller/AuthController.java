@@ -3,8 +3,11 @@ package com.gestion_deportiva.api.auth.controller;
 import com.gestion_deportiva.api.auth.dto.AuthResponse;
 import com.gestion_deportiva.api.auth.dto.AuthUserResponse;
 import com.gestion_deportiva.api.auth.dto.LoginRequest;
+import com.gestion_deportiva.api.auth.dto.PasswordRecoveryRequest;
+import com.gestion_deportiva.api.auth.dto.PasswordResetRequest;
 import com.gestion_deportiva.api.auth.dto.RefreshRequest;
 import com.gestion_deportiva.api.auth.service.AuthService;
+import com.gestion_deportiva.api.auth.service.PasswordRecoveryService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordRecoveryService passwordRecoveryService;
 
     // @SecurityRequirements vacío: en Swagger figura como endpoint público (sin candado)
     @PostMapping("/login")
@@ -38,6 +42,23 @@ public class AuthController {
     @SecurityRequirements
     public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
         return authService.refresh(request);
+    }
+
+    // US-44 · Pide el enlace de recuperación. Siempre 202, exista o no el email (no revela qué emails están
+    // registrados). Si falla el envío del email responde 503
+    @PostMapping("/password-recovery")
+    @SecurityRequirements
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void requestPasswordRecovery(@Valid @RequestBody PasswordRecoveryRequest request) {
+        passwordRecoveryService.requestRecovery(request);
+    }
+
+    // US-44 · Define la nueva contraseña con el token del enlace. Revoca las sesiones abiertas
+    @PostMapping("/password-reset")
+    @SecurityRequirements
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+        passwordRecoveryService.resetPassword(request);
     }
 
     // Revoca el refresh token de la sesión del usuario autenticado. Sin @SecurityRequirements:

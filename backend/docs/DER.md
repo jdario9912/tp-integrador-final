@@ -111,7 +111,7 @@ erDiagram
     PASSWORD_RESET_TOKENS {
         uuid id PK
         uuid user_id FK
-        char token_hash
+        char token_hash UK
         timestamptz expires_at
         timestamptz used_at
     }

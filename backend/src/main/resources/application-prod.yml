@@ -4,6 +4,9 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
+  # US-44: sin valor por defecto, si falta MAIL_HOST la app no arranca
+  mail:
+    host: ${MAIL_HOST}
   jpa:
     hibernate:
       # El esquema se maneja con migraciones, Hibernate solo valida
@@ -11,6 +14,11 @@ spring:
     show-sql: false
 
 app:
+  security:
+    password-reset:
+      # Sin valores por defecto: la página del front y el remitente reales
+      reset-url: ${PASSWORD_RESET_URL}
+      mail-from: ${MAIL_FROM}
   storage:
     supabase:
       # Sin valores por defecto: si falta alguna variable de Supabase, la app falla al arrancar

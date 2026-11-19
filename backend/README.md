@@ -26,6 +26,8 @@ Probar el endpoint del healt check
 ```shell
 curl http://localhost:8080/actuator/health
 ```
+
+Compose levanta también **Mailpit** (US-44), un servidor SMTP de desarrollo que recibe todos los emails sin enviarlos. Los emails de recuperación de contraseña se ven en http://localhost:8025.
 **Autenticación**
 
 Los endpoints protegidos requieren `Authorization: Bearer <accessToken>`. El token se obtiene con `POST /api/auth/login` usando el email y la contraseña de un usuario registrado (por ejemplo, un entrenador creado con `POST /api/coaches`). En Swagger UI se carga desde el botón **Authorize** (`bearerAuth`).
@@ -81,6 +83,8 @@ La API es stateless: cada request protegida lleva un access token JWT en el head
 | `POST /api/auth/refresh` | público | Recibe `refreshToken`. Devuelve un par nuevo; el refresh token usado deja de servir |
 | `GET /api/auth/me` | con token | Datos del usuario autenticado |
 | `POST /api/auth/logout` | con token | Revoca el refresh token de la sesión; responde 204, también si ya estaba cerrada |
+| `POST /api/auth/password-recovery` | público | Recibe `email`. Envía por email un enlace de recuperación (US-44). Siempre 202, exista o no el email |
+| `POST /api/auth/password-reset` | público | Recibe `token` y `newPassword`. Cambia la contraseña y revoca las sesiones abiertas; responde 204 |
 
 Variables de entorno:
 
@@ -124,6 +128,11 @@ Cada endpoint declara en `SecurityConfig` qué rol lo puede usar: sin token resp
 | `PUT /api/athletes/{athleteId}/sessions/{sessionId}/exercises/{routineExerciseId}/sets/{setNumber}` | 401 | 403 | ✓ solo él mismo |
 | `GET /api/foods` · `GET /api/foods/{id}` | 401 | ✓ | ✓ |
 | `POST /api/foods` · `PUT /api/foods/{id}` | 401 | ✓ | 403 |
+| `POST /api/auth/password-recovery` · `POST /api/auth/password-reset` | público | público | público |
+| `POST /api/athletes/{athleteId}/notes` | 401 | ✓ solo sus atletas | 403 |
+| `GET /api/athletes/{athleteId}/notes` | 401 | ✓ solo sus atletas (todas) | ✓ solo él mismo (solo visibles) |
+| `PATCH /api/athletes/{athleteId}/notes/{noteId}/read` | 401 | 403 | ✓ solo él mismo |
+| `GET /api/alerts` · `PATCH /api/alerts/{alertId}/handle` | 401 | ✓ solo su cartera | 403 |
 
 `GET /api/athletes` ("Mis atletas") devuelve los atletas vinculados al entrenador autenticado, ordenados por apellido y nombre, con el formato paginado común `PageResponse`: `{ content, page, size, totalElements, totalPages }`. Query params opcionales: `page` (desde 0), `size` (20 por defecto, máximo 100), `name` (nombre, apellido o "nombre apellido") y `goal`; los filtros de texto no distinguen mayúsculas y se combinan con AND.
 
@@ -302,6 +311,52 @@ Límites: el tope del contenedor es `spring.servlet.multipart.max-file-size: 6MB
 
 Pendiente de configuración: el bucket tiene que ser **privado** (`public = false`) en el panel de Supabase. Que el acceso sin firma sea denegado se verifica ahí, no en los tests.
 
+**Recuperación de contraseña (US-44)**
+
+- `POST /api/auth/password-recovery` con `{ email }`: responde **202 sin cuerpo** exista o no el email, así no revela qué emails están registrados (una cuenta desactivada tampoco recibe el email). Si existe, invalida los enlaces anteriores sin usar, guarda el hash SHA-256 de un token aleatorio de 256 bits (nunca el token en claro) y envía `PASSWORD_RESET_URL?token=...`. Si el envío falla responde **503** y el token se descarta (rollback): no queda un enlace que nadie recibió.
+- `POST /api/auth/password-reset` con `{ token, newPassword }`: con la misma política de contraseña que el registro (mínimo 8 caracteres y máximo 72 bytes; si no se cumple, **400** con `fieldErrors` en `newPassword`). Un token inexistente, vencido o ya usado responde **400** con solo `message`, sin `fieldErrors`. Si sale bien responde **204**: marca el token como usado (de un solo uso), descarta los demás enlaces y revoca las sesiones abiertas. Hay que volver a iniciar sesión.
+
+Variables de entorno (ver `.env.example`):
+
+- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH` y `MAIL_SMTP_STARTTLS`: el servidor SMTP. En dev, Mailpit (`localhost:1025`, o `mailpit:1025` dentro de Compose). **`MAIL_HOST` es obligatoria en prod.**
+- `MAIL_FROM`: remitente. `PASSWORD_RESET_URL`: la página del front que recibe el token (por defecto `http://localhost:5173/reset-password`). **Las dos son obligatorias en prod.**
+- `PASSWORD_RESET_TOKEN_TTL`: vencimiento del enlace (por defecto `30m`).
+
+El SMTP no forma parte del health check (`management.health.mail.enabled: false`): si el servidor de correo falla, la API sigue sana y solo la recuperación responde 503.
+
+Probar en local: `docker compose up -d --build` y `POST /api/auth/password-recovery` desde Swagger. El email aparece en http://localhost:8025; el enlace apunta al front, y su `token` se puede usar directo en `POST /api/auth/password-reset`.
+
+**Notas del entrenador (US-46)**
+
+- `POST /api/athletes/{athleteId}/notes` (solo el entrenador del atleta): `{ title, content, type }`. Título obligatorio, hasta 150 caracteres; contenido obligatorio, hasta 2000; `type` es `PRIVATE` o `VISIBLE_TO_ATHLETE`. Responde 201 con `{ id, title, content, type, createdAt, readAt }`.
+- `GET /api/athletes/{athleteId}/notes`: de la más reciente a la más antigua. El entrenador ve todas. El atleta ve solo las `VISIBLE_TO_ATHLETE`: el filtro va en la consulta, así que una nota privada nunca sale en una respuesta para el atleta.
+- `PATCH /api/athletes/{athleteId}/notes/{noteId}/read` (solo el atleta): completa `readAt`. Es idempotente (conserva la primera lectura). Una nota privada responde 404, igual que una inexistente.
+
+Errores: 400 (nota vacía o demasiado larga), 403 (atleta ajeno o rol equivocado) y 404 (atleta o nota inexistente).
+
+**Alertas automáticas (US-47)**
+
+Cinco condiciones, cada una con su severidad. Los umbrales y los textos están en el catálogo `alert_types` (V18), así que se ajustan sin tocar código:
+
+| Tipo | Severidad | Condición |
+|---|---|---|
+| `INACTIVITY` | `CRITICAL` | Tiene una rutina vigente pero no finalizó ningún entrenamiento en los últimos 14 días |
+| `NO_ROUTINE` | `WARNING` | No tiene una rutina asignada y vigente |
+| `LOW_COMPLIANCE` | `WARNING` | Finalizó menos de la mitad de los entrenamientos que planifica su rutina (`daysPerWeek`) en los últimos 7 días |
+| `NO_WEIGHT_LOG` | `INFO` | No registró su peso en los últimos 7 días |
+| `PENDING_REVIEW` | `INFO` | Tiene sesiones finalizadas que el entrenador no revisó |
+
+Inactividad y bajo cumplimiento solo se evalúan si la rutina se asignó antes de la ventana: una rutina recién asignada no genera alertas. Solo se evalúan los atletas activos.
+
+- `GET /api/alerts`: reevalúa la cartera del entrenador y devuelve las pendientes: `{ id, athleteId, athleteName, type, severity, message, generatedAt, handledAt }`. Primero las críticas; dentro de la misma severidad, las más recientes.
+- `PATCH /api/alerts/{alertId}/handle`: la marca como atendida y guarda quién (`handled_by`) y cuándo (`handledAt`). Si ya estaba atendida responde 409; si es de un atleta ajeno, 403; si no existe, 404.
+
+Reglas de la evaluación:
+
+- Nunca hay dos alertas abiertas del mismo tipo para el mismo atleta. Lo controla la aplicación y, por si dos evaluaciones corren a la vez, también un índice único parcial en la base.
+- Después de atender una alerta, ese tipo no se vuelve a abrir para el atleta durante **7 días** aunque la condición siga. Si no, reaparecería en la consulta siguiente.
+- Cada atleta se evalúa en su propia transacción: si falla uno, se registra en el log y el resto continúa.
+- Además de evaluarse en cada consulta, un job diario evalúa todas las carteras: `ALERTS_SCHEDULER_CRON`, por defecto `0 0 6 * * *` (06:00 en `APP_TIME_ZONE`). `ALERTS_SCHEDULER_ENABLED=false` lo apaga.
 
 **Tests**
 

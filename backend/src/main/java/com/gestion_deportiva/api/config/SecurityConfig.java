@@ -30,16 +30,21 @@ import java.util.List;
 @EnableConfigurationProperties(CorsProperties.class)
 public class SecurityConfig {
 
-    // Endpoints públicos: registro de entrenadores (US-01), login y refresh (US-02).
+    // Endpoints públicos: registro de entrenadores (US-01), login y refresh (US-02) y recuperación de contraseña (US-44).
     // Spring Security filtra por la URL real, por eso incluyen el prefijo de WebConfig
     static final String COACH_REGISTRATION_PATH = WebConfig.API_PREFIX + "/coaches";
     static final String LOGIN_PATH = WebConfig.API_PREFIX + "/auth/login";
     static final String REFRESH_PATH = WebConfig.API_PREFIX + "/auth/refresh";
+    // US-44 · Recuperación de contraseña: quien la pide no tiene sesión
+    static final String PASSWORD_RECOVERY_PATH = WebConfig.API_PREFIX + "/auth/password-recovery";
+    static final String PASSWORD_RESET_PATH = WebConfig.API_PREFIX + "/auth/password-reset";
 
     private static final RequestMatcher PUBLIC_ENDPOINTS = new OrRequestMatcher(
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, COACH_REGISTRATION_PATH),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, LOGIN_PATH),
-            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, REFRESH_PATH));
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, REFRESH_PATH),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, PASSWORD_RECOVERY_PATH),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, PASSWORD_RESET_PATH));
 
     // Endpoints con access token (US-04): cada uno declara acá qué rol lo puede usar
     static final String ME_PATH = WebConfig.API_PREFIX + "/auth/me";
@@ -85,6 +90,12 @@ public class SecurityConfig {
     static final String ATHLETE_MEAL_REVIEW_PATH = ATHLETE_MEAL_PATH + "/review";
     // US-11 · Dashboard del entrenador: la cartera es la del token, por eso "me" y no un id
     static final String COACH_DASHBOARD_PATH = WebConfig.API_PREFIX + "/coaches/me/dashboard";
+    // US-46 · Notas del entrenador sobre el atleta
+    static final String ATHLETE_NOTES_PATH = ATHLETES_PATH + "/{athleteId}/notes";
+    static final String ATHLETE_NOTE_READ_PATH = ATHLETE_NOTES_PATH + "/{noteId}/read";
+    // US-47 · Alertas del entrenador: la cartera es la del token
+    static final String ALERTS_PATH = WebConfig.API_PREFIX + "/alerts";
+    static final String ALERT_HANDLE_PATH = ALERTS_PATH + "/{alertId}/handle";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -194,6 +205,16 @@ public class SecurityConfig {
                         // US-11 · Dashboard del entrenador: solo COACH (el atleta recibe 403). Las métricas son de la
                         // cartera del entrenador del token (CoachDashboardService)
                         .requestMatchers(HttpMethod.GET, COACH_DASHBOARD_PATH).hasRole("COACH")
+                        // US-46 · Notas: el entrenador las escribe (el atleta recibe 403); el listado lo leen los dos
+                        // roles (el atleta, solo las visibles) y solo el atleta las marca como leídas. Qué atleta puede
+                        // usar cada uno lo decide AthleteAccessGuard en NoteService
+                        .requestMatchers(HttpMethod.POST, ATHLETE_NOTES_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.GET, ATHLETE_NOTES_PATH).hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.PATCH, ATHLETE_NOTE_READ_PATH).hasRole("ATHLETE")
+                        // US-47 · Alertas: solo COACH (el atleta recibe 403). La pertenencia de cada alerta la
+                        // controla AlertService
+                        .requestMatchers(HttpMethod.GET, ALERTS_PATH).hasRole("COACH")
+                        .requestMatchers(HttpMethod.PATCH, ALERT_HANDLE_PATH).hasRole("COACH")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

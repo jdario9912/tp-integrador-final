@@ -1,9 +1,9 @@
 # Diagrama de Clases UML — App de Gestión Deportiva
 
-TP Final · versión 1.1
+TP Final · versión 1.2
 Modelo de dominio derivado de la hoja de *Requerimientos de Diseño* y del *Product Backlog*.
 
-Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay`, `RoutineExercise`, `RoutineAssignment` y `Food` reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
+Las clases `User`, `Coach`, `Athlete`, `RefreshToken`, `Exercise` (con los enums `MuscleGroup` y `MuscleRegion`), `Routine`, `RoutineDay`, `RoutineExercise`, `RoutineAssignment`, `Food`, `PasswordResetToken` (US-44), `Note` (US-46) y `Alert` (US-47, con los enums `AlertType` y `AlertSeverity`) reflejan el código implementado. El resto de las clases todavía es diseño y puede cambiar al implementarse.
 
 ---
 
@@ -101,6 +101,18 @@ Centraliza la creación de usuarios: hashea la contraseña y delega en cada subc
 | − revoked | boolean |
 | + revoke() | void |
 | + isActive(now: Instant) | boolean |
+
+### PasswordResetToken
+Token de recuperación de contraseña (US-44): de un solo uso y con vencimiento. Se guarda solo el hash del token del enlace.
+| Miembro | Tipo |
+|---|---|
+| + HASH_LENGTH *{static}* | int = 64 |
+| − id | UUID |
+| − user | User |
+| − tokenHash | String |
+| − expiresAt | Instant |
+| − usedAt | Instant [0..1] |
+| + isUsable(now: Instant) | boolean |
 
 ### Exercise
 Ejercicio del catálogo (US-38). Sin autor (`createdBy` null) es un ejercicio del sistema: lo ven todos los entrenadores y nadie lo edita. Baja lógica con `deletedAt`.
@@ -229,10 +241,34 @@ Alimento del catálogo (US-39). El catálogo es global: no tiene autor, los entr
 `− id: UUID`, `− date: Date`, `− type: PhotoType`, `− url: String`
 
 ### Note
-`− id: UUID`, `− date: Date`, `− title: String`, `− content: String`, `− type: NoteType`, `− read: boolean`
+Nota del entrenador sobre un atleta de su cartera (US-46). El atleta solo ve las de tipo `VISIBLE_TO_ATHLETE` y solo esas puede marcar como leídas.
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − athlete | Athlete |
+| − author | Coach |
+| − type | NoteType |
+| − title | String (≤ 150) |
+| − content | String (≤ 2000) |
+| − createdAt | Instant |
+| − readAt | Instant [0..1] |
+| + markAsRead(at: Instant) | void |
+| + isRead() | boolean |
 
 ### Alert
-`− id: UUID`, `− cause: String`, `− date: Date`, `− handled: boolean`
+Alerta automática sobre un atleta (US-47). Abierta mientras `handledAt` es null; una sola abierta por atleta y tipo. Atenderla guarda quién y cuándo.
+| Miembro | Tipo |
+|---|---|
+| − id | UUID |
+| − athlete | Athlete |
+| − type | AlertType |
+| − message | String |
+| − generatedAt | Instant |
+| − handledBy | Coach [0..1] |
+| − handledAt | Instant [0..1] |
+| + handle(coach: Coach, at: Instant) | void |
+| + isHandled() | boolean |
+| + getSeverity() | AlertSeverity |
 
 ### Enumeraciones
 - **Role**: COACH, ATHLETE
@@ -243,7 +279,9 @@ Alimento del catálogo (US-39). El catálogo es global: no tiene autor, los entr
 - **MuscleRegion**: UPPER, CORE, LOWER, FULL
 - **SessionStatus**: IN_PROGRESS, FINISHED
 - **PhotoType**: FRONT, SIDE, BACK
-- **NoteType**: PRIVATE, VISIBLE_TO_ATHLETE
+- **NoteType** (`visibleToAthlete`): PRIVATE, VISIBLE_TO_ATHLETE
+- **AlertType** (`severity`; el umbral en días y el texto del mensaje están en el catálogo `alert_types`): INACTIVITY (CRITICAL), NO_ROUTINE (WARNING), LOW_COMPLIANCE (WARNING), NO_WEIGHT_LOG (INFO), PENDING_REVIEW (INFO)
+- **AlertSeverity** (`sortOrder`): INFO, WARNING, CRITICAL
 
 ---
 
@@ -253,6 +291,7 @@ Alimento del catálogo (US-39). El catálogo es global: no tiene autor, los entr
 |---|---|---|---|---|
 | User | generalización | Coach, Athlete | — | inheritance |
 | User | asociación | RefreshToken | 1 → 0..* | issues |
+| User | asociación | PasswordResetToken | 1 → 0..* | requests |
 | UserFactory | generalización | CoachFactory, AthleteFactory | — | inheritance |
 | CoachFactory | dependencia | Coach | — | creates |
 | AthleteFactory | dependencia | Athlete | — | creates |
@@ -275,6 +314,7 @@ Alimento del catálogo (US-39). El catálogo es global: no tiene autor, los entr
 | Athlete | asociación | BodyMeasurement | 1 → 0..* | logs |
 | Athlete | asociación | ProgressPhoto | 1 → 0..* | uploads |
 | Athlete | asociación | Alert | 1 → 0..* | triggers |
+| Coach | asociación | Alert | 0..1 → 0..* | handles |
 | Note | asociación dirigida | Athlete | → 1 | about |
 
 ---
@@ -327,6 +367,14 @@ SIDE
 BACK }
 enum NoteType { PRIVATE
 VISIBLE_TO_ATHLETE }
+enum AlertType { INACTIVITY
+NO_ROUTINE
+LOW_COMPLIANCE
+NO_WEIGHT_LOG
+PENDING_REVIEW }
+enum AlertSeverity { INFO
+WARNING
+CRITICAL }
 
 abstract class User {
   - id: UUID
@@ -408,6 +456,16 @@ class RefreshToken {
   - revoked: boolean
   + revoke(): void
   + isActive(now: Instant): boolean
+}
+
+class PasswordResetToken {
+  + {static} HASH_LENGTH: int = 64
+  - id: UUID
+  - user: User
+  - tokenHash: String
+  - expiresAt: Instant
+  - usedAt: Instant [0..1]
+  + isUsable(now: Instant): boolean
 }
 
 class Exercise {
@@ -563,23 +621,34 @@ class ProgressPhoto {
 
 class Note {
   - id: UUID
-  - date: Date
+  - athlete: Athlete
+  - author: Coach
+  - type: NoteType
   - title: String
   - content: String
-  - type: NoteType
-  - read: boolean
+  - createdAt: Instant
+  - readAt: Instant [0..1]
+  + markAsRead(at: Instant): void
+  + isRead(): boolean
 }
 
 class Alert {
   - id: UUID
-  - cause: String
-  - date: Date
-  - handled: boolean
+  - athlete: Athlete
+  - type: AlertType
+  - message: String
+  - generatedAt: Instant
+  - handledBy: Coach [0..1]
+  - handledAt: Instant [0..1]
+  + handle(coach: Coach, at: Instant): void
+  + isHandled(): boolean
+  + getSeverity(): AlertSeverity
 }
 
 User <|-- Coach
 User <|-- Athlete
 User "1" -- "0..*" RefreshToken : issues >
+User "1" -- "0..*" PasswordResetToken : requests >
 
 UserFactory <|-- CoachFactory
 UserFactory <|-- AthleteFactory
@@ -609,6 +678,7 @@ Athlete "1" -- "0..*" WeightLog : logs >
 Athlete "1" -- "0..*" BodyMeasurement : logs >
 Athlete "1" -- "0..*" ProgressPhoto : uploads >
 Athlete "1" -- "0..*" Alert : triggers >
+Coach "0..1" -- "0..*" Alert : handles >
 
 Note --> "1" Athlete : about >
 
@@ -620,6 +690,14 @@ MuscleGroup ..> MuscleRegion
 TrainingSession ..> SessionStatus
 ProgressPhoto ..> PhotoType
 Note ..> NoteType
+Alert ..> AlertType
+AlertType ..> AlertSeverity
+
+note right of Alert
+  Una abierta por atleta y tipo.
+  Atendida: el mismo tipo no se
+  reabre durante 7 días.
+end note
 
 note right of RoutineAssignment
   Una sola activa por atleta;
