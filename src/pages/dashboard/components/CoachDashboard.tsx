@@ -16,12 +16,24 @@ import {
 import { TextLink } from '../../../ui/text-link'
 import { lastWeightLabel, pendingSessionsLabel } from '../dashboard-format'
 import { CardError } from './CardError'
+import { CoachAlertsCard } from './CoachAlertsCard' // US-47
 import { CoachMetricCard } from './CoachMetricCard'
 
-// panel del entrenador (US-11): el estado de su cartera en cuatro métricas, para priorizar a quién
-// atender. Llegan en una sola respuesta; si el servidor no pudo calcular una, esa tarjeta avisa y
-// el resto se muestra igual. El saludo y "Agregar atleta" los pone DashboardPage
+// panel del entrenador: arriba las alertas pendientes (US-47) y debajo el estado de su cartera en
+// cuatro métricas (US-11). Las alertas tienen su propia carga y error: se muestran aunque las
+// métricas fallen o la cartera esté vacía. El saludo y "Agregar atleta" los pone DashboardPage
 export function CoachDashboard() {
+  return (
+    <div className="flex flex-col gap-4 md:gap-6">
+      <CoachAlertsCard />
+      <CoachMetrics />
+    </div>
+  )
+}
+
+// las cuatro métricas llegan en una sola respuesta; si el servidor no pudo calcular una, esa
+// tarjeta avisa y el resto se muestra igual
+function CoachMetrics() {
   const dashboard = useCoachDashboard()
   const { data, isFetching } = dashboard
   const retry = () => void dashboard.refetch()

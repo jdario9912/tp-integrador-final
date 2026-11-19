@@ -18,6 +18,8 @@ const SESSION_DETAIL_URL = /\/api\/athletes\/[^/]+\/sessions\/[^/?]+(\?|$)/
 const SUMMARY_URL = /\/api\/athletes\/[^/]+\/meals\/summary(\?|$)/
 const MEALS_URL = /\/api\/athletes\/[^/]+\/meals(\?|$)/
 const WEIGHTS_URL = /\/api\/athletes\/[^/]+\/weights(\?|$)/
+// US-46: las notas del entrenador se cubren en notes.spec; acá, sin notas
+const NOTES_URL = /\/api\/athletes\/[^/]+\/notes(\?|$)/
 
 const TORSO_ID = 'c3d4e5f6-0718-4293-a4b5-c6d7e8f90a1b'
 const LEGS_ID = 'd4e5f607-1829-43a4-b5c6-d7e8f90a1b2c'
@@ -213,6 +215,9 @@ const routeDashboard = async (page: Page, replies: Replies = {}) => {
   const current = { ...defaultReplies(), ...replies }
   const startRequests: unknown[] = []
 
+  await page.route(NOTES_URL, (route) =>
+    route.fulfill({ status: 200, json: [] }),
+  )
   await page.route(MEALS_URL, (route) =>
     route.fulfill({ status: 200, json: [lunch] }),
   )

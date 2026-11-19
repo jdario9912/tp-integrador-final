@@ -6,9 +6,11 @@ import { saveSession } from '../../lib/auth'
 import { MemoryRouter, Route, Routes } from '../../lib/navigation'
 import { paths } from '../../router/paths'
 import { getCurrentUser } from '../../lib/auth/get-current-user'
+import { getAlerts } from '../../lib/alerts/get-alerts'
 import { getAthleteRoutine } from '../../lib/athlete-routine/get-athlete-routine'
 import { getCoachDashboard } from '../../lib/coach-dashboard/get-coach-dashboard'
 import { getMealsOfDay } from '../../lib/meals/get-meals'
+import { getNotes } from '../../lib/notes/get-notes'
 import { getInProgressSession } from '../../lib/training-sessions/get-in-progress-session'
 import { getTrainingHistory } from '../../lib/training-sessions/get-training-history'
 import { getWeights } from '../../lib/weights/get-weights'
@@ -38,6 +40,9 @@ vi.mock('../../lib/coach-dashboard/get-coach-dashboard', () => ({
   getCoachDashboard: vi.fn(),
 }))
 vi.mock('../../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
+// US-47 y US-46: alertas del entrenador y notas del atleta, vacías
+vi.mock('../../lib/alerts/get-alerts', () => ({ getAlerts: vi.fn() }))
+vi.mock('../../lib/notes/get-notes', () => ({ getNotes: vi.fn() }))
 vi.mock('../meals/actions/get-daily-summary', () => ({
   getDailyNutritionSummary: vi.fn(),
 }))
@@ -73,6 +78,10 @@ beforeEach(() => {
   })
   vi.mocked(getWeights).mockResolvedValue(weightsPage([]))
   vi.mocked(getMealsOfDay).mockResolvedValue([])
+  vi.mocked(getAlerts).mockReset()
+  vi.mocked(getAlerts).mockResolvedValue([])
+  vi.mocked(getNotes).mockReset()
+  vi.mocked(getNotes).mockResolvedValue([])
   vi.mocked(getDailyNutritionSummary).mockResolvedValue(
     dailySummary({
       mealCount: 0,
@@ -103,6 +112,10 @@ describe('DashboardPage', () => {
     expect(
       await screen.findByRole('region', { name: 'Atletas activos' }),
     ).toBeInTheDocument()
+    // US-47
+    expect(
+      screen.getByRole('region', { name: 'Requiere atención' }),
+    ).toBeInTheDocument()
   })
 
   it('muestra el panel del atleta a un atleta', () => {
@@ -119,8 +132,13 @@ describe('DashboardPage', () => {
       screen.getByRole('region', { name: 'Entrenamiento de hoy' }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/Bienvenido de nuevo/)).not.toBeInTheDocument()
-    // un atleta no pide el panel del entrenador (el backend le daría 403)
+    // un atleta no pide el panel del entrenador ni las alertas (el backend le daría 403)
     expect(getCoachDashboard).not.toHaveBeenCalled()
+    expect(getAlerts).not.toHaveBeenCalled()
+    // US-46: ve las notas de su entrenador
+    expect(
+      screen.getByRole('region', { name: 'Notas de tu entrenador' }),
+    ).toBeInTheDocument()
   })
 
   it('saluda con el nombre de la sesión y lo actualiza con GET /auth/me', async () => {
@@ -172,6 +190,7 @@ describe('DashboardPage', () => {
     renderPage({ createdAthlete: 'Juana Pérez' })
     // los esqueletos del panel también son status: se espera a que cargue
     await screen.findAllByRole('link', { name: 'Leo Gil' })
+    await screen.findByText('No tenés alertas pendientes.')
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'Creaste a Juana Pérez. Ya puede ingresar con su email y la contraseña que le asignaste.',
@@ -184,6 +203,7 @@ describe('DashboardPage', () => {
 
     renderPage()
     await screen.findAllByRole('link', { name: 'Leo Gil' })
+    await screen.findByText('No tenés alertas pendientes.')
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })

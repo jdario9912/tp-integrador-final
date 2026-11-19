@@ -63,3 +63,7 @@ export { Check, SkipForward } from 'lucide-react'
 export { Utensils } from 'lucide-react'
 // US-21: historial de entrenamientos (menú del atleta)
 export { ClipboardCheck } from 'lucide-react'
+// US-44: recuperación de contraseña
+export { MailCheck } from 'lucide-react'
+// US-47: alertas del entrenador
+export { TriangleAlert } from 'lucide-react'

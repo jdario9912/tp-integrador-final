@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/api'
 import { saveSession } from '../../../lib/auth'
+import { getAlerts } from '../../../lib/alerts/get-alerts'
 import { getCoachDashboard } from '../../../lib/coach-dashboard/get-coach-dashboard'
 import { athleteProfilePath, paths } from '../../../router/paths'
+import { alert } from '../../../test/alert-fixtures'
 import { session } from '../../../test/auth-fixtures'
 import {
   ANA,
@@ -19,6 +21,8 @@ import { CoachDashboard } from './CoachDashboard'
 vi.mock('../../../lib/coach-dashboard/get-coach-dashboard', () => ({
   getCoachDashboard: vi.fn(),
 }))
+// US-47: la tarjeta se prueba en CoachAlertsCard.test; por defecto, sin alertas
+vi.mock('../../../lib/alerts/get-alerts', () => ({ getAlerts: vi.fn() }))
 
 const card = (name: string) => screen.getByRole('region', { name })
 // el número grande de la tarjeta
@@ -33,6 +37,8 @@ const athletesOf = (name: string) =>
 beforeEach(() => {
   saveSession(session('COACH'))
   vi.mocked(getCoachDashboard).mockReset()
+  vi.mocked(getAlerts).mockReset()
+  vi.mocked(getAlerts).mockResolvedValue([])
 })
 
 describe('CoachDashboard (US-11)', () => {
@@ -196,5 +202,69 @@ describe('CoachDashboard (US-11)', () => {
 
     await metricsLoaded()
     expect(countOf('Atletas activos')).toBe('3')
+  })
+
+  describe('alertas (US-47)', () => {
+    const alertsCard = () => card('Requiere atención')
+
+    it('van arriba de las métricas', async () => {
+      vi.mocked(getCoachDashboard).mockResolvedValue(coachDashboard())
+      vi.mocked(getAlerts).mockResolvedValue([alert()])
+
+      renderWithRouter(<CoachDashboard />)
+
+      expect(
+        await within(alertsCard()).findByText(alert().message),
+      ).toBeInTheDocument()
+      await metricsLoaded()
+      const regions = screen.getAllByRole('region')
+      expect(regions[0]).toBe(alertsCard())
+    })
+
+    it('se muestran aunque la cartera esté vacía', async () => {
+      vi.mocked(getCoachDashboard).mockResolvedValue(emptyCoachDashboard())
+
+      renderWithRouter(<CoachDashboard />)
+
+      expect(
+        await screen.findByRole('heading', {
+          name: 'Todavía no tenés atletas activos',
+        }),
+      ).toBeInTheDocument()
+      expect(
+        await within(alertsCard()).findByText('No tenés alertas pendientes.'),
+      ).toBeInTheDocument()
+    })
+
+    it('se muestran aunque falle el pedido de las métricas, y al revés', async () => {
+      vi.mocked(getCoachDashboard).mockRejectedValue(
+        new ApiError('Error interno del servidor', 500),
+      )
+      vi.mocked(getAlerts).mockResolvedValue([alert()])
+
+      renderWithRouter(<CoachDashboard />)
+
+      expect(
+        await within(alertsCard()).findByText(alert().message),
+      ).toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Error interno del servidor',
+      )
+    })
+
+    it('si fallan las alertas, las métricas se ven igual', async () => {
+      vi.mocked(getCoachDashboard).mockResolvedValue(coachDashboard())
+      vi.mocked(getAlerts).mockRejectedValue(
+        new ApiError('No se pudieron calcular las alertas', 500),
+      )
+
+      renderWithRouter(<CoachDashboard />)
+
+      expect(await within(alertsCard()).findByRole('alert')).toHaveTextContent(
+        'No se pudieron calcular las alertas',
+      )
+      await metricsLoaded()
+      expect(countOf('Atletas activos')).toBe('3')
+    })
   })
 })

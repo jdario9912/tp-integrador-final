@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAthleteRoutine } from '../../../lib/athlete-routine/get-athlete-routine'
 import { saveSession } from '../../../lib/auth'
 import { getMealsOfDay } from '../../../lib/meals/get-meals'
+import { getNotes } from '../../../lib/notes/get-notes'
 import { getTrainingHistory } from '../../../lib/training-sessions/get-training-history'
 import { getInProgressSession } from '../../../lib/training-sessions/get-in-progress-session'
 import { getWeights } from '../../../lib/weights/get-weights'
@@ -28,6 +29,8 @@ vi.mock('../../../lib/training-sessions/get-training-history', () => ({
 }))
 vi.mock('../../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
 vi.mock('../../../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
+// US-46: la tarjeta se prueba en AthleteNotesCard.test
+vi.mock('../../../lib/notes/get-notes', () => ({ getNotes: vi.fn() }))
 vi.mock('../../meals/actions/get-daily-summary', () => ({
   getDailyNutritionSummary: vi.fn(),
 }))
@@ -57,13 +60,14 @@ beforeEach(() => {
   vi.mocked(getWeights).mockResolvedValue(weightsPage())
   vi.mocked(getDailyNutritionSummary).mockResolvedValue(dailySummary())
   vi.mocked(getMealsOfDay).mockResolvedValue([])
+  vi.mocked(getNotes).mockResolvedValue([])
   vi.mocked(getTrainingHistory).mockResolvedValue(
     pageOf([trainingHistoryItem()]),
   )
 })
 
 describe('AthleteDashboard', () => {
-  it('muestra las cuatro tarjetas del día', async () => {
+  it('muestra las tarjetas del día y las notas del entrenador', async () => {
     renderDashboard()
 
     for (const name of [
@@ -71,6 +75,7 @@ describe('AthleteDashboard', () => {
       'Comidas de hoy',
       'Último peso',
       'Observaciones del entrenador',
+      'Notas de tu entrenador',
     ]) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument()
     }

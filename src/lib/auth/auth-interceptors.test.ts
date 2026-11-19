@@ -169,6 +169,29 @@ describe('interceptores de autenticación', () => {
     expect(requestsTo('/auth/refresh')).toHaveLength(0)
   })
 
+  it('no manda el access token a la recuperación de contraseña (US-44)', async () => {
+    saveSession(session())
+    respondWith(() => ({ status: 202 }))
+
+    await post('/auth/password-recovery', { email: 'ana@example.com' })
+    await post('/auth/password-reset', { token: 't', newPassword: 'x' })
+
+    expect(authorization(requestsTo('/auth/password-recovery')[0])).toBeFalsy()
+    expect(authorization(requestsTo('/auth/password-reset')[0])).toBeFalsy()
+  })
+
+  it('un 401 del reset de contraseña no intenta refrescar (US-44)', async () => {
+    saveSession(session())
+    respondWith(() => unauthorized)
+
+    await expect(
+      post('/auth/password-reset', { token: 't', newPassword: 'x' }),
+    ).rejects.toMatchObject({ status: 401 })
+
+    expect(requestsTo('/auth/refresh')).toHaveLength(0)
+    expect(getSession()).not.toBeNull()
+  })
+
   it('sin sesión un 401 no intenta refrescar', async () => {
     respondWith(() => unauthorized)
 
