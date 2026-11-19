@@ -17,6 +17,15 @@ services:
       timeout: 5s
       retries: 5
 
+  # US-44: servidor SMTP de desarrollo. Recibe todos los emails sin enviarlos; se ven en http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+
   app:
     build: .
     container_name: app
@@ -47,6 +56,19 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-}
       STORAGE_SIGNED_URL_TTL: ${STORAGE_SIGNED_URL_TTL:-10m}
+      # US-44: dentro de la red de Compose el SMTP es el servicio mailpit
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@gestion-deportiva.local}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173/reset-password}
+      PASSWORD_RESET_TOKEN_TTL: ${PASSWORD_RESET_TOKEN_TTL:-30m}
+      # US-47: evaluación diaria de alertas
+      ALERTS_SCHEDULER_ENABLED: ${ALERTS_SCHEDULER_ENABLED:-true}
+      ALERTS_SCHEDULER_CRON: ${ALERTS_SCHEDULER_CRON:-0 0 6 * * *}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
 

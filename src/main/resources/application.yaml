@@ -18,6 +18,23 @@ spring:
     multipart:
       max-file-size: 6MB
       max-request-size: 7MB
+  # US-44: SMTP para el email de recuperación de contraseña. Por defecto, Mailpit local (docker compose, UI en
+  # http://localhost:8025). En prod MAIL_HOST es obligatorio (application-prod.yml)
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+          # Sin timeouts, un SMTP colgado dejaría la request esperando para siempre
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 app:
   # Zona horaria de la app (US-26): define qué fecha es "hoy" para las reglas de negocio (por ahora, la fecha no
@@ -33,6 +50,11 @@ app:
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
       # Se renueva en cada refresh: con 2 h sin usar la app hay que volver a iniciar sesión
       refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:2h}
+    # US-44: recuperación de contraseña. reset-url es la página del front que recibe ?token=...
+    password-reset:
+      token-ttl: ${PASSWORD_RESET_TOKEN_TTL:30m}
+      reset-url: ${PASSWORD_RESET_URL:http://localhost:5173/reset-password}
+      mail-from: ${MAIL_FROM:no-reply@gestion-deportiva.local}
   cors:
     # Orígenes del front que pueden llamar a la API desde el navegador, separados por coma (US-04).
     # Sin valor por defecto: si falta CORS_ALLOWED_ORIGINS la app no arranca (en dev lo define application-dev.yml)
@@ -51,11 +73,22 @@ app:
   # spring.servlet.multipart.max-file-size; si se sube por encima de 6 MB, subir también ese tope
   uploads:
     max-image-size: ${UPLOAD_MAX_IMAGE_SIZE:5MB}
+  # US-47: evaluación diaria de alertas de todas las carteras. Los umbrales y textos están en el catálogo alert_types.
+  # El cron (segundo minuto hora día mes día-semana) se interpreta en app.time-zone
+  alerts:
+    scheduler:
+      enabled: ${ALERTS_SCHEDULER_ENABLED:true}
+      cron: ${ALERTS_SCHEDULER_CRON:0 0 6 * * *}
 
 server:
   port: ${PORT:8080}
 
 management:
+  # US-44: el SMTP no forma parte del health. Si el servidor de correo falla, la API sigue sana (solo la
+  # recuperación de contraseña responde 503)
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:

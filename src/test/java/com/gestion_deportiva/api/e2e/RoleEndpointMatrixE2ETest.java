@@ -81,6 +81,9 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.POST, "/api/coaches", ALLOWED, ALLOWED, ALLOWED),
             new Row(HttpMethod.POST, "/api/auth/login", ALLOWED, ALLOWED, ALLOWED),
             new Row(HttpMethod.POST, "/api/auth/refresh", ALLOWED, ALLOWED, ALLOWED),
+            // US-44 · recuperación de contraseña (con "{}" responden 400)
+            new Row(HttpMethod.POST, "/api/auth/password-recovery", ALLOWED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.POST, "/api/auth/password-reset", ALLOWED, ALLOWED, ALLOWED),
             // cualquier usuario autenticado
             new Row(HttpMethod.GET, "/api/auth/me", UNAUTHORIZED, ALLOWED, ALLOWED),
             new Row(HttpMethod.POST, "/api/auth/logout", UNAUTHORIZED, ALLOWED, ALLOWED),
@@ -182,7 +185,17 @@ class RoleEndpointMatrixE2ETest {
                     FORBIDDEN),
             // US-11 · dashboard del entrenador: solo COACH (el atleta recibe 403). Las métricas se prueban en
             // CoachDashboardE2ETest
-            new Row(HttpMethod.GET, "/api/coaches/me/dashboard", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.GET, "/api/coaches/me/dashboard", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // US-46 · notas: el entrenador escribe (con "{}" el POST responde 400), los dos roles leen y solo el atleta
+            // marca como leída ({noteId} no existe: 404). La pertenencia y la visibilidad se prueban en NoteE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/notes", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/notes", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.PATCH, "/api/athletes/{athleteId}/notes/{noteId}/read", UNAUTHORIZED, FORBIDDEN,
+                    ALLOWED),
+            // US-47 · alertas: solo COACH ({alertId} no existe: 404). La evaluación, la pertenencia y el 409 se
+            // prueban en AlertE2ETest
+            new Row(HttpMethod.GET, "/api/alerts", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            new Row(HttpMethod.PATCH, "/api/alerts/{alertId}/handle", UNAUTHORIZED, ALLOWED, FORBIDDEN));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
@@ -289,7 +302,9 @@ class RoleEndpointMatrixE2ETest {
                         .replace("{setNumber}", "1")
                         // US-28
                         .replace("{photoId}", UUID.randomUUID().toString())
-                        .replace("{mealId}", UUID.randomUUID().toString())) // US-23
+                        .replace("{mealId}", UUID.randomUUID().toString()) // US-23
+                        .replace("{noteId}", UUID.randomUUID().toString()) // US-46
+                        .replace("{alertId}", UUID.randomUUID().toString())) // US-47
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));

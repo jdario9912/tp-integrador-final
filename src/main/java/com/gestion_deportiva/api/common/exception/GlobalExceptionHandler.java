@@ -1,5 +1,6 @@
 package com.gestion_deportiva.api.common.exception;
 
+import com.gestion_deportiva.api.auth.exception.PasswordResetMailException;
 import com.gestion_deportiva.api.common.exception.ApiErrorResponse.FieldErrorDetail;
 import com.gestion_deportiva.api.common.upload.exception.ImageTooLargeException;
 import com.gestion_deportiva.api.common.upload.exception.UnsupportedImageFormatException;
@@ -43,6 +44,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             "El servicio de almacenamiento no está disponible. Intente nuevamente más tarde";
     // US-28: bloque de subidas. Cuerpo multipart roto o incompleto (400), sin detalle de Spring
     static final String INVALID_UPLOAD_MESSAGE = "La solicitud de subida no es válida";
+    // US-44: falló el envío del email de recuperación
+    static final String MAIL_UNAVAILABLE_MESSAGE =
+            "No se pudo enviar el email de recuperación. Intente nuevamente más tarde";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException ex,
@@ -73,6 +77,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Violación de integridad de datos en {} {}: {}", request.getMethod(), request.getRequestURI(),
                 ex.getMostSpecificCause().getMessage());
         return build(HttpStatus.CONFLICT, DATA_CONFLICT_MESSAGE, request);
+    }
+
+    // 400 sin campo puntual (ej. enlace de recuperación vencido o usado, US-44): solo el mensaje, sin fieldErrors
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(BusinessRuleException.class)
@@ -112,6 +122,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.warn("Almacenamiento no disponible en {} {}: {}", request.getMethod(), request.getRequestURI(),
                 ex.getMessage());
         return build(HttpStatus.SERVICE_UNAVAILABLE, STORAGE_UNAVAILABLE_MESSAGE, request);
+    }
+
+    // US-44: el servidor SMTP no respondió o rechazó el email. El token ya se descartó (rollback); el cliente puede
+    // reintentar. El detalle queda en el log, nunca la respuesta del servidor de correo
+    @ExceptionHandler(PasswordResetMailException.class)
+    public ResponseEntity<ApiErrorResponse> handlePasswordResetMail(PasswordResetMailException ex,
+                                                                    HttpServletRequest request) {
+        log.error("Falló el envío del email de recuperación en {} {}", request.getMethod(), request.getRequestURI(),
+                ex);
+        return build(HttpStatus.SERVICE_UNAVAILABLE, MAIL_UNAVAILABLE_MESSAGE, request);
     }
 
     // US-28 (bloque propio de subidas). 413: la imagen supera la política (app.uploads.max-image-size)
