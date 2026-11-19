@@ -7,14 +7,24 @@ import { toSession, type AuthResponse } from './types'
 
 export const LOGIN_URL = '/auth/login'
 export const REFRESH_URL = '/auth/refresh'
+// US-44: recuperación de contraseña, endpoints públicos
+export const PASSWORD_RECOVERY_URL = '/auth/password-recovery'
+export const PASSWORD_RESET_URL = '/auth/password-reset'
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
-// login y refresh no llevan access token y su 401 no dispara un refresh.
-// /auth/logout queda fuera a propósito: necesita el access token y, si venció, el
+// login, refresh y la recuperación de contraseña no llevan access token y su 401 no dispara un
+// refresh (se puede abrir el link del mail con una sesión vieja guardada). /auth/logout queda fuera a propósito: necesita el access token y, si venció, el
 // interceptor tiene que refrescar y reintentar el logout con el token nuevo.
+const PUBLIC_AUTH_URLS: (string | undefined)[] = [
+  LOGIN_URL,
+  REFRESH_URL,
+  PASSWORD_RECOVERY_URL,
+  PASSWORD_RESET_URL,
+]
+
 const isAuthRequest = (config: InternalAxiosRequestConfig) =>
-  config.url === LOGIN_URL || config.url === REFRESH_URL
+  PUBLIC_AUTH_URLS.includes(config.url)
 
 const bearer = (accessToken: string) => `Bearer ${accessToken}`
 

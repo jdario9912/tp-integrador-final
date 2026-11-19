@@ -38,3 +38,15 @@ export const todayInAppTimeZone = (now = new Date()) => {
     parts.find((p) => p.type === type)?.value
   return `${part('year')}-${part('month')}-${part('day')}`
 }
+
+const appIsoDate = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: APP_TIME_ZONE,
+})
+
+// día de un instante ISO (createdAt, generatedAt...) en la zona de la app, con el formato largo
+// de formatIsoDate: "14 de noviembre de 2026"
+export const formatInstantDate = (instant: string) =>
+  formatIsoDate(appIsoDate.format(new Date(instant)))

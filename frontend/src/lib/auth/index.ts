@@ -15,3 +15,5 @@ export { useAuth } from './use-auth'
 export { useCurrentUser } from './use-current-user'
 export { logout } from './logout'
 export { useLogout } from './use-logout'
+// US-44: endpoints públicos de recuperación de contraseña (los excluye el interceptor)
+export { PASSWORD_RECOVERY_URL, PASSWORD_RESET_URL } from './auth-interceptors'

@@ -7,7 +7,9 @@ import { Callout } from '../../ui/callout'
 import { TextLink } from '../../ui/text-link'
 import { LoginForm } from './components/LoginForm'
 
-type LoginLocationState = { logoutFailed?: boolean }
+// logoutFailed: el servidor no confirmó el cierre de sesión. passwordReset: se acaba de cambiar la
+// contraseña desde el link del mail (US-44)
+type LoginLocationState = { logoutFailed?: boolean; passwordReset?: boolean }
 
 export function LoginPage() {
   const { isAuthenticated } = useAuth()
@@ -15,9 +17,13 @@ export function LoginPage() {
   const navigate = useNavigate()
   // el aviso se lee una sola vez y después se limpia el state: el navegador lo conserva al
   // recargar y el aviso volvería a aparecer aunque ya no corresponda
-  const [logoutFailed] = useState(
-    () => (location.state as LoginLocationState | null)?.logoutFailed === true,
-  )
+  const [{ logoutFailed, passwordReset }] = useState(() => {
+    const state = location.state as LoginLocationState | null
+    return {
+      logoutFailed: state?.logoutFailed === true,
+      passwordReset: state?.passwordReset === true,
+    }
+  })
 
   useEffect(() => {
     if (location.state) {
@@ -39,7 +45,15 @@ export function LoginPage() {
           el servidor.
         </Callout>
       )}
+      {passwordReset && (
+        <Callout tone="success" role="status">
+          Actualizaste tu contraseña. Iniciá sesión con la nueva.
+        </Callout>
+      )}
       <LoginForm />
+      <TextLink to={paths.forgotPassword} className="self-center text-[15px]">
+        ¿Olvidaste tu contraseña?
+      </TextLink>
       <p className="text-muted-foreground text-center text-[15px]">
         ¿Sos entrenador y no tenés cuenta?{' '}
         <TextLink to={paths.registerCoach} className="text-[15px]">

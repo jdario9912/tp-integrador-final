@@ -44,4 +44,20 @@ describe('validatePassword', () => {
   it('acepta 8 caracteres o más, incluidos espacios', () => {
     expect(validatePassword({ value: ' clave 1 ' })).toBeUndefined()
   })
+
+  it('acepta hasta 72 bytes', () => {
+    expect(validatePassword({ value: 'a'.repeat(72) })).toBeUndefined()
+  })
+
+  it('rechaza más de 72 bytes', () => {
+    expect(validatePassword({ value: 'a'.repeat(73) })).toBe(
+      'La contraseña es demasiado larga',
+    )
+  })
+
+  it('mide en bytes: 37 letras con tilde ocupan 74 bytes', () => {
+    expect(validatePassword({ value: 'á'.repeat(37) })).toBe(
+      'La contraseña es demasiado larga',
+    )
+  })
 })

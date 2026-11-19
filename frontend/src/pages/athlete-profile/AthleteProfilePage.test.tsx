@@ -11,6 +11,7 @@ import { saveSession } from '../../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../../lib/navigation'
 import { getWeights } from '../../lib/weights/get-weights'
 import { getProgressPhotos } from '../../lib/progress-photos/get-progress-photos'
+import { getNotes } from '../../lib/notes/get-notes'
 import { getNutritionOverview } from './actions/get-nutrition-overview'
 import { athleteProfilePath, paths } from '../../router/paths'
 import {
@@ -44,6 +45,9 @@ vi.mock('../../lib/progress-photos/get-progress-photos', () => ({
   getProgressPhotos: vi.fn(),
   getProgressPhoto: vi.fn(),
 }))
+
+// notas (US-46): la sección se prueba en NotesSection.test; por defecto, sin notas
+vi.mock('../../lib/notes/get-notes', () => ({ getNotes: vi.fn() }))
 
 // ficha con todos los datos cargados (ejemplo del contrato de API)
 const leo = createdAthlete({
@@ -123,6 +127,8 @@ beforeEach(() => {
   })
   vi.mocked(getProgressPhotos).mockReset()
   vi.mocked(getProgressPhotos).mockResolvedValue(progressPhotosPage([]))
+  vi.mocked(getNotes).mockReset()
+  vi.mocked(getNotes).mockResolvedValue([])
   saveSession(session('COACH'))
   // la edad depende de hoy: solo se fija la fecha, los timers siguen siendo reales
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -149,6 +155,17 @@ describe('AthleteProfilePage', () => {
       screen.queryByRole('status', { name: 'Cargando ficha del atleta' }),
     ).not.toBeInTheDocument()
     expect(getAthlete).toHaveBeenCalledWith(leo.id)
+  })
+
+  it('muestra las notas del atleta de la URL (US-46)', async () => {
+    await renderProfile(leo)
+
+    expect(
+      await within(section('Notas')).findByText(
+        'Todavía no escribiste notas sobre este atleta',
+      ),
+    ).toBeInTheDocument()
+    expect(getNotes).toHaveBeenCalledWith(leo.id)
   })
 
   it('el encabezado muestra estado, objetivo e inicio', async () => {
@@ -467,6 +484,11 @@ describe('AthleteProfilePage', () => {
       screen.queryByRole('region', { name: 'Progreso' }),
     ).not.toBeInTheDocument()
     expect(getProgressPhotos).not.toHaveBeenCalled()
+    // US-46: ni sus notas
+    expect(
+      screen.queryByRole('region', { name: 'Notas' }),
+    ).not.toBeInTheDocument()
+    expect(getNotes).not.toHaveBeenCalled()
     expect(
       screen.getByRole('link', { name: 'Volver a atletas' }),
     ).toHaveAttribute('href', paths.athletes)

@@ -8,6 +8,10 @@ export const paths = {
   home: '/',
   registerCoach: '/register-coach',
   login: '/login',
+  // US-44: recuperación de contraseña, públicas. reset-password es el link del mail
+  // (${FRONTEND_URL}/reset-password?token=...): si cambia, hay que cambiarlo en el backend
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   dashboard: '/dashboard',
   athletes: '/athletes',
   newAthlete: '/athletes/new',

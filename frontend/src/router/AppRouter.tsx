@@ -9,6 +9,7 @@ import { EditFoodPage } from '../pages/edit-food'
 import { EditRoutinePage } from '../pages/edit-routine'
 import { ExercisesPage } from '../pages/exercises'
 import { FoodsPage } from '../pages/foods'
+import { ForgotPasswordPage } from '../pages/forgot-password' // US-44
 import { HomePage } from '../pages/home'
 import { LoginPage } from '../pages/login'
 import { MealsPage } from '../pages/meals' // US-23
@@ -19,6 +20,7 @@ import { NewRoutinePage } from '../pages/new-routine'
 import { ProgressPage } from '../pages/progress'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
+import { ResetPasswordPage } from '../pages/reset-password' // US-44
 import { RoutineDetailPage } from '../pages/routine-detail'
 import { RoutineStructurePage } from '../pages/routine-structure'
 import { RoutinesPage } from '../pages/routines'
@@ -32,6 +34,9 @@ const router = createBrowserRouter([
   { path: paths.home, element: <HomePage /> },
   { path: paths.registerCoach, element: <RegisterCoachPage /> },
   { path: paths.login, element: <LoginPage /> },
+  // US-44: recuperación de contraseña
+  { path: paths.forgotPassword, element: <ForgotPasswordPage /> },
+  { path: paths.resetPassword, element: <ResetPasswordPage /> },
   {
     element: <RequireAuth />,
     children: [

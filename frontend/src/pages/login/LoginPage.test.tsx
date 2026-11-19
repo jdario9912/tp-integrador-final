@@ -30,6 +30,10 @@ describe('LoginPage', () => {
       'href',
       paths.registerCoach,
     )
+    // US-44
+    expect(
+      screen.getByRole('link', { name: '¿Olvidaste tu contraseña?' }),
+    ).toHaveAttribute('href', paths.forgotPassword)
     // sin un logout fallido no hay aviso
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -47,6 +51,14 @@ describe('LoginPage', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'Cerraste sesión en este dispositivo, pero no pudimos confirmarlo con el servidor.',
+    )
+  })
+
+  it('avisa una sola vez que se cambió la contraseña (US-44)', () => {
+    renderAtLogin({ passwordReset: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Actualizaste tu contraseña. Iniciá sesión con la nueva.',
     )
   })
 })

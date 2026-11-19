@@ -9,6 +9,8 @@ import {
 
 // US-11: panel del entrenador con el estado de su cartera (GET /coaches/me/dashboard)
 const DASHBOARD_URL = /\/api\/coaches\/me\/dashboard$/
+// US-47: las alertas se cubren en coach-alerts.spec; acá, sin alertas
+const ALERTS_URL = /\/api\/alerts$/
 
 const ana = {
   id: '1a2b3c4d-0000-4000-8000-000000000001',
@@ -59,6 +61,9 @@ const emptyDashboardJson = (): DashboardJson => ({
 
 const routeDashboard = async (page: Page, ...responses: DashboardJson[]) => {
   const requests: Request[] = []
+  await page.route(ALERTS_URL, (route) =>
+    route.fulfill({ status: 200, json: [] }),
+  )
   await page.route(DASHBOARD_URL, (route) => {
     requests.push(route.request())
     const json = responses[Math.min(requests.length, responses.length) - 1]
