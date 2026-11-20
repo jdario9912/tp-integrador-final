@@ -105,7 +105,12 @@ El modelo de datos tiene 31 tablas en PostgreSQL, organizadas en seis áreas. La
 
 ![Modelo de datos simplificado](img/der.png)
 
-_Figura 1. Entidades principales y sus relaciones (diagrama simplificado). El DER completo está en `documentacion/DER Mermaid.md` y el diagrama de clases en `documentacion/Diagrama de Clases UML.md`._
+_Figura 1. Entidades principales y sus relaciones (diagrama simplificado)._
+
+El modelo completo está documentado en el repositorio del backend:
+
+- [DER (diagrama entidad-relación)](../backend/docs/DER.md) — [ver en GitHub](https://github.com/jdario9912/tpif-backend/blob/main/docs/DER.md)
+- [Diagrama de clases UML](../backend/docs/UML.md) — [ver en GitHub](https://github.com/jdario9912/tpif-backend/blob/main/docs/UML.md)
 
 - **Identidad:** `users` guarda las credenciales, el rol y el estado de la cuenta. `coaches` y `athletes` especializan a `users` (herencia _JOINED_: comparten la clave primaria). Un entrenador gestiona muchos atletas; un atleta pertenece a lo sumo a un entrenador.
 - **Planificación:** una rutina (`routines`) pertenece a un entrenador y se compone de días (`routine_days`), cada uno con ejercicios planificados (`routine_exercises`) que referencian al catálogo (`exercises`, clasificados por `muscle_groups`). Una rutina se asigna a atletas a través de `routine_assignments`.
@@ -393,4 +398,6 @@ Se implementaron e integraron los módulos comprometidos en los requisitos funci
 - Repositorio de entrega: https://github.com/jdario9912/tp-integrador-final
 - Backend: https://github.com/jdario9912/tpif-backend
 - Frontend: https://github.com/jdario9912/tpif-frontend
+- DER: https://github.com/jdario9912/tpif-backend/blob/main/docs/DER.md
+- Diagrama de clases UML: https://github.com/jdario9912/tpif-backend/blob/main/docs/UML.md
 - **Video final:** _[completar: enlace al video de demostración]_
