@@ -1,18 +1,43 @@
 import { formatIsoDate, parseIsoDate } from '../../lib/iso-date'
 import { formatWeightKg } from '../../lib/weights'
 
-// punto del gráfico: un registro de peso con su día en milisegundos (UTC, para la escala X)
-export type ChartPoint = { date: string; kg: number; time: number }
+// punto del gráfico: un valor (kg del peso, cm o % de una medida) con su día en milisegundos
+// (UTC, para la escala X). US-45 generaliza el campo: el gráfico no sabe qué mide
+export type ChartPoint = { date: string; value: number; time: number }
+
+// lo que el gráfico necesita saber de la métrica que dibuja: títulos y formato del valor
+// (US-45: el peso y cada medida corporal usan el mismo gráfico)
+export type ChartMetric = {
+  // título accesible del gráfico y de la tarjeta
+  title: string
+  // nombre de la columna de la tabla de datos
+  columnLabel: string
+  formatValue: (value: number) => string
+}
+
+export const WEIGHT_CHART_METRIC: ChartMetric = {
+  title: 'Evolución del peso',
+  columnLabel: 'Peso',
+  formatValue: formatWeightKg,
+}
+
+// de cualquier lista de { fecha, valor } a puntos ordenados de la más antigua a la más nueva
+export const toValuePoints = (
+  entries: { date: string; value: number }[],
+): ChartPoint[] =>
+  entries
+    .map(({ date, value }) => {
+      const { year, month, day } = parseIsoDate(date)
+      return { date, value, time: Date.UTC(year, month - 1, day) }
+    })
+    .sort((a, b) => a.time - b.time)
 
 export const toChartPoints = (
   records: { date: string; weightKg: number }[],
 ): ChartPoint[] =>
-  records
-    .map(({ date, weightKg }) => {
-      const { year, month, day } = parseIsoDate(date)
-      return { date, kg: weightKg, time: Date.UTC(year, month - 1, day) }
-    })
-    .sort((a, b) => a.time - b.time)
+  toValuePoints(
+    records.map(({ date, weightKg }) => ({ date, value: weightKg })),
+  )
 
 // escalones "bonitos" para los kilos: 72,0 / 72,5 / 73,0 y no 72,37 / 73,12
 const NICE_STEPS = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100]
@@ -48,8 +73,8 @@ export const niceYAxis = (values: number[], targetIntervals = 4): YAxis => {
 }
 
 // Y crece hacia arriba: el kilo más alto queda arriba del área de dibujo
-export const yFor = (kg: number, axis: YAxis, top: number, height: number) =>
-  top + (1 - (kg - axis.min) / (axis.max - axis.min)) * height
+export const yFor = (value: number, axis: YAxis, top: number, height: number) =>
+  top + (1 - (value - axis.min) / (axis.max - axis.min)) * height
 
 // X es proporcional al día. Un solo día (o ninguna distancia) cae al centro, no divide por cero
 export const xFor = (
@@ -89,12 +114,16 @@ export const formatChartDate = (isoDate: string) => {
   return shortDateFormat.format(new Date(Date.UTC(year, month - 1, day)))
 }
 
-// texto alternativo del gráfico para lectores de pantalla (el dibujo solo no se describe)
-export const describeWeightChart = (points: ChartPoint[]) => {
+// texto alternativo del gráfico para lectores de pantalla (el dibujo solo no se describe).
+// formatValue es el de la métrica (peso por defecto, cm o % en las medidas, US-45)
+export const describeWeightChart = (
+  points: ChartPoint[],
+  formatValue: (value: number) => string = formatWeightKg,
+) => {
   if (points.length === 0) return 'Sin registros en este rango'
   const first = points[0]
   const last = points[points.length - 1]
   const count =
     points.length === 1 ? '1 registro' : `${points.length} registros`
-  return `${count}, del ${formatIsoDate(first.date)} al ${formatIsoDate(last.date)}. De ${formatWeightKg(first.kg)} a ${formatWeightKg(last.kg)}.`
+  return `${count}, del ${formatIsoDate(first.date)} al ${formatIsoDate(last.date)}. De ${formatValue(first.value)} a ${formatValue(last.value)}.`
 }

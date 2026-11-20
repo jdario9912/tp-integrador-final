@@ -67,3 +67,5 @@ export { ClipboardCheck } from 'lucide-react'
 export { MailCheck } from 'lucide-react'
 // US-47: alertas del entrenador
 export { TriangleAlert } from 'lucide-react'
+// US-45: medidas corporales
+export { Ruler } from 'lucide-react'

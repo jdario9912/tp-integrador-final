@@ -1,12 +1,13 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useAuth } from '../../../lib/auth'
-import { athleteWeightsKey, getWeights } from '../../../lib/weights'
+import {
+  athleteWeightsKey,
+  getWeights,
+  type WeightRecord,
+} from '../../../lib/weights'
 import { toChartPoints } from '../weight-chart-scale'
 import type { WeightRange } from '../weight-range'
-
-// máximo que admite el contrato (8.6): el gráfico pide todas las páginas del rango de a 100
-export const EVOLUTION_PAGE_SIZE = 100
+import { useAllPages } from './use-all-pages'
 
 // la clave cuelga de la de los pesos: alta y edición la invalidan junto con el resto (US-26)
 export const weightEvolutionKey = (
@@ -30,49 +31,22 @@ export const useWeightEvolution = (
   const { user } = useAuth()
   const activeRange = range ?? {}
 
-  const query = useInfiniteQuery({
+  const { records, isPending, error, refetch } = useAllPages<WeightRecord>({
     queryKey: weightEvolutionKey(user?.id, athleteId, activeRange),
-    queryFn: ({ pageParam }) =>
+    fetchPage: (page, size) =>
       getWeights(athleteId, {
         from: activeRange.from,
         to: activeRange.to,
-        page: pageParam,
-        size: EVOLUTION_PAGE_SIZE,
+        page,
+        size,
       }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.page + 1 < lastPage.totalPages ? lastPage.page + 1 : undefined,
     enabled: range !== null && user !== null && athleteId !== '',
   })
 
-  const {
-    hasNextPage,
-    isFetchingNextPage,
-    isFetchNextPageError,
-    fetchNextPage,
-  } = query
-
-  // trae las páginas que faltan, una tras otra. Si una falla, se detiene: no hay reintento en bucle
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
-      void fetchNextPage()
-    }
-  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
-
   const points = useMemo(
-    () =>
-      query.data
-        ? toChartPoints(query.data.pages.flatMap((page) => page.content))
-        : undefined,
-    [query.data],
+    () => (records ? toChartPoints(records) : undefined),
+    [records],
   )
 
-  return {
-    points,
-    // hasta que llegan todas las páginas el gráfico no muestra datos parciales
-    isPending:
-      query.isPending || (hasNextPage === true && !isFetchNextPageError),
-    error: query.error,
-    refetch: query.refetch,
-  }
+  return { points, isPending, error, refetch }
 }
