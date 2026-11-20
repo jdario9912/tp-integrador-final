@@ -1,4 +1,11 @@
-# tpif-frontend
+# Universidad Tecnológica Nacional
+
+### Tecnicatura Universitaria en Programación
+
+**Alumnos**:
+
+- Alexis Da Silva
+- Joel Dario Muñoz
 
 ## Puesta en marcha
 
