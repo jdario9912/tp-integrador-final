@@ -205,6 +205,25 @@ class OpenApiE2ETest {
         }
     }
 
+    // US-45 (bloque propio): el alta devuelve 201, la edición documenta sus errores, el listado tiene ?from y ?to, y el
+    // catálogo de medidas aparece con su respuesta 200
+    @Test
+    void shouldDocumentTheBodyMeasurementEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode measurements = paths.get("/api/athletes/{athleteId}/measurements");
+        assertTrue(measurements.get("post").get("responses").has("201"));
+        assertTrue(measurements.get("get").get("parameters").toString().contains("\"from\""));
+        assertTrue(measurements.get("get").get("parameters").toString().contains("\"to\""));
+        JsonNode update = paths.get("/api/athletes/{athleteId}/measurements/{recordId}").get("put").get("responses");
+        for (String status : new String[] {"200", "400", "403", "404", "409"}) {
+            assertTrue(update.has(status), status);
+        }
+        assertTrue(paths.get("/api/body-measurement-types").get("get").get("responses").has("200"));
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)

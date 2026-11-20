@@ -7,6 +7,7 @@ import com.gestion_deportiva.api.athlete.model.enums.Sex;
 import com.gestion_deportiva.api.exercise.model.enums.MuscleGroup;
 import com.gestion_deportiva.api.photo.model.enums.ProgressPhotoType; // US-28
 import com.gestion_deportiva.api.meal.model.enums.MealType; // US-23
+import com.gestion_deportiva.api.measurement.model.enums.BodyMeasurementType; // US-45
 import com.gestion_deportiva.api.training.model.enums.SessionStatus;
 import com.gestion_deportiva.api.training.model.enums.SetStatus; // US-19
 import com.gestion_deportiva.api.user.model.enums.Role;
@@ -39,6 +40,7 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
         // US-28
         assertCatalogInSync("photo_types", ProgressPhotoType.values());
         assertCatalogInSync("meal_types", MealType.values()); // US-23
+        assertCatalogInSync("body_measurement_types", BodyMeasurementType.values()); // US-45
     }
 
     @Test
@@ -78,6 +80,25 @@ class CatalogSchemaTest extends AbstractIntegrationTest {
                 "select count(*) from flyway_schema_history where version in ('1', '2', '3') and success",
                 Integer.class);
         assertTrue(applied != null && applied == 3);
+    }
+
+    // US-45: además del código, el nombre, la unidad, si es bilateral y el rango de cada medida deben coincidir
+    @Test
+    void bodyMeasurementTypesMatchTheTable() {
+        Map<String, String> fromDb = jdbc.queryForList(
+                        "select code, name, unit, bilateral, min_value, max_value from body_measurement_types").stream()
+                .collect(Collectors.toMap(row -> (String) row.get("code"),
+                        row -> row.get("name") + "|" + row.get("unit") + "|" + row.get("bilateral") + "|"
+                                + ((java.math.BigDecimal) row.get("min_value")).stripTrailingZeros().toPlainString()
+                                + "|" + ((java.math.BigDecimal) row.get("max_value")).stripTrailingZeros()
+                                .toPlainString()));
+
+        for (BodyMeasurementType type : BodyMeasurementType.values()) {
+            assertEquals(type.getDisplayName() + "|" + type.getUnit() + "|" + type.isBilateral() + "|"
+                            + type.getMinValue().stripTrailingZeros().toPlainString() + "|"
+                            + type.getMaxValue().stripTrailingZeros().toPlainString(),
+                    fromDb.get(type.name()), type.name());
+        }
     }
 
     private void assertCatalogInSync(String table, CatalogEnum[] values) {
