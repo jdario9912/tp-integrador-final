@@ -195,7 +195,14 @@ class RoleEndpointMatrixE2ETest {
             // US-47 · alertas: solo COACH ({alertId} no existe: 404). La evaluación, la pertenencia y el 409 se
             // prueban en AlertE2ETest
             new Row(HttpMethod.GET, "/api/alerts", UNAUTHORIZED, ALLOWED, FORBIDDEN),
-            new Row(HttpMethod.PATCH, "/api/alerts/{alertId}/handle", UNAUTHORIZED, ALLOWED, FORBIDDEN));
+            new Row(HttpMethod.PATCH, "/api/alerts/{alertId}/handle", UNAUTHORIZED, ALLOWED, FORBIDDEN),
+            // US-45 · medidas corporales: alta y edición solo el atleta (con "{}" responde 400; {recordId} no existe: 404).
+            // El listado y el catálogo, los dos roles. La pertenencia y las reglas se prueban en BodyMeasurementE2ETest
+            new Row(HttpMethod.POST, "/api/athletes/{athleteId}/measurements", UNAUTHORIZED, FORBIDDEN, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/measurements/{recordId}", UNAUTHORIZED, FORBIDDEN,
+                    ALLOWED),
+            new Row(HttpMethod.GET, "/api/athletes/{athleteId}/measurements", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.GET, "/api/body-measurement-types", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
@@ -304,7 +311,8 @@ class RoleEndpointMatrixE2ETest {
                         .replace("{photoId}", UUID.randomUUID().toString())
                         .replace("{mealId}", UUID.randomUUID().toString()) // US-23
                         .replace("{noteId}", UUID.randomUUID().toString()) // US-46
-                        .replace("{alertId}", UUID.randomUUID().toString())) // US-47
+                        .replace("{alertId}", UUID.randomUUID().toString())
+                        .replace("{recordId}", UUID.randomUUID().toString())) // US-47 y US-45
                 .headers(headers -> {
                     if (caller != Caller.ANONYMOUS) {
                         headers.setBearerAuth(accessTokens.get(caller));
