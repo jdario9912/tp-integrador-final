@@ -19,3 +19,12 @@ export type PhotoFormValues = {
 }
 
 export type PhotoFieldName = keyof PhotoFormValues
+
+// US-45: formulario de medidas. Cada medida guarda su texto por la clave de su campo
+// (WAIST, ARM-LEFT...); vacío significa que no se mide
+export type BodyMeasurementFormValues = {
+  // YYYY-MM-DD, el formato de <input type="date">
+  date: string
+  comment: string
+  measurements: Record<string, string>
+}

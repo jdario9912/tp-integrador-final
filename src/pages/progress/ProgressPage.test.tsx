@@ -13,6 +13,13 @@ import { session } from '../../test/auth-fixtures'
 import { progressPhotosPage } from '../../test/progress-photo-fixtures'
 import { weightRecord, weightsPage } from '../../test/weight-fixtures'
 import { getProgressPhotos } from '../../lib/progress-photos/get-progress-photos'
+// US-45: la tarjeta de medidas pide el catálogo y sus registros; aquí, catálogo fijo y sin registros
+import { getBodyMeasurementTypes } from '../../lib/body-measurements/get-body-measurement-types'
+import { getBodyMeasurements } from '../../lib/body-measurements/get-body-measurements'
+import {
+  bodyMeasurementTypes,
+  bodyMeasurementsPage,
+} from '../../test/body-measurement-fixtures'
 import { ProgressPage } from './ProgressPage'
 
 vi.mock('../../lib/weights/get-weights', () => ({ getWeights: vi.fn() }))
@@ -22,6 +29,12 @@ vi.mock('../../lib/weights/update-weight', () => ({ updateWeight: vi.fn() }))
 vi.mock('../../lib/progress-photos/get-progress-photos', () => ({
   getProgressPhotos: vi.fn(),
   getProgressPhoto: vi.fn(),
+}))
+vi.mock('../../lib/body-measurements/get-body-measurement-types', () => ({
+  getBodyMeasurementTypes: vi.fn(),
+}))
+vi.mock('../../lib/body-measurements/get-body-measurements', () => ({
+  getBodyMeasurements: vi.fn(),
 }))
 
 const ATHLETE_ID = session('ATHLETE').user.id
@@ -75,6 +88,8 @@ const entryHeading = (name: string) =>
 beforeEach(() => {
   vi.mocked(getProgressPhotos).mockReset()
   vi.mocked(getProgressPhotos).mockResolvedValue(progressPhotosPage([]))
+  vi.mocked(getBodyMeasurementTypes).mockResolvedValue(bodyMeasurementTypes)
+  vi.mocked(getBodyMeasurements).mockResolvedValue(bodyMeasurementsPage([]))
   vi.mocked(getWeights).mockReset()
   vi.mocked(createWeight).mockReset()
   vi.mocked(updateWeight).mockReset()

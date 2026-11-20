@@ -10,6 +10,8 @@ import {
 } from '../../lib/weights'
 import { Pencil, Scale } from '../../ui/icons'
 import { LatestWeightsCard } from './components/LatestWeightsCard'
+// US-45: tarjeta de medidas corporales (alta, edición y últimos registros)
+import { BodyMeasurementsSection } from './components/BodyMeasurementsSection'
 import { ProgressPhotosCard } from './components/ProgressPhotosCard'
 import { WeightConflictNotice } from './components/WeightConflictNotice'
 import { WeightEvolutionCard } from './components/WeightEvolutionCard'
@@ -101,7 +103,7 @@ export function ProgressPage() {
     <div className="flex flex-col gap-6 [&_*]:scroll-mt-24">
       <PageHeader
         title="Progreso"
-        description="Registrá tu peso y tus fotos, y revisá tu evolución."
+        description="Registrá tu peso, tus medidas y tus fotos, y revisá tu evolución."
       />
       {/* mobile-first: primero el formulario; desde xl, formulario a la izquierda y lista a la derecha */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
@@ -156,6 +158,9 @@ export function ProgressPage() {
           />
         </div>
       </div>
+
+      {/* US-45: medidas corporales debajo de los pesos, encima de las fotos */}
+      <BodyMeasurementsSection athleteId={athleteId} today={today} />
 
       {/* US-28: fotos de progreso debajo de los pesos (sección propia, con su tarjeta) */}
       <ProgressPhotosCard athleteId={athleteId} today={today} />

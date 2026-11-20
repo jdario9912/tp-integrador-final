@@ -20,7 +20,7 @@ describe('toChartPoints', () => {
 
     expect(points.map(({ date }) => date)).toEqual(['2026-11-01', '2026-11-06'])
     expect(records[0].date).toBe('2026-11-06')
-    expect(points[0]).toMatchObject({ kg: 73.1 })
+    expect(points[0]).toMatchObject({ value: 73.1 })
   })
 
   it('una lista vacía da una lista vacía', () => {

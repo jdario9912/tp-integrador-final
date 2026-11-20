@@ -1,6 +1,5 @@
 import { useId } from 'react'
 import { formatIsoDate } from '../../../lib/iso-date'
-import { formatWeightKg } from '../../../lib/weights'
 import { useElementWidth } from '../hooks/use-element-width'
 import {
   describeWeightChart,
@@ -8,14 +7,18 @@ import {
   formatKgTick,
   niceYAxis,
   pickLabelIndexes,
+  WEIGHT_CHART_METRIC,
   xFor,
   yFor,
+  type ChartMetric,
   type ChartPoint,
 } from '../weight-chart-scale'
 
 type WeightChartProps = {
   // ya ordenados de la más antigua a la más nueva (toChartPoints)
   points: ChartPoint[]
+  // US-45: qué mide el gráfico (título, columna y formato). Por defecto, el peso
+  metric?: ChartMetric
 }
 
 const HEIGHT = 240
@@ -28,7 +31,10 @@ const DATE_LABEL_SPACING = 72
 // gráfico de evolución en SVG propio (sin librerías): línea, área suave y un punto por registro.
 // Cada punto tiene su fecha y su valor en el tooltip del navegador; la misma información, en
 // texto, va en la tabla desplegable (teclado y lectores de pantalla)
-export function WeightChart({ points }: WeightChartProps) {
+export function WeightChart({
+  points,
+  metric = WEIGHT_CHART_METRIC,
+}: WeightChartProps) {
   const { ref, width } = useElementWidth<HTMLDivElement>(FALLBACK_WIDTH)
   const titleId = useId()
   const descId = useId()
@@ -37,7 +43,7 @@ export function WeightChart({ points }: WeightChartProps) {
 
   const first = points[0]
   const last = points[points.length - 1]
-  const axis = niceYAxis(points.map(({ kg }) => kg))
+  const axis = niceYAxis(points.map(({ value }) => value))
   const plotWidth = Math.max(width - PAD.left - PAD.right, 1)
   const plotHeight = HEIGHT - PAD.top - PAD.bottom
   const plotBottom = PAD.top + plotHeight
@@ -46,7 +52,7 @@ export function WeightChart({ points }: WeightChartProps) {
   const coords = points.map((point) => ({
     ...point,
     x: xFor(point.time, first.time, last.time, PAD.left, plotWidth),
-    y: yFor(point.kg, axis, PAD.top, plotHeight),
+    y: yFor(point.value, axis, PAD.top, plotHeight),
   }))
   const firstCoord = coords[0]
   const lastCoord = coords[coords.length - 1]
@@ -96,8 +102,10 @@ export function WeightChart({ points }: WeightChartProps) {
           viewBox={`0 0 ${width} ${HEIGHT}`}
           className="block overflow-visible"
         >
-          <title id={titleId}>Evolución del peso</title>
-          <desc id={descId}>{describeWeightChart(points)}</desc>
+          <title id={titleId}>{metric.title}</title>
+          <desc id={descId}>
+            {describeWeightChart(points, metric.formatValue)}
+          </desc>
 
           {axis.ticks.map((tick) => {
             const y = yFor(tick, axis, PAD.top, plotHeight)
@@ -163,7 +171,7 @@ export function WeightChart({ points }: WeightChartProps) {
                     : 'fill-surface stroke-primary'
                 }
               >
-                <title>{`${formatIsoDate(point.date)}: ${formatWeightKg(point.kg)}`}</title>
+                <title>{`${formatIsoDate(point.date)}: ${metric.formatValue(point.value)}`}</title>
               </circle>
             )
           })}
@@ -174,7 +182,7 @@ export function WeightChart({ points }: WeightChartProps) {
       <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
         <span className="text-muted-foreground">Último registro</span>
         <strong className="font-semibold tabular-nums">
-          {formatWeightKg(last.kg)}
+          {metric.formatValue(last.value)}
         </strong>
         <span className="text-muted-foreground">
           del {formatIsoDate(last.date)}
@@ -193,7 +201,7 @@ export function WeightChart({ points }: WeightChartProps) {
         </summary>
         <table className="mt-3 w-full border-collapse">
           <caption className="sr-only">
-            Peso por día en el rango elegido
+            {metric.columnLabel} por día en el rango elegido
           </caption>
           <thead>
             <tr className="text-muted-foreground text-left">
@@ -201,7 +209,7 @@ export function WeightChart({ points }: WeightChartProps) {
                 Fecha
               </th>
               <th scope="col" className="pb-2 text-right font-medium">
-                Peso
+                {metric.columnLabel}
               </th>
             </tr>
           </thead>
@@ -212,7 +220,7 @@ export function WeightChart({ points }: WeightChartProps) {
                   <time dateTime={point.date}>{formatIsoDate(point.date)}</time>
                 </td>
                 <td className="py-2 text-right tabular-nums">
-                  {formatWeightKg(point.kg)}
+                  {metric.formatValue(point.value)}
                 </td>
               </tr>
             ))}
