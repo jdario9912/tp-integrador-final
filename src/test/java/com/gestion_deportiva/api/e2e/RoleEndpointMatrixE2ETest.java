@@ -202,7 +202,15 @@ class RoleEndpointMatrixE2ETest {
             new Row(HttpMethod.PUT, "/api/athletes/{athleteId}/measurements/{recordId}", UNAUTHORIZED, FORBIDDEN,
                     ALLOWED),
             new Row(HttpMethod.GET, "/api/athletes/{athleteId}/measurements", UNAUTHORIZED, ALLOWED, ALLOWED),
-            new Row(HttpMethod.GET, "/api/body-measurement-types", UNAUTHORIZED, ALLOWED, ALLOWED));
+            new Row(HttpMethod.GET, "/api/body-measurement-types", UNAUTHORIZED, ALLOWED, ALLOWED),
+            // US-48 (bloque propio): perfil propio, los dos roles y siempre sobre el usuario del token (con "{}" el PUT del
+            // perfil y el de la contraseña responden 400; el PUT de la foto espera multipart y responde 415). La cuenta, el
+            // email y la foto se prueban en UserProfileE2ETest
+            new Row(HttpMethod.GET, "/api/users/me/profile", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/users/me/profile", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/users/me/password", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.PUT, "/api/users/me/photo", UNAUTHORIZED, ALLOWED, ALLOWED),
+            new Row(HttpMethod.DELETE, "/api/users/me/photo", UNAUTHORIZED, ALLOWED, ALLOWED));
 
     private static final String COACH_EMAIL = "ana@test.com";
     private static final String ATHLETE_EMAIL = "leo@test.com";
