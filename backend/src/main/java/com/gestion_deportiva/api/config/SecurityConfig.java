@@ -100,6 +100,10 @@ public class SecurityConfig {
     static final String ATHLETE_MEASUREMENTS_PATH = ATHLETES_PATH + "/{athleteId}/measurements";
     static final String ATHLETE_MEASUREMENT_PATH = ATHLETE_MEASUREMENTS_PATH + "/{recordId}";
     static final String BODY_MEASUREMENT_TYPES_PATH = WebConfig.API_PREFIX + "/body-measurement-types";
+    // US-48 · Perfil propio (contrato 18): "me" como en el dashboard, así que no hay id en la ruta
+    static final String USER_PROFILE_PATH = WebConfig.API_PREFIX + "/users/me/profile";
+    static final String USER_PASSWORD_PATH = WebConfig.API_PREFIX + "/users/me/password";
+    static final String USER_PHOTO_PATH = WebConfig.API_PREFIX + "/users/me/photo";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -226,6 +230,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, ATHLETE_MEASUREMENT_PATH).hasRole("ATHLETE")
                         .requestMatchers(HttpMethod.GET, ATHLETE_MEASUREMENTS_PATH, BODY_MEASUREMENT_TYPES_PATH)
                                 .hasAnyRole("COACH", "ATHLETE")
+                        // US-48 · Perfil propio: los dos roles; siempre sobre el usuario del token (sin id en la ruta)
+                        .requestMatchers(HttpMethod.GET, USER_PROFILE_PATH).hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.PUT, USER_PROFILE_PATH, USER_PASSWORD_PATH, USER_PHOTO_PATH)
+                                .hasAnyRole("COACH", "ATHLETE")
+                        .requestMatchers(HttpMethod.DELETE, USER_PHOTO_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

@@ -365,6 +365,22 @@ Reglas de la evaluación:
 - Cada atleta se evalúa en su propia transacción: si falla uno, se registra en el log y el resto continúa.
 - Además de evaluarse en cada consulta, un job diario evalúa todas las carteras: `ALERTS_SCHEDULER_CRON`, por defecto `0 0 6 * * *` (06:00 en `APP_TIME_ZONE`). `ALERTS_SCHEDULER_ENABLED=false` lo apaga.
 
+**Perfil propio y foto de perfil (US-48)**
+
+Cualquier usuario (entrenador o atleta) edita sus datos comunes, cambia su contraseña y sube o quita su foto de perfil. Todos los endpoints actúan sobre el usuario del token: no hay id en la ruta, así que nadie puede tocar el perfil de otro. Solo son datos comunes de `User`; los datos deportivos del atleta los sigue editando su entrenador.
+
+- `GET /api/users/me/profile`: `{ id, role, firstName, lastName, email, phone, photoUrl, photoUrlExpiresAt }`. La foto sale como URL firmada en cada lectura (`null` si no tiene foto). Si Storage no firma la URL, responde igual, sin foto.
+- `PUT /api/users/me/profile` con `{ firstName, lastName, email, phone? }`: reemplaza los datos. El email se guarda en minúsculas; el teléfono en blanco queda en `null`. Un email que ya usa otro usuario responde 409.
+- `PUT /api/users/me/password` con `{ currentPassword, newPassword }`: 204. La nueva tiene la misma política que el alta (mínimo 8 caracteres, máximo 72 bytes). Una actual incorrecta o una nueva igual a la actual responden 400 con `fieldErrors` en `currentPassword` o `newPassword`. La sesión sigue activa.
+- `PUT /api/users/me/photo` (multipart, parte `file`): JPG, PNG o WebP de hasta 5 MB, validados por el contenido. Reemplaza la foto anterior y borra su objeto. Responde 200 con el perfil.
+- `DELETE /api/users/me/photo`: 204, también si no había foto. Primero se quita la ruta de la base; si Storage no borra el objeto, la respuesta sigue siendo 204 y el objeto queda en el log.
+
+Sesión y email: el token lleva el id del usuario como `subject`, así que **cambiar el email no cierra la sesión**; sí cambia el email con el que se inicia sesión.
+
+Almacenamiento: la foto va al mismo bucket privado de US-28, en `profile-photos/<userId>/<uuid>.<ext>`. Se sube primero y después se guarda la ruta en `users.profile_photo_path` (migración `V21__user_profile_photo.sql`). Si algo falla después de subir, el objeto nuevo se borra; la foto anterior se borra después del commit.
+
+Errores: 400 (campos inválidos o contraseña actual incorrecta), 401 (sin token), 403 (cuenta desactivada), 409 (email usado por otro), 413 (más de 5 MB), 415 (formato no permitido) y 503 (Supabase no responde al subir o firmar).
+
 **Tests**
 
 Los tests de integración y e2e usan [Testcontainers](https://testcontainers.com/): levantan su propio PostgreSQL en un contenedor temporal, así que **Docker tiene que estar corriendo**. No hace falta levantar el `docker-compose.yml` ni tocan la base de desarrollo.

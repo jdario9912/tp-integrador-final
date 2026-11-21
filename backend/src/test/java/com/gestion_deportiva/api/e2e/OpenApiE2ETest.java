@@ -224,6 +224,33 @@ class OpenApiE2ETest {
         assertTrue(paths.get("/api/body-measurement-types").get("get").get("responses").has("200"));
     }
 
+    // US-48 (bloque propio): los cinco endpoints del perfil propio con sus respuestas documentadas (contrato 18), y la
+    // foto como multipart
+    @Test
+    void shouldDocumentTheOwnProfileEndpoints() {
+        // Act
+        JsonNode paths = jsonMapper.readTree(get("/v3/api-docs").getBody()).get("paths");
+
+        // Assert
+        JsonNode profile = paths.get("/api/users/me/profile");
+        assertTrue(profile.get("get").get("responses").has("200"));
+        JsonNode update = profile.get("put").get("responses");
+        for (String status : new String[] {"200", "400", "401", "403", "409"}) {
+            assertTrue(update.has(status), status);
+        }
+        JsonNode password = paths.get("/api/users/me/password").get("put").get("responses");
+        for (String status : new String[] {"204", "400", "401", "403"}) {
+            assertTrue(password.has(status), status);
+        }
+        JsonNode photo = paths.get("/api/users/me/photo");
+        JsonNode upload = photo.get("put").get("responses");
+        for (String status : new String[] {"200", "400", "413", "415", "503"}) {
+            assertTrue(upload.has(status), status);
+        }
+        assertTrue(photo.get("put").get("requestBody").get("content").has("multipart/form-data"));
+        assertTrue(photo.get("delete").get("responses").has("204"));
+    }
+
     private ResponseEntity<String> get(String path) {
         return client.get()
                 .uri(path)
