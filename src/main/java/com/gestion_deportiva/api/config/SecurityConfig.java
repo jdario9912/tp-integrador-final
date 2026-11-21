@@ -96,14 +96,6 @@ public class SecurityConfig {
     // US-47 · Alertas del entrenador: la cartera es la del token
     static final String ALERTS_PATH = WebConfig.API_PREFIX + "/alerts";
     static final String ALERT_HANDLE_PATH = ALERTS_PATH + "/{alertId}/handle";
-    // US-45 · Medidas corporales (contrato 17): registros bajo el atleta y el catálogo, con su ruta propia
-    static final String ATHLETE_MEASUREMENTS_PATH = ATHLETES_PATH + "/{athleteId}/measurements";
-    static final String ATHLETE_MEASUREMENT_PATH = ATHLETE_MEASUREMENTS_PATH + "/{recordId}";
-    static final String BODY_MEASUREMENT_TYPES_PATH = WebConfig.API_PREFIX + "/body-measurement-types";
-    // US-48 · Perfil propio (contrato 18): "me" como en el dashboard, así que no hay id en la ruta
-    static final String USER_PROFILE_PATH = WebConfig.API_PREFIX + "/users/me/profile";
-    static final String USER_PASSWORD_PATH = WebConfig.API_PREFIX + "/users/me/password";
-    static final String USER_PHOTO_PATH = WebConfig.API_PREFIX + "/users/me/photo";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -223,18 +215,6 @@ public class SecurityConfig {
                         // controla AlertService
                         .requestMatchers(HttpMethod.GET, ALERTS_PATH).hasRole("COACH")
                         .requestMatchers(HttpMethod.PATCH, ALERT_HANDLE_PATH).hasRole("COACH")
-                        // US-45 · Medidas corporales: alta y edición solo el atleta (el entrenador recibe 403 aunque el
-                        // atleta sea suyo); el listado y el catálogo los leen los dos roles. Qué atleta puede usar cada
-                        // uno lo decide AthleteAccessGuard en BodyMeasurementServiceImpl
-                        .requestMatchers(HttpMethod.POST, ATHLETE_MEASUREMENTS_PATH).hasRole("ATHLETE")
-                        .requestMatchers(HttpMethod.PUT, ATHLETE_MEASUREMENT_PATH).hasRole("ATHLETE")
-                        .requestMatchers(HttpMethod.GET, ATHLETE_MEASUREMENTS_PATH, BODY_MEASUREMENT_TYPES_PATH)
-                                .hasAnyRole("COACH", "ATHLETE")
-                        // US-48 · Perfil propio: los dos roles; siempre sobre el usuario del token (sin id en la ruta)
-                        .requestMatchers(HttpMethod.GET, USER_PROFILE_PATH).hasAnyRole("COACH", "ATHLETE")
-                        .requestMatchers(HttpMethod.PUT, USER_PROFILE_PATH, USER_PASSWORD_PATH, USER_PHOTO_PATH)
-                                .hasAnyRole("COACH", "ATHLETE")
-                        .requestMatchers(HttpMethod.DELETE, USER_PHOTO_PATH).hasAnyRole("COACH", "ATHLETE")
                         // Red de seguridad: lo que no tenga regla exige al menos un access token válido
                         .anyRequest().authenticated()
                 )

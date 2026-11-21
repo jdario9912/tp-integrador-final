@@ -208,13 +208,6 @@ Registros de peso (US-26): el atleta registra y corrige su peso; él y su entren
 - `GET /api/athletes/{athleteId}/weights` los lista del más reciente al más antiguo con el formato `PageResponse`, para el propio atleta (también si está desvinculado) y para su entrenador. Query params opcionales: `from` y `to` (`YYYY-MM-DD`, inclusivos; `from` posterior a `to` → 400), `page` y `size`. Con `size=1` devuelve el último peso (ficha del entrenador).
 - "Hoy" se calcula en la zona horaria de la app y no en UTC (a las 22:00 de Argentina en UTC ya es el día siguiente). Variable `APP_TIME_ZONE`: ID IANA, por defecto `America/Argentina/Buenos_Aires`; si está vacía se usa ese valor, y un valor inválido no deja arrancar la app.
 
-Medidas corporales (US-45): el atleta registra sus medidas de un día (cintura, pecho, cadera, brazo, pierna y % de grasa); él y su entrenador las consultan. Como el peso: un registro por atleta y por día, y no se borran (se corrigen con `PUT`).
-- `POST /api/athletes/{athleteId}/measurements` (solo el propio atleta) registra un día: `{ date, comment?, values: [{ type, side?, value }] }`. Responde 201 sin header `Location`. `type` es un código del catálogo (`WAIST`, `CHEST`, `HIP`, `ARM`, `LEG`, `BODY_FAT`). `side` (`LEFT` o `RIGHT`) es obligatorio en las bilaterales (`ARM` y `LEG`), no se admite en las demás, y basta con un solo lado. Cada `value` tiene su rango inclusive (por ejemplo, de 5 a 100 para `ARM` y de 1 a 75 para `BODY_FAT`) y hasta 2 decimales. Un mismo tipo y lado no se repite. Fecha futura → 400; día ocupado → 409 "Ya existe un registro de medidas para el DD/MM/AAAA".
-- `PUT /api/athletes/{athleteId}/measurements/{recordId}` corrige el registro: reemplaza la fecha, el comentario y la lista completa de medidas. Mover el registro a un día ocupado → 409. Un registro de otro atleta responde 404, igual que uno inexistente.
-- `GET /api/athletes/{athleteId}/measurements` los lista del más reciente al más antiguo con el formato `PageResponse`, para el propio atleta y su entrenador. Query params opcionales: `from` y `to` (inclusivos; `from` posterior a `to` → 400), `page` y `size`.
-- `GET /api/body-measurement-types` devuelve el catálogo (`code`, `name`, `unit`, `bilateral`, `min`, `max`) para armar el formulario. Lo leen los dos roles.
-- Migración `V20__body_measurements.sql`: `body_measurement_types` (catálogo, con `CHECK` de rango), `body_measurement_records` (único por atleta y fecha) y `body_measurement_values` (`ON DELETE CASCADE` desde el registro, y `NULLS NOT DISTINCT` por tipo y lado). Contrato completo: `docs/contracts/41-us-45.md` (se integra en `api-contract.md` al mergear).
-
 Catálogo de alimentos (US-39): es global (sin autor), lo consultan los dos roles y solo los entrenadores crean y editan. Los valores nutricionales corresponden a la porción de referencia. No hay baja: las comidas (US-23) lo van a referenciar.
 - `GET /api/foods` devuelve los alimentos (precargados por la V9 y los que agregan los entrenadores), ordenados por nombre y con el formato `PageResponse`. Query params opcionales: `page`, `size` y `name` (contiene, sin distinguir mayúsculas). `GET /api/foods/{id}` devuelve uno; inexistente → 404.
 - `POST /api/foods` lo crea (201): `name` (máximo 100), `referencePortionG` (gramos, mayor a 0), `caloriesKcal`, `proteinG`, `carbsG` y `fatG` (0 o más), todos obligatorios, hasta 10000 y con 2 decimales como máximo. Nombre repetido, sin distinguir mayúsculas → 409.
@@ -364,22 +357,6 @@ Reglas de la evaluación:
 - Después de atender una alerta, ese tipo no se vuelve a abrir para el atleta durante **7 días** aunque la condición siga. Si no, reaparecería en la consulta siguiente.
 - Cada atleta se evalúa en su propia transacción: si falla uno, se registra en el log y el resto continúa.
 - Además de evaluarse en cada consulta, un job diario evalúa todas las carteras: `ALERTS_SCHEDULER_CRON`, por defecto `0 0 6 * * *` (06:00 en `APP_TIME_ZONE`). `ALERTS_SCHEDULER_ENABLED=false` lo apaga.
-
-**Perfil propio y foto de perfil (US-48)**
-
-Cualquier usuario (entrenador o atleta) edita sus datos comunes, cambia su contraseña y sube o quita su foto de perfil. Todos los endpoints actúan sobre el usuario del token: no hay id en la ruta, así que nadie puede tocar el perfil de otro. Solo son datos comunes de `User`; los datos deportivos del atleta los sigue editando su entrenador.
-
-- `GET /api/users/me/profile`: `{ id, role, firstName, lastName, email, phone, photoUrl, photoUrlExpiresAt }`. La foto sale como URL firmada en cada lectura (`null` si no tiene foto). Si Storage no firma la URL, responde igual, sin foto.
-- `PUT /api/users/me/profile` con `{ firstName, lastName, email, phone? }`: reemplaza los datos. El email se guarda en minúsculas; el teléfono en blanco queda en `null`. Un email que ya usa otro usuario responde 409.
-- `PUT /api/users/me/password` con `{ currentPassword, newPassword }`: 204. La nueva tiene la misma política que el alta (mínimo 8 caracteres, máximo 72 bytes). Una actual incorrecta o una nueva igual a la actual responden 400 con `fieldErrors` en `currentPassword` o `newPassword`. La sesión sigue activa.
-- `PUT /api/users/me/photo` (multipart, parte `file`): JPG, PNG o WebP de hasta 5 MB, validados por el contenido. Reemplaza la foto anterior y borra su objeto. Responde 200 con el perfil.
-- `DELETE /api/users/me/photo`: 204, también si no había foto. Primero se quita la ruta de la base; si Storage no borra el objeto, la respuesta sigue siendo 204 y el objeto queda en el log.
-
-Sesión y email: el token lleva el id del usuario como `subject`, así que **cambiar el email no cierra la sesión**; sí cambia el email con el que se inicia sesión.
-
-Almacenamiento: la foto va al mismo bucket privado de US-28, en `profile-photos/<userId>/<uuid>.<ext>`. Se sube primero y después se guarda la ruta en `users.profile_photo_path` (migración `V21__user_profile_photo.sql`). Si algo falla después de subir, el objeto nuevo se borra; la foto anterior se borra después del commit.
-
-Errores: 400 (campos inválidos o contraseña actual incorrecta), 401 (sin token), 403 (cuenta desactivada), 409 (email usado por otro), 413 (más de 5 MB), 415 (formato no permitido) y 503 (Supabase no responde al subir o firmar).
 
 **Tests**
 
