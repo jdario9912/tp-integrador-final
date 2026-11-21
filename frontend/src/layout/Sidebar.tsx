@@ -47,7 +47,8 @@ export function Sidebar({ id, open, onNavigate }: SidebarProps) {
         ))}
       </nav>
       <div className="mt-auto">
-        <SidebarUser />
+        {/* US-48: al ir a Mi perfil desde el bloque de la cuenta, el panel móvil se cierra */}
+        <SidebarUser onNavigate={onNavigate} />
       </div>
     </aside>
   )

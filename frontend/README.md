@@ -168,6 +168,10 @@ Convenciones comunes: los formularios replican las validaciones y mensajes del b
 - **Comidas** (US-23, US-24, `/meals`): alta con descripción y/o alimentos del catálogo, edición y borrado. Navegación por días en la URL (`?date=`, sin futuro) y resumen de calorías y macros del día (los calcula el backend).
 - **Alimentos** (US-39, `/foods`, ambos roles): catálogo global paginado con búsqueda; solo el entrenador crea y edita.
 
+### Cuenta (ambos roles)
+
+- **Mi perfil** (US-48, `/profile`, `src/pages/profile/`, `src/lib/profile/`): datos personales (un 409 marca el email), foto de perfil (JPG, PNG o WebP hasta 5 MB, con vista previa y confirmación; quitarla pide confirmación) y cambio de contraseña con la actual. Se llega desde el bloque de la cuenta del menú, que muestra la foto o las iniciales.
+
 ### Recuperación de contraseña (US-44)
 
 `/forgot-password` envía `POST /auth/password-recovery` (siempre 202: la confirmación no revela si el email existe). El link del mail es `/reset-password?token=...` (si cambia la ruta, cambiarla en el backend) y envía `POST /auth/password-reset`. Con 204 se borran sesión y caché y se va al login con aviso; un 400 sin `fieldErrors` (token inválido) ofrece pedir otro enlace.
