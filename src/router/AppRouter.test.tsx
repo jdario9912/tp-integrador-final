@@ -7,6 +7,7 @@ import { createdFood, foodsPage } from '../test/food-fixtures'
 import { SESSION_ID, trainingSession } from '../test/training-session-fixtures'
 import { weightsPage } from '../test/weight-fixtures'
 import { emptyDailySummary } from '../test/daily-summary-fixtures' // US-24
+import { ownProfile } from '../test/own-profile-fixtures' // US-48
 import { getTrainingHistory } from '../lib/training-sessions/get-training-history'
 import { foodEditPath, paths, trainingPath } from './paths'
 
@@ -29,6 +30,8 @@ vi.mock('../lib/meals/get-meals', () => ({ getMealsOfDay: vi.fn() }))
 vi.mock('../pages/meals/actions/get-daily-summary', () => ({
   getDailyNutritionSummary: vi.fn(),
 }))
+// US-48: perfil propio (menú de usuario y Mi perfil) (bloque propio)
+vi.mock('../lib/profile/get-own-profile', () => ({ getOwnProfile: vi.fn() }))
 vi.mock('../lib/training-sessions/get-in-progress-session', () => ({
   getInProgressSession: vi.fn(),
 }))
@@ -66,6 +69,9 @@ const renderAppAt = async (path: string, role: Role) => {
   const { getTrainingSession } =
     await import('../lib/training-sessions/get-training-session')
   vi.mocked(getTrainingSession).mockResolvedValue(trainingSession())
+  // US-48: perfil propio (bloque propio)
+  const { getOwnProfile } = await import('../lib/profile/get-own-profile')
+  vi.mocked(getOwnProfile).mockResolvedValue(ownProfile())
   const { AppRouter } = await import('./AppRouter')
 
   render(
@@ -81,6 +87,26 @@ const renderAppAt = async (path: string, role: Role) => {
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
+})
+
+// US-48: Mi perfil lo usan los dos roles (bloque propio)
+describe('AppRouter · Mi perfil (US-48)', () => {
+  it.each(['COACH', 'ATHLETE'] as const)(
+    'el %s entra a /profile y la barra muestra "Mi perfil"',
+    async (role) => {
+      await renderAppAt(paths.profile, role)
+
+      expect(
+        await screen.findByRole('heading', { name: 'Mi perfil', level: 1 }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('navigation', { name: 'Ubicación' }),
+      ).toHaveTextContent('Mi perfil')
+      expect(window.location.pathname).toBe(paths.profile)
+    },
+    // importar el router de nuevo (resetModules) tarda más que el límite global con la suite llena
+    15_000,
+  )
 })
 
 describe('AppRouter · Mi rutina (US-17)', () => {

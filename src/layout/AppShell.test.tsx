@@ -1,35 +1,47 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query' // US-48
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { saveSession } from '../lib/auth'
 import { createMemoryRouter, RouterProvider } from '../lib/navigation'
 import { paths } from '../router/paths'
+import { ownProfile } from '../test/own-profile-fixtures' // US-48
 import { session } from '../test/auth-fixtures'
 import { AppShell } from './AppShell'
 
 vi.mock('../lib/auth/use-logout', () => ({
   useLogout: () => ({ mutate: vi.fn(), isPending: false }),
 }))
+// US-48: el menú de usuario consulta el perfil propio
+vi.mock('../lib/profile/get-own-profile', () => ({
+  getOwnProfile: vi.fn(async () => ownProfile()),
+}))
 
 const renderShell = () =>
   render(
-    <RouterProvider
-      router={createMemoryRouter(
-        [
-          {
-            element: <AppShell />,
-            children: [
-              {
-                path: paths.dashboard,
-                element: <p>contenido</p>,
-                handle: { title: 'Panel' },
-              },
-            ],
-          },
-        ],
-        { initialEntries: [paths.dashboard] },
-      )}
-    />,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <RouterProvider
+        router={createMemoryRouter(
+          [
+            {
+              element: <AppShell />,
+              children: [
+                {
+                  path: paths.dashboard,
+                  element: <p>contenido</p>,
+                  handle: { title: 'Panel' },
+                },
+              ],
+            },
+          ],
+          { initialEntries: [paths.dashboard] },
+        )}
+      />
+    </QueryClientProvider>,
   )
 
 describe('AppShell', () => {

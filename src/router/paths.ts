@@ -41,6 +41,8 @@ export const paths = {
   meals: '/meals',
   // US-21: solo atleta, historial de entrenamientos cerrados y la observación del entrenador
   trainingHistory: '/training-history',
+  // US-48: perfil propio (datos, foto y contraseña), los dos roles; se llega desde el menú de usuario
+  profile: '/profile',
 } as const
 
 // las rutas con parámetros se arman con estos helpers para no concatenar a mano

@@ -87,3 +87,16 @@ export const postForm = async <TResponse>(
       headers: { 'Content-Type': false },
     })
   ).data
+
+// US-48: PUT con archivos (foto de perfil). Igual que postForm: el navegador pone el boundary
+export const putForm = async <TResponse>(
+  url: string,
+  form: FormData,
+  config?: Omit<AxiosRequestConfig<FormData>, 'headers'>,
+) =>
+  (
+    await httpClient.put<TResponse>(url, form, {
+      ...config,
+      headers: { 'Content-Type': false },
+    })
+  ).data

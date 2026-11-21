@@ -17,6 +17,7 @@ import { MyRoutinePage } from '../pages/my-routine'
 import { NewExercisePage } from '../pages/new-exercise'
 import { NewFoodPage } from '../pages/new-food'
 import { NewRoutinePage } from '../pages/new-routine'
+import { ProfilePage } from '../pages/profile' // US-48
 import { ProgressPage } from '../pages/progress'
 import { RegisterAthletePage } from '../pages/register-athlete'
 import { RegisterCoachPage } from '../pages/register-coach'
@@ -54,6 +55,12 @@ const router = createBrowserRouter([
             path: paths.foods,
             element: <FoodsPage />,
             handle: { title: 'Alimentos' },
+          },
+          // US-48: perfil propio, lo usan los dos roles (desde el menú de usuario)
+          {
+            path: paths.profile,
+            element: <ProfilePage />,
+            handle: { title: 'Mi perfil' },
           },
           // páginas de un solo rol (US-04): van dentro de RequireRole
           {
