@@ -78,6 +78,11 @@ public abstract class User {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    // US-48 (bloque propio): ruta del objeto de la foto de perfil en el bucket privado (null = sin foto). La API nunca la
+    // expone: responde una URL firmada
+    @Column(name = "profile_photo_path", length = 255)
+    private String profilePhotoPath;
+
     protected User(Role role, String firstName, String lastName, String email, String passwordHash) {
         this.role = Objects.requireNonNull(role, "role");
         this.firstName = Objects.requireNonNull(firstName, "firstName");
@@ -123,6 +128,40 @@ public abstract class User {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    // US-48 (bloque propio): datos comunes que el propio usuario edita en "Mi perfil". El email pasa por changeEmail
+    // (normalizado); el teléfono en blanco queda en null. Los datos deportivos del atleta no son de esta superclase
+    public void changeProfile(String firstName, String lastName, String email, String phone) {
+        this.firstName = Objects.requireNonNull(firstName, "firstName");
+        this.lastName = Objects.requireNonNull(lastName, "lastName");
+        changeEmail(email);
+        this.phone = blankToNull(phone);
+    }
+
+    // US-48: la foto nueva reemplaza a la anterior. La ruta la arma el service (nunca el nombre que mandó el cliente)
+    public void changeProfilePhoto(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) {
+            throw new IllegalArgumentException("storagePath es obligatorio");
+        }
+        if (storagePath.length() > 255) {
+            throw new IllegalArgumentException("storagePath admite hasta 255 caracteres");
+        }
+        this.profilePhotoPath = storagePath;
+    }
+
+    // US-48: quita la foto. Sin foto no hace nada
+    public void removeProfilePhoto() {
+        this.profilePhotoPath = null;
+    }
+
+    public boolean hasProfilePhoto() {
+        return profilePhotoPath != null;
+    }
+
+    // US-48: en blanco o solo espacios, null (la misma regla que el CHECK de la V21)
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     // equals/hashCode por id: patrón seguro para entidades JPA (no usar @Data)
