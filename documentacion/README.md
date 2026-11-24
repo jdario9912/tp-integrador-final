@@ -19,7 +19,7 @@
 
 **Repositorio:** https://github.com/jdario9912/tp-integrador-final
 
-**Video final:** _[completar: enlace al video de demostración]_
+**Video final:** [español](https://drive.google.com/file/d/16zNzG8YXY8eCdnt8SAs8fsKsitpwPhv0/view?usp=drive_link) | [inglés](https://drive.google.com/file/d/19soy1cv5gaDELeO_-aU9bG6v7dpbYYiO/view?usp=drive_link)
 
 ---
 
